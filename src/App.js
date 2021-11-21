@@ -1,11 +1,10 @@
 import './App.css';
-//import 'bootstrap/dist/css/bootstrap.min.css';
 
-import BOMFileUploadInterface from './components/BOMFileUploadInterface';
+import BOMInterface from './components/BOMInterface';
 function App() {
   return (
     <div className="App">
-        <BOMFileUploadInterface/>
+        <BOMInterface/>
     </div>
   );
 }
