@@ -1,8 +1,72 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useMemo} from 'react';
 import update from 'immutability-helper';
+
+import { useTable } from 'react-table'
 
 import Table from 'react-bootstrap/Table';
 import {SimpleDropdown} from './Dropdown';
+ 
+export function ReactTable(props) {
+    const data = useMemo(() => props.data, [props.data]);
+    
+    /*
+    const columns = useMemo(() => [
+    {
+        Header: 'MPN',
+        accessor: 'MPN', // accessor is the "key" in the data
+    },
+    {
+        Header: 'URL',
+        accessor: 'URL',
+    },
+    ], []);
+    */
+    const columns = useMemo(() => props.headers, [props.headers]);
+
+    const {
+        getTableProps,
+        getTableBodyProps,
+        headerGroups,
+        rows,
+        prepareRow,
+    } = useTable({ columns, data })
+
+    return (
+    <Table {...getTableProps()} bordered hover>
+        <thead>
+            {headerGroups.map(headerGroup => (
+            <tr {...headerGroup.getHeaderGroupProps()}>
+                {headerGroup.headers.map(column => (
+                <th
+                    {...column.getHeaderProps()}
+                >
+                    {column.render('Header')}
+                </th>
+                ))}
+            </tr>
+            ))}
+        </thead>
+        <tbody {...getTableBodyProps()}>
+            {rows.map(row => {
+            prepareRow(row)
+            return (
+                <tr {...row.getRowProps()}>
+                {row.cells.map(cell => {
+                    return (
+                    <td
+                        {...cell.getCellProps()}
+                    >
+                        {cell.render('Cell')}
+                    </td>
+                    )
+                })}
+                </tr>
+            )
+            })}
+        </tbody>
+    </Table>
+    )
+    }
 
 
 //should rename functions more simply

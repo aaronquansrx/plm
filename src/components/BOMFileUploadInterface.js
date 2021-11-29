@@ -4,9 +4,10 @@ import update from 'immutability-helper';
 import XLSX from 'xlsx';
 
 import {MyDropzone} from './Dropzone';
-import {ExcelDisplayTable, CheckLinesExcelTable, CheckboxRowCustomColumnTable} from './Tables';
+import {ExcelDisplayTable, CheckboxRowCustomColumnTable} from './Tables';
 
 const columnOptions = ["_remove", "Custom", "Manufacturer Part Number", "Manufacturer", "Quantity"];
+const columnOptions2 = [{Header: "_remove", accessor: "_remove"}, {Header:"Custom"}, {Header:"Manufacturer Part Number"}, {Header:"Manufacturer"}, {Header:"Quantity"}];
 
 function BOMFileUploadInterface(props){
     const [file, setFile] = useState(null); 
@@ -15,9 +16,6 @@ function BOMFileUploadInterface(props){
     const [editedSheet, setEditedSheet] = useState([]);
     const [formattedSheet, setFormattedSheet] = useState([]); // Will be sent to BOMInterface (easier to manipulate columns)
     const [uploadState, setUploadState] = useState(0); // 0: upload file, 1: editing, 2: confirmation
-
-
-
 
     const [editTableState, setEditTableState] = useState({checkedRows: [], columnAttributes: []});
 
@@ -43,6 +41,15 @@ function BOMFileUploadInterface(props){
         //setUploadState(1);
         //setCheckedLines([...Array(data.length)].map(() => true));
         //console.log([...Array(data.length)].map(() => true));
+
+        //get first column as mpn
+        
+        const firstCol = data.map(line => {
+            return {"MPN": line[0]}
+        });
+        console.log(firstCol);
+        props.onBOMUpload(firstCol, {Header: 'MPN', accessor: 'MPN'});
+        
     }
     function handleEditCheckBox(i){
         setEditTableState(update(editTableState, {
@@ -92,7 +99,7 @@ function BOMFileUploadInterface(props){
                 console.log(editedBOM);
                 break;
             case 2:
-                props.onBOMUpload(formattedSheet,  editTableState['columnAttributes']);
+                props.onBOMUpload(formattedSheet,  editTableState['columnAttributes']); //change 2nd prop
                 break;
             default:
                 console.log("Unknown BOMUpload state");

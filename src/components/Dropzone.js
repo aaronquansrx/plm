@@ -16,7 +16,7 @@ export function MyDropzone(props) {
         const workbook = XLSX.read(binaryStr, {type:'binary'});
         dropFunction(workbook, file);
       }
-      console.log(file);
+      //console.log(file);
       reader.readAsBinaryString(file);
     })
     
