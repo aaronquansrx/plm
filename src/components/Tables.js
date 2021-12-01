@@ -8,19 +8,6 @@ import {SimpleDropdown} from './Dropdown';
  
 export function ReactTable(props) {
     const data = useMemo(() => props.data, [props.data]);
-    
-    /*
-    const columns = useMemo(() => [
-    {
-        Header: 'MPN',
-        accessor: 'MPN', // accessor is the "key" in the data
-    },
-    {
-        Header: 'URL',
-        accessor: 'URL',
-    },
-    ], []);
-    */
     const columns = useMemo(() => props.headers, [props.headers]);
 
     const {

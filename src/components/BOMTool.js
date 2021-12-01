@@ -32,8 +32,18 @@ function BOMTool(props){
                 for(const api of apis){
                     const offers = response.data[api];
                     if(offers.length > 0){
+                        const offerOutput = <div>
+                        <span>
+                            {'Quantity Available: '+offers[0].Quantity.Available}
+                        </span>
+                        {offers[0].Pricing.length > 0 &&
+                        <span>
+                            {'Price: '+offers[0].Pricing[0].UnitPrice}
+                        </span>
+                        }
+                        </div>
                         ubom = update(ubom, {
-                            [i]: {$merge: {[api]:'Quantity Available: '+offers[0].Quantity.Available} } 
+                            [i]: {$merge: {[api]: offerOutput} } 
                         });
                         setBomdata(ubom);
                     }
