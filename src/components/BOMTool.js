@@ -12,11 +12,13 @@ Part lookup
 */
 
 function BOMTool(props){
+    console.log(props.BOMData);
     const [partLookupData, setPartLookupData] = useState(Array(props.BOMData.BOM.length).fill(null));
     const [bomdata, setBomdata] = useState(props.BOMData.BOM);
     const [tableHeader, setTableHeader] = useState([{Header: 'MPN', accessor: 'MPN'}, 
     {Header: 'Future Electronics', accessor: 'futureelectronics'}, 
     {Header: 'Digikey', accessor: 'digikey'}]);
+    //console.log(process.env.REACT_APP_SERVER_URL);
     useEffect(() => {
         //call api
         
@@ -26,11 +28,11 @@ function BOMTool(props){
         props.BOMData.BOM.forEach((line, i) => {
             axios({
                 method: 'get',
-                url: 'https://localhost/plmserver/api/part?part='+line['MPN']
+                url: process.env.REACT_APP_SERVER_URL+'api/part?part='+line['MPN']
             }).then(response => {
                 console.log(response.data);
                 for(const api of apis){
-                    const offers = response.data[api];
+                    const offers = response.data[api].data;
                     if(offers.length > 0){
                         const offerOutput = <div>
                         <span>
@@ -41,6 +43,9 @@ function BOMTool(props){
                             {'Price: '+offers[0].Pricing[0].UnitPrice}
                         </span>
                         }
+                        <span>
+                            {'Lead Time: '+offers[0].LeadTime}
+                        </span>
                         </div>
                         ubom = update(ubom, {
                             [i]: {$merge: {[api]: offerOutput} } 
@@ -92,8 +97,18 @@ function BOMTool(props){
         */
         
     }, [props.BOMData.BOM]);
-    function BOMDataToArray(){
-
+    function BOMDataToArray(data, headers){
+        return data.map((line) => {
+            const out = headers.map((header) => {
+                //line 
+            });
+        });
+    }
+    function handleEditBOM(){
+        props.changeState(1);
+    }
+    function handleUploadBOM(){
+        props.changeState(0);
     }
     return (
         <div>
@@ -102,6 +117,8 @@ function BOMTool(props){
             {/*<JsonArrayDisplayTable jsonArray={props.BOMData.BOM} 
             headings={props.BOMData.columnFields}/>*/}
             {partLookupData.length > 0 && partLookupData[0]}
+            <button onClick={handleEditBOM}>Edit BOM</button>
+            <button onClick={handleUploadBOM}>Upload BOM</button>
         </div>
     );
 }

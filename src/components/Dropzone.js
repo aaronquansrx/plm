@@ -1,6 +1,11 @@
 import React, {useCallback} from 'react';
+
 import {useDropzone} from 'react-dropzone';
 import XLSX from 'xlsx';
+
+import { BsFileEarmarkArrowDown } from "react-icons/bs";
+
+import './../css/dropzone.css';
 
 export function MyDropzone(props) {
   const dropFunction = props.onDrop;
@@ -24,9 +29,10 @@ export function MyDropzone(props) {
   const {getRootProps, getInputProps} = useDropzone({onDrop});
 
   return (
-    <div {...getRootProps()}>
+    <div {...getRootProps()} className='DropFiles'>
       <input {...getInputProps()} />
-      <p>Drag 'n' drop some files here, or click to select files</p>
+      <BsFileEarmarkArrowDown size={40}/>
+      <p>Drop BOM files (excel, csv)</p>
     </div>
   );
 }
