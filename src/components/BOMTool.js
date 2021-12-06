@@ -12,7 +12,7 @@ Part lookup
 */
 
 function BOMTool(props){
-    console.log(props.BOMData);
+    //console.log(props.BOMData);
     const [partLookupData, setPartLookupData] = useState(Array(props.BOMData.BOM.length).fill(null));
     const [bomdata, setBomdata] = useState(props.BOMData.BOM);
     const [tableHeader, setTableHeader] = useState([{Header: 'MPN', accessor: 'MPN'}, 
@@ -22,35 +22,39 @@ function BOMTool(props){
     useEffect(() => {
         //call api
         
+        //const server_url = process.env.REACT_APP_SERVER_URL;
+        const server_url = 'http://localhost:8080/PLMServer/'
         
         var ubom = bomdata;
         const apis = ['futureelectronics', 'digikey'];
         props.BOMData.BOM.forEach((line, i) => {
             axios({
                 method: 'get',
-                url: process.env.REACT_APP_SERVER_URL+'api/part?part='+line['MPN']
+                url: server_url+'api/part?part='+line['MPN']
             }).then(response => {
                 console.log(response.data);
                 for(const api of apis){
-                    const offers = response.data[api].data;
-                    if(offers.length > 0){
-                        const offerOutput = <div>
-                        <span>
-                            {'Quantity Available: '+offers[0].Quantity.Available}
-                        </span>
-                        {offers[0].Pricing.length > 0 &&
-                        <span>
-                            {'Price: '+offers[0].Pricing[0].UnitPrice}
-                        </span>
+                    if(response.data[api].status == "success"){
+                        const offers = response.data[api].data;
+                        if(offers.length > 0){
+                            const offerOutput = <div>
+                            <span>
+                                {'Quantity Available: '+offers[0].Quantity.Available}
+                            </span>
+                            {offers[0].Pricing.length > 0 &&
+                            <span>
+                                {'Price: '+offers[0].Pricing[0].UnitPrice}
+                            </span>
+                            }
+                            <span>
+                                {'Lead Time: '+offers[0].LeadTime}
+                            </span>
+                            </div>
+                            ubom = update(ubom, {
+                                [i]: {$merge: {[api]: offerOutput} } 
+                            });
+                            setBomdata(ubom);
                         }
-                        <span>
-                            {'Lead Time: '+offers[0].LeadTime}
-                        </span>
-                        </div>
-                        ubom = update(ubom, {
-                            [i]: {$merge: {[api]: offerOutput} } 
-                        });
-                        setBomdata(ubom);
                     }
                 }
                 /*
