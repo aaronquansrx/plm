@@ -12,13 +12,16 @@ Functions:
 Part lookup
 */
 
+
+const testHeaders = [{Header: 'MPN', accessor: 'MPN'}, 
+{Header: 'Future Electronics', accessor: 'futureelectronics'}, 
+{Header: 'Digikey', accessor: 'digikey'}];
+
 function BOMTool(props){
     //console.log(props.BOMData);
-    const [partLookupData, setPartLookupData] = useState(Array(props.BOMData.BOM.length).fill(null));
-    const [bomdata, setBomdata] = useState(props.BOMData.BOM);
-    const [tableHeader, setTableHeader] = useState([{Header: 'MPN', accessor: 'MPN'}, 
-    {Header: 'Future Electronics', accessor: 'futureelectronics'}, 
-    {Header: 'Digikey', accessor: 'digikey'}]);
+    const [partLookupData, setPartLookupData] = useState(Array(props.BOMData.bom.length).fill(null));
+    const [bomdata, setBomdata] = useState(props.BOMData.bom);
+    const [tableHeader, setTableHeader] = useState(props.BOMData.headers);
     //console.log(process.env.REACT_APP_SERVER_URL);
     useEffect(() => {
         //call api
@@ -27,7 +30,7 @@ function BOMTool(props){
         //const server_url = 'http://localhost:8080/PLMServer/'
         let ubom = bomdata;
         const apis = ['futureelectronics', 'digikey'];
-        const apiOffers = Array(props.BOMData.BOM.length).fill(
+        const apiOffers = Array(props.BOMData.bom.length).fill(
             apis.reduce(function(map, api) {
             map[api] = null;
             return map;
@@ -91,8 +94,8 @@ function BOMTool(props){
                 updateBOM(api_name, i, offerOutput);
             }
         }
-        props.BOMData.BOM.forEach((line, i) => {
-            callApi(line['MPN'], i, 0);
+        props.BOMData.bom.forEach((line, i) => {
+            callApi(line.mpn, i, 0);
             /*
             axios({
                 method: 'get',
@@ -191,8 +194,6 @@ function BOMTool(props){
         <div>
             This is where BOMs are viewed
             <ReactTable data={bomdata} headers={tableHeader}/>
-            {/*<JsonArrayDisplayTable jsonArray={props.BOMData.BOM} 
-            headings={props.BOMData.columnFields}/>*/}
             {partLookupData.length > 0 && partLookupData[0]}
             <button onClick={handleEditBOM}>Edit BOM</button>
             <button onClick={handleUploadBOM}>Upload BOM</button>

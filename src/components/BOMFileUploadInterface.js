@@ -31,8 +31,8 @@ function BOMFileUploadInterface(props){
         //Convert worksheet to array of arrays
         const data = XLSX.utils.sheet_to_json(ws, {header:1});
         setUploadedSheet(data);
-
-        //props.onBOMUpload(data, 1); // send straight to main bom
+        props.onBOMUpload(data); //send straight to main bom
+        //props.onBOMUpload(data, 1);
         
     }
     function handleConfirm(){

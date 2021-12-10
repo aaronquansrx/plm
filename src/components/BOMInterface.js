@@ -17,6 +17,9 @@ const headerToAccessor = tableHeaders.reduce(function(map, obj) {
     return map;
 }, {});
 
+const apis = [{Header: 'Future Electronics', accessor: 'futureelectronics'}, 
+{Header: 'Digikey', accessor: 'digikey'}];
+
 
 function BOMInterface(props){
     const [uploadedBOM, setUploadedBOM] = useState(null); // bom uploaded from file upload interface
@@ -25,14 +28,20 @@ function BOMInterface(props){
     const [interfaceState, setInterfaceState] = useState(0) // 0: upload, 1: main
     //const [initialUploadState, setInitialUploadState] = useState(0);
     const [initialBOMEdit, setInitialBOMEdit] = useState([]); //BOM initial input when editing BOM
-    function getUploadedBOM(bom, state=1){
+    function handleUploadedBOM(bom, state=1){
         //assume first col is MPN
         setUploadedBOM(bom);
-        //setBOMColumnFields(attrs);
-        setInterfaceState(state);
+        const autofind = autoFindMPN(bom);
+        if(autofind.found){
+            console.log('found mpn');
+            setBOMData({bom: autofind.bom, headers: autofind.headers.concat(apis)});
+            setInterfaceState(2);
+        }else{
+            setInterfaceState(state);
+        }
     };
     function handleEditBOM(bom, headers){
-        setBOMData({'BOM': bom, 'header': headers});
+        setBOMData({bom: bom, headers: headers.concat(apis)});
         setInterfaceState(2);
     }
     function changeState(state, bom){
@@ -43,7 +52,7 @@ function BOMInterface(props){
     function renderInterfaceState(){
         switch(interfaceState){
             case 0:
-                return <BOMFileUploadInterface onBOMUpload={getUploadedBOM}/>;
+                return <BOMFileUploadInterface onBOMUpload={handleUploadedBOM}/>;
             case 1:
                 return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState}/>
             case 2:
@@ -51,6 +60,21 @@ function BOMInterface(props){
             default:
                 return "Unknown interface state";
         }
+    }
+    function autoFindMPN(bom){
+        const search = ['mpn', 'manufacturing part number'];
+        if(bom.length > 0){
+            const col = bom[0].findIndex((val) => search.includes(val.toLowerCase()));
+            if(col !== -1){
+                const bomData = bom.map((line) => {
+                    return {
+                        mpn: line[col]
+                    };
+                });
+                return {found: true, bom: bomData, headers: [{Header: 'MPN', accessor: 'mpn'}]};
+            }
+        }
+        return {found: false};
     }
     return ( 
         <div>

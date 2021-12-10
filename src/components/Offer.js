@@ -8,7 +8,7 @@ export function SimpleOffer(props){
     return (
         <Accordion>
             {props.offers.map((offer, i) => 
-                <Accordion.Item eventKey={i}>
+                <Accordion.Item key={i} eventKey={i}>
                     <Accordion.Header>Offer {i+1}</Accordion.Header>
                     <Accordion.Body>
                     <div className='Offer'>
@@ -18,7 +18,9 @@ export function SimpleOffer(props){
                     <span>
                     <Table bordered hover>
                     <thead>
+                    <tr>
                     <th>Break Quantity</th><th>Price</th>
+                    </tr>
                     </thead>
                     <tbody>
                     {offer.Pricing.map((bracket, j) => 
@@ -39,5 +41,37 @@ export function SimpleOffer(props){
                 
             )}
         </Accordion>
+    );
+}
+
+export function SimpleOffer2(props){
+    return (
+        <>
+        {props.offers.map((offer, i) => 
+                <div className='Offer'>
+                <span>
+                    {'Quantity Available: '+offer.Quantity.Available}
+                </span>
+                <span>
+                <Table bordered hover>
+                <thead>
+                <tr><th>Break Quantity</th><th>Price</th></tr>
+                </thead>
+                <tbody>
+                {offer.Pricing.map((bracket, j) => 
+                    <tr key={j}>
+                        <td>{bracket.BreakQuantity}</td>
+                        <td>{bracket.UnitPrice}</td>
+                    </tr>
+                )}
+                </tbody>
+                </Table>
+                </span>
+                <span>
+                    {'Lead Time: '+offer.LeadTime}
+                </span>
+                </div>
+            )}
+        </>
     );
 }

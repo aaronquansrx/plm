@@ -5,7 +5,7 @@ import {ExcelDisplayTable, CheckboxRowCustomColumnTable} from './Tables';
 
 const tableHeaders = [
     {Header:'_remove', accessor: '_'},
-    {Header:'Custom', accessor: 'custom'}, {Header:'Manufacturer Part Number', accessor: 'MPN'}, 
+    {Header:'Custom', accessor: 'custom'}, {Header:'Manufacturer Part Number', accessor: 'mpn'}, 
     {Header:'Manufacturer', accessor: 'manufacturer'}, {Header:'Quantity', accessor: 'quantity'}
 ];
 const columnOptions = tableHeaders.map((obj) => obj.Header);
@@ -25,6 +25,8 @@ function BOMEditInterface(props){
         columnAttributes: columnAttrs
     });
     console.log(columnAttrs);
+
+    const [columnAttributes, setColumnAttributes] = useState([]);
 
     const [editState, setEditState] = useState(0);
     console.log(props.bom);
@@ -65,13 +67,20 @@ function BOMEditInterface(props){
                     //display order
                     //list of obj (bom data)
                 });
+                const attrs = editTableState.columnAttributes.reduce((arr, attr) => {
+                    if(attr !== tableHeaders[0].Header){
+                        arr.push({Header: attr, accessor: headerToAccessor[attr]});
+                    }
+                    return arr;
+                }, []);
                 editedRowsBOM.unshift(editTableState['columnAttributes']);
                 //todo map column field to index
                 setEditedSheet(editedRowsBOM);
                 setFormattedSheet(editedBOM);
+                setColumnAttributes(attrs);
                 break;
             case 1:
-                props.onFinishEdit(formattedSheet);
+                props.onFinishEdit(formattedSheet, columnAttributes);
                 //props.onBOMUpload(formattedSheet, tableHeaders); //change 2nd prop
                 break;
             default:
