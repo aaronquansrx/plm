@@ -77,7 +77,7 @@ function TableHeader(props){
     return(
         <tr>
             {props.array.map((str, i) =>
-                str != "_remove" &&
+                str !== "_remove" &&
                 <th key={i}>{str}</th>
                 
             )}
@@ -104,7 +104,7 @@ export function JsonArrayDisplayTable(props){
                 {props.jsonArray.map((row, i) => 
                     <tr key={i}>
                     {props.headings.map((header, j) => 
-                        header != "_remove" &&
+                        header !== "_remove" &&
                         <td key={j}>{row[header]}</td>
                         
                     )}

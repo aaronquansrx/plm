@@ -17,8 +17,12 @@ const headerToAccessor = tableHeaders.reduce(function(map, obj) {
     return map;
 }, {});
 
-const apis = [{Header: 'Future Electronics', accessor: 'futureelectronics'}, 
-{Header: 'Digikey', accessor: 'digikey'}];
+const apis = [
+    {Header: 'Future Electronics', accessor: 'futureelectronics'}, 
+    {Header: 'Digikey', accessor: 'digikey'},
+    {Header: 'Mouser', accessor: 'mouser'},
+    {Header: 'Element14', accessor: 'element14'}
+];
 
 
 function BOMInterface(props){
@@ -49,6 +53,7 @@ function BOMInterface(props){
         setInterfaceState(state);
         setInitialBOMEdit(bom);
     }
+    //renders the body of interface depending on state
     function renderInterfaceState(){
         switch(interfaceState){
             case 0:
@@ -59,6 +64,13 @@ function BOMInterface(props){
                 return <BOMTool BOMData={BOMData} changeState={changeState}/>;
             default:
                 return "Unknown interface state";
+        }
+    }
+
+    //renders the header for each interface mode
+    function renderInterfaceMode(){
+        switch(interfaceState){
+
         }
     }
     function autoFindMPN(bom){

@@ -57,7 +57,7 @@ function BOMEditInterface(props){
                     const BOMLine = {"_unnamed": []};
                     for(var i=0; i<line.length; i++){
                         const attribute = editTableState['columnAttributes'][i];
-                        if(attribute != columnOptions[0]){
+                        if(attribute !== columnOptions[0]){
                             BOMLine[headerToAccessor[attribute]] = line[i];
                         }else{
                             BOMLine["_unnamed"].push(line[i]);
@@ -112,11 +112,11 @@ function BOMEditInterface(props){
     }
     return(
         <>
-        {renderInterfaceState()}
         <button onClick={handleUpload}>Upload BOM</button>
         {editState !== 0 && <button onClick={handleBack}>Back</button>}
         
         <button onClick={handleConfirm}>Confirm</button>
+        {renderInterfaceState()}
         </>
     );
 }
