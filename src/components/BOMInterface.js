@@ -4,6 +4,11 @@ import BOMFileUploadInterface from './BOMFileUploadInterface';
 import BOMEditInterface from './BOMEditInterface';
 import BOMTool from './BOMTool';
 
+
+import {UploadIcon, EditIcon, SheetIcon} from './Icons';
+
+import './../css/temp.css';
+
 const interfaceStateModes = ["upload", "edit", "main"];
 
 const tableHeaders = [
@@ -24,31 +29,71 @@ const apis = [
     {Header: 'Element14', accessor: 'element14'}
 ];
 
-
 function BOMInterface(props){
-    const [uploadedBOM, setUploadedBOM] = useState(null); // bom uploaded from file upload interface
-    const [BOMData, setBOMData] = useState();
+    const [uploadedBOM, setUploadedBOM] = useState([]); // bom uploaded from file upload interface
+    const [BOMData, setBOMData] = useState({bom: [], bomAttrs: [], apis: []});
     //const [BOMColumnFields, setBOMColumnFields] = useState(); 
     const [interfaceState, setInterfaceState] = useState(0) // 0: upload, 1: main
     //const [initialUploadState, setInitialUploadState] = useState(0);
     const [initialBOMEdit, setInitialBOMEdit] = useState([]); //BOM initial input when editing BOM
-    function handleUploadedBOM(bom, state=1){
+    function handleBOMUpload(bom, options){
         //assume first col is MPN
         setUploadedBOM(bom);
-        const autofind = autoFindMPN(bom);
-        if(autofind.found){
-            console.log('found mpn');
-            setBOMData({bom: autofind.bom, headers: autofind.headers.concat(apis)});
-            setInterfaceState(2);
+        if(options.autofind){
+            const autofind = autoFindMPN(bom);
+            if(autofind.found){
+                console.log('found mpn');
+                //const hs = autofind.headers.concat(apis);
+                const hs = autofind.headers
+                setBOMData({bom: autofind.bom, bomAttrs: autofind.headers, apis: apis});
+                setInterfaceState(2);
+            }else{
+                setInterfaceState(1);
+            }
         }else{
-            setInterfaceState(state);
+            setInterfaceState(1);
         }
     };
+    function autoFindMPN(bom, options={}){
+        const searchMPN = ['mpn', 'manufacturing part number'];
+        const searchQuantity = ['q', 'quantity'];
+        if(bom.length > 0){
+            const mpnCol = bom[0].findIndex((val) => {
+                return (typeof val === 'string') 
+                ? searchMPN.includes(val.toLowerCase()) 
+                : false;
+            });
+            const qCol = bom[0].findIndex((val) => {
+                return (typeof val === 'string') 
+                ? searchQuantity.includes(val.toLowerCase()) 
+                : false;
+            });
+            //const found = {mpn: mpnCol, quantity: qCol};
+            if(mpnCol !== -1){
+                const headers = [{Header: 'MPN', accessor: 'mpn'}];
+                if(qCol !== -1) headers.push({Header:'Quantity', accessor: 'quantity'});
+                bom.shift();
+                const bomData = bom.map((line) => {
+                    const data = {
+                        mpn: line[mpnCol]
+                    };
+                    if(qCol !== -1){
+                        data.quantity = line[qCol]
+                    }
+                    return data;
+                });
+                return {found: true, bom: bomData, headers: headers};
+            }
+        }
+        return {found: false};
+    }
     function handleEditBOM(bom, headers){
-        setBOMData({bom: bom, headers: headers.concat(apis)});
+        //const hs = headers.concat(apis);
+        const hs = headers;
+        setBOMData({bom: bom, bomAttrs: hs, apis:apis});
         setInterfaceState(2);
     }
-    function changeState(state, bom){
+    function changeState(state, bom=[]){
         //setInitialUploadState(1);
         setInterfaceState(state);
         setInitialBOMEdit(bom);
@@ -57,7 +102,7 @@ function BOMInterface(props){
     function renderInterfaceState(){
         switch(interfaceState){
             case 0:
-                return <BOMFileUploadInterface onBOMUpload={handleUploadedBOM}/>;
+                return <BOMFileUploadInterface onBOMUpload={handleBOMUpload}/>;
             case 1:
                 return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState}/>
             case 2:
@@ -66,32 +111,31 @@ function BOMInterface(props){
                 return "Unknown interface state";
         }
     }
-
-    //renders the header for each interface mode
-    function renderInterfaceMode(){
-        switch(interfaceState){
-
+    function handleNavChange(state, bom=[]){
+        return function(){
+            changeState(state, bom);
         }
     }
-    function autoFindMPN(bom){
-        const search = ['mpn', 'manufacturing part number'];
-        if(bom.length > 0){
-            const col = bom[0].findIndex((val) => search.includes(val.toLowerCase()));
-            if(col !== -1){
-                const bomData = bom.map((line) => {
-                    return {
-                        mpn: line[col]
-                    };
-                });
-                return {found: true, bom: bomData, headers: [{Header: 'MPN', accessor: 'mpn'}]};
-            }
-        }
-        return {found: false};
+
+    //renders the header for each interface mode
+    function renderNavigation(){
+        const size = 35;
+        return(
+            <div className='IconNav'>
+            <UploadIcon onClick={handleNavChange(0)} 
+            selected={interfaceState===0} size={size}/>
+            <EditIcon onClick={handleNavChange(1, [])} 
+            selected={interfaceState===1} size={size}/>
+            <SheetIcon onClick={handleNavChange(2)} 
+            selected={interfaceState===2} size={size}/>
+            </div>
+        );
     }
     return ( 
         <div>
-        {interfaceStateModes[interfaceState]}
-        {renderInterfaceState()}
+            {renderNavigation()}
+        {/*interfaceStateModes[interfaceState]*/}
+            {renderInterfaceState()}
         </div>
     );
 }

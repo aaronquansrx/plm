@@ -1,0 +1,16 @@
+.Ver {
+    display: flex;
+    flex-direction: column;
+}
+
+.Scroll {
+    overflow: auto;
+}
+
+.IconNav {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    padding:5px;
+
+}

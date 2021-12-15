@@ -1,0 +1,14 @@
+.CellHeading {
+    font-weight: bold;
+}
+
+.PricingTable {
+    font-size: 12px;
+}
+
+td.PricingCell {
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
