@@ -168,6 +168,7 @@ function BOMTool(props){
             setBomdata(ubom);
         }
         let ubom = bomdata;
+        let apiBomData = Array(ubom.length).fill({});
         function callApi(line, i, n, api_name=null){
             const mpn = line.mpn;
             if(n <= 2){
@@ -178,8 +179,7 @@ function BOMTool(props){
                     method: 'get',
                     url: callUrl
                 }).then(response => {
-                    console.log(response.data);
-                    const apisOutput = {
+                    const apisOutput = api_name ? {}:{
                         maxOffers: 0
                     }
                     let maxOffers = 0;
@@ -208,7 +208,8 @@ function BOMTool(props){
                         }else if(apiresponse.status === "error"){
                             if(apiresponse.code === 400 || apiresponse.code === 500 || 
                             apiresponse.code === 403){
-                                setTimeout(callApi(line, i, n+1, api), 1000);
+                                console.log('timeout '+line.mpn+' api: '+api);
+                                setTimeout(() => {callApi(line, i, n+1, api)}, 1000);
                             }
                         }
                         /*
@@ -235,7 +236,13 @@ function BOMTool(props){
                         //console.log(i);
                         //updateBOMOffers(api, i, offerOutput, maxOffers);
                     }
+                    if(api_name!==null){
+                        if(maxOffers < ubom[i].maxOffers){
+                            maxOffers = ubom[i].maxOffers;
+                        }
+                    }
                     apisOutput['maxOffers'] = maxOffers;
+                    apiBomData[i] = apisOutput;
                     updateBOMOffers(i, apisOutput);
                 });
             }else if(api_name !== null){
@@ -246,6 +253,13 @@ function BOMTool(props){
         props.BOMData.bom.forEach((line, i) => {
             if('mpn' in line) callApi(line, i, 0);
         });
+
+        /*
+        const mergedData = ubom.map((line, i) => {
+            return {...line, ...apiBomData[i]};
+        });
+        //setBomdata(mergedData); doesnt work (calls before apis return)
+        */
     }
     function bestPrice(line, moq, pricing){
         const quantity = 'quantity' in line ? line.quantity : moq;

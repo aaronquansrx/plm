@@ -19,7 +19,6 @@ function BOMEditInterface(props){
     const [editedSheet, setEditedSheet] = useState(props.bom); // edited bom (display)
     const [formattedSheet, setFormattedSheet] = useState([]); // will be sent to BOMInterface (array of same object)
     //keeps track of the edited table state
-    console.log(props.bom);
     const columnAttrs = props.bom.length > 0 ? Array(props.bom[0].length).fill(columnOptions[0]) : [];
     const [editTableState, setEditTableState] = useState({
         checkedRows: Array(props.bom.length).fill(false), 
@@ -30,7 +29,6 @@ function BOMEditInterface(props){
     const [columnAttributes, setColumnAttributes] = useState([]);
 
     const [editState, setEditState] = useState(0);
-    console.log(props.bom);
     function handleEditCheckBox(i){
         setEditTableState(update(editTableState, {
             checkedRows: {[i]: 

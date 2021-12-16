@@ -79,7 +79,6 @@ export function BOMAPITableV2(props){
         prepareRow,
     } = useTable({columns, data});
     useEffect(() => {
-        console.log(props.data);
         const initShowPriceOffers = props.data.map((row) => {
             return {switches: Array(row.maxOffers).fill(false), ntrue: 0};
         });
