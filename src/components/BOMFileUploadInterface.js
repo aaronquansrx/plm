@@ -25,7 +25,7 @@ function BOMFileUploadInterface(props){
     const [uploadedSheet, setUploadedSheet] = useState([]);
     const [autoFind, setAutoFind] = useState(true);
     function handleDrop(workbook, file){
-        console.log(workbook);
+        //console.log(workbook);
         setFile(file);
         //Get first worksheet
         const wsname = workbook.SheetNames[0];

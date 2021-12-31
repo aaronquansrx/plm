@@ -24,7 +24,7 @@ function BOMEditInterface(props){
         checkedRows: Array(props.bom.length).fill(false), 
         columnAttributes: columnAttrs
     });
-    console.log(columnAttrs);
+    //console.log(columnAttrs);
 
     const [columnAttributes, setColumnAttributes] = useState([]);
 

@@ -7,6 +7,7 @@ import _ from 'lodash';
 
 import {JsonArrayDisplayTable, BOMAPITable, BOMAPITableV2} from './Tables'; 
 import {SimpleOffer} from './Offer';
+import BOMExporter from './BOMExporter';
 
 import { RefreshIcon } from './Icons';
 
@@ -183,33 +184,37 @@ function BOMTool(props){
                         maxOffers: 0
                     }
                     let maxOffers = 0;
-                    for(const [api, apiresponse] of Object.entries(response.data)){
-                        let offerOutput = {};
-                        if(apiresponse.status === "success"){
-                            const offers = apiresponse.data;
-                            if(offers.length > 0){
-                                const trimmedOffers = []
-                                for(const offer of offers){
-                                    trimmedOffers.push({
-                                        available: offer.Quantity.Available,
-                                        moq: offer.Quantity.MinimumOrder,
-                                        leadtime: offer.LeadTime,
-                                        pricing: offer.Pricing,
-                                        price: bestPrice(line, offer.Quantity.MinimumOrder, offer.Pricing)
-                                    });
+                    props.BOMData.apis.forEach((api_header) => {
+                        const api = api_header.accessor;
+                        if(api in response.data){
+                            const apiresponse = response.data[api];
+                            let offerOutput = {};
+                            if(apiresponse.status === "success"){
+                                const offers = apiresponse.offers;
+                                if(offers.length > 0){
+                                    const trimmedOffers = []
+                                    for(const offer of offers){
+                                        trimmedOffers.push({
+                                            available: offer.Quantity.Available,
+                                            moq: offer.Quantity.MinimumOrder,
+                                            leadtime: offer.LeadTime,
+                                            pricing: offer.Pricing,
+                                            price: bestPrice(line, offer.Quantity.MinimumOrder, offer.Pricing)
+                                        });
+                                    }
+                                    offerOutput = {
+                                        offers: trimmedOffers
+                                        //length: offers.length
+                                    }
+                                    maxOffers = Math.max(offers.length, maxOffers);
+                                    apisOutput[api] = offerOutput;
                                 }
-                                offerOutput = {
-                                    offers: trimmedOffers
-                                    //length: offers.length
+                            }else if(apiresponse.status === "error"){
+                                if(apiresponse.code === 400 || apiresponse.code === 500 || 
+                                apiresponse.code === 403){
+                                    console.log('timeout '+line.mpn+' api: '+api);
+                                    setTimeout(() => {callApi(line, i, n+1, api)}, 1000);
                                 }
-                                maxOffers = Math.max(offers.length, maxOffers);
-                                apisOutput[api] = offerOutput;
-                            }
-                        }else if(apiresponse.status === "error"){
-                            if(apiresponse.code === 400 || apiresponse.code === 500 || 
-                            apiresponse.code === 403){
-                                console.log('timeout '+line.mpn+' api: '+api);
-                                setTimeout(() => {callApi(line, i, n+1, api)}, 1000);
                             }
                         }
                         /*
@@ -235,7 +240,7 @@ function BOMTool(props){
                         */
                         //console.log(i);
                         //updateBOMOffers(api, i, offerOutput, maxOffers);
-                    }
+                    });
                     if(api_name!==null){
                         if(maxOffers < ubom[i].maxOffers){
                             maxOffers = ubom[i].maxOffers;
@@ -288,7 +293,10 @@ function BOMTool(props){
     }
     return (
         <div>
+            <div className='IconNav2'>
             <RefreshIcon onClick={handleReload} size={35}/>
+            <BOMExporter data={bomdata} apis={apiHeaders2} apiSubHeadings={apiAttrs}/>
+            </div>
             {/*<BOMAPITable data={bomdata} bomAttrs={bomAttrs}
              apis={props.BOMData.apis} apiHeaders={apiHeaders} apiAttrs={apiAttrs}/>
             {/*partLookupData.length > 0 && partLookupData[0]*/}

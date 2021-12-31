@@ -5,7 +5,9 @@ import {
     BsFileEarmarkDiff,
     BsFileEarmarkDiffFill,
     BsFileSpreadsheet,
-    BsFileSpreadsheetFill
+    BsFileSpreadsheetFill,
+
+    BsFileEarmarkExcel
 
 } from "react-icons/bs";
 
@@ -57,6 +59,15 @@ export function RefreshIcon(props){
     return (
         <div className='Icon' onClick={props.onClick}>
         <span><MdRefresh size={size}/></span>
+        </div>
+    );
+}
+
+export function ExportExcelIcon(props){
+    const size = props.size;
+    return (
+        <div className='Icon' onClick={props.onClick}>
+        <span><BsFileEarmarkExcel size={size}/></span>
         </div>
     );
 }
