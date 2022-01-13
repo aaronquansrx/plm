@@ -5,6 +5,7 @@ import { useTable, useGroupBy, useExpanded } from 'react-table'
 
 import Table from 'react-bootstrap/Table';
 import {SimpleDropdown} from './Dropdown';
+import {PartRow} from './Offer';
 
 import './../css/table.css';
 import './../css/temp.css';
@@ -20,11 +21,9 @@ export function BOMAPITable(props) {
         rows,
         prepareRow,
     } = useTable({columns, data});
-    //const prices = props.data.map
-    //console.log(props.data);
     return (
-    <Table {...getTableProps()} bordered>
-        <thead>
+    <Table {...getTableProps()}>
+        <thead className='TableHeader'>
             {headerGroups.map(headerGroup => (
             <tr {...headerGroup.getHeaderGroupProps()}>
                 {headerGroup.headers.map(column => (
@@ -44,12 +43,6 @@ export function BOMAPITable(props) {
                 <>
                 <tr {...row.getRowProps()}>
                 {row.cells.map(cell => {
-                    //let cellContent = cell.column.parent 
-                    //</tr>?  (<td {...cell.getCellProps()} rowSpan='2'> {cell.render('Cell')}</td>)
-                    //: (<td {...cell.getCellProps()}>
-                    //    {cell.render('Cell')}
-                    //</td>
-                    //);
                     return (
                     <td {...cell.getCellProps()} rowSpan={cell.column.parent ? 1 : 2}>
                         {cell.render('Cell')}
@@ -57,7 +50,6 @@ export function BOMAPITable(props) {
                     );
                 })}
                 </tr>
-                <ApiPriceRow cells={row.cells} colspan={props.apiAttrs.length}/>
                 </>
             )
             })}
@@ -100,42 +92,60 @@ export function BOMAPITableV2(props){
             }));
         }
     }
+    function handleChangeQuantity(rn){
+        return function(quantity){
+            //console.log(props);
+            props.onChangeQuantity(rn, quantity);
+            //console.log(rn);
+            //console.log(quantity);
+        }
+    }
     function isAPICell(i){
         return i >= props.bomAttrs.length;
     }
+     {/*
+        <tr key={'headers'+h}>
+            {headerGroup.headers.map((column, i) => (
+                isAPICell(i) && 
+                props.apiSubHeadings.map((heading, j) => (
+                    <th key={'head'+h+'col'+i+'sub'+j}>{heading.Header}</th>
+                ))
+            ))}
+        </tr>
+        */}
     function renderHeader(){
         return (
-        <thead>
-        {headerGroups.map(headerGroup => (
         <>
-        <tr {...headerGroup.getHeaderGroupProps()}>
+        {headerGroups.map((headerGroup,h) => (
+        <thead key={'group'+h} className='TableHeading'>
+        <tr key={'group'+h} {...headerGroup.getHeaderGroupProps()}>
             {headerGroup.headers.map((column, i) => (
-            <th {...column.getHeaderProps()} 
+            <th key={'head'+h+'col'+i} {...column.getHeaderProps()} 
             rowSpan={isAPICell(i) ? 1:2} 
             colSpan={isAPICell(i) ? props.apiSubHeadings.length:1}>
                 {column.render('Header')}
             </th>
             ))}
         </tr>
-        <tr>
+        <tr key={'headers'+h}>
             {headerGroup.headers.map((column, i) => (
                 isAPICell(i) && 
                 props.apiSubHeadings.map((heading, j) => (
-                    <th key={i*headerGroup.headers.length+j}>{heading.Header}</th>
+                    <th key={'head'+h+'col'+i+'sub'+j}>{heading.Header}</th>
                 ))
             ))}
         </tr>
-        </>
-        ))}
         </thead>
+        ))}
+        </>
         );
     }
-    function NoOffer(){
-        return <td colSpan={props.apiSubHeadings.length}>No Offer</td>;
+    function NoOffer(k){
+        return <td key={k} colSpan={props.apiSubHeadings.length}>No Offer</td>;
     }
     //console.log(data);
     return(
-        <Table {...getTableProps()} bordered>
+        <Table {...getTableProps()}>
         {renderHeader()}
         <tbody {...getTableBodyProps()}>
             {rows.map((row, rn) => {
@@ -143,149 +153,198 @@ export function BOMAPITableV2(props){
             const rowData = row.original;
             if(rowData.maxOffers > 0){
                 return (
-                    <>
-                    {[...Array(rowData.maxOffers)].map((e, i) => {
-                        const rowProps = i === 0 ? {...row.getRowProps()} : {}
-                        return(
-                        <>
-                        <tr {...rowProps}>
-                            {row.cells.map((cell,c) => {
-                                if(isAPICell(c)){
-                                    if(cell.column.id in rowData){
-                                        const offers = rowData[cell.column.id].offers;
-                                        if(i < offers.length){
-                                            const offer = offers[i];
-                                            return(
-                                                <>
-                                                {props.apiSubHeadings.map((heading, j) => 
-                                                    <td key={cell.column.id+props.apiSubHeadings.length*i+j}>
-                                                        {heading.accessor in offer && offer[heading.accessor]}
-                                                    </td>
-                                                )}
-                                                </>
-                                            );
-                                        }else{
-                                            //<td colSpan={props.apiSubHeadings.length}></td>
-                                            return <td colSpan={props.apiSubHeadings.length}></td>;
-                                        }
-                                    }else{
-                                        return NoOffer();
-                                    }
-                                }else{
-                                    if(cell.column.id === 'n'){
-                                        return(
-                                            <td {...cell.getCellProps()} className='Ver'>
-                                                <span>{i+1}</span>
-                                                <button onClick={handleShowPrice(rn, i)}>Prices</button>
-                                            </td>
-                                        );
-                                    }else{
-                                        if(i === 0){
-
-                                            return(
-                                            <td {...cell.getCellProps()} 
-                                            rowSpan={rowData.maxOffers+showPriceOffers[rn].ntrue}>
-                                                {cell.render('Cell')}
-                                            </td>
-                                            );
-                                        }
-                                    }
-                                }
-                            })}
-                        </tr>
-                        { showPriceOffers[rn].switches[i] &&
-                        <tr>
-                            {row.cells.map((cell,c) => {
-                                if(isAPICell(c)){
-                                    if(cell.column.id in rowData){
-                                        const offers = rowData[cell.column.id].offers;
-                                        if(i < offers.length){
-                                            const offer = offers[i];
-                                            //console.log(offer);
-                                            return(
-                                                <td colSpan={props.apiSubHeadings.length}>
-                                                    <PricingTable pricing={offer.pricing}/>
-                                                </td>
-                                            );
-                                        }else{
-                                            return <td colSpan={props.apiSubHeadings.length}></td>;
-                                        }
-                                    }else{
-                                        return <td colSpan={props.apiSubHeadings.length}></td>;
-                                    }
-                                }else if(cell.column.id === 'n'){
-                                    return <td className='CellHeading'>Price</td>;
-                                }
-                            })}
-                        </tr>
-                        }
-                        </>
-                        );
-                    })}
-                    </>
+                    <PartRow key={rn} row={row} bomAttrsLength={props.bomAttrs.length} 
+                    apiSubHeadings={props.apiSubHeadings}
+                    onChangeQuantity={handleChangeQuantity(rn)}/>
                 );
             }else{
                 return(
-                <tr {...row.getRowProps()}>
+                <tr key={rn} {...row.getRowProps()}>
                     {row.cells.map((cell,i) => {
+                        const k = 'row'+rn+'cell'+i;
                         if(isAPICell(i)){
-                            return NoOffer();
+                            return NoOffer(k);
                         }else{
                             //const maxOffers = rowData.maxOffers ? rowData.maxOffers : 0;
                             return (
-                            <td {...cell.getCellProps()}>
+                            <td key={k} {...cell.getCellProps()}>
                                 {cell.render('Cell')}
                             </td>
                             );
                         }
                     })}
-                </tr>  
+                </tr>
                 );
             }
-
-                /*
-                <tr {...row.getRowProps()}>
-                    {row.cells.map((cell,i) => {
-                        //console.log(cell);
-                        const maxOffers = cell.row.original.maxOffers;
-                        if(isAPICell(i)){
-                            if(cell.column.id in cell.row.original){
-                                const offers = cell.row.original[cell.column.id].offers;
-                                console.log(offers);
-                                return(
-                                    <>
-                                    {offers.map((offer, i) => {
-                                        return(
-                                            <>
-                                            {props.apiSubHeadings.map((heading, j) => 
-                                                <td key={offers.length*i+j}>{offer[heading.accessor]}</td>
-                                            )}
-                                            </>
-                                        );
-                                    })}
-                                    </>
-                                )
-                            }else{
-                                return <td colSpan={props.apiSubHeadings.length}></td>
-                            }
-                        }else{
-                            return (
-                            <td {...cell.getCellProps()} rowSpan={maxOffers}>
-                                {cell.render('Cell')}
-                            </td>
-                            )
-                        }
-                    })}
-                </tr>
-                */
-            //})
             })}
         </tbody>
         </Table>
     );
 }
 
-function PricingTable(props){
+export function BestPriceTable(props){
+    console.log(props.data);
+    //const headers = props.headers;
+    const headers = [
+        {
+            Header: 'MPN',
+            accessor: 'mpn'
+        },
+        {
+            Header: 'Total Price',
+            accessor: 'total_price',
+            Cell: (r) => r.value.toFixed(2)
+        },
+        {
+            Header: 'Quantity Buying',
+            accessor: 'quantity'
+        },
+        {
+            Header: 'Offers',
+            accessor: 'offers',
+            Cell: (r) => {
+                const offers = r.value;
+                //console.log(offers);
+                return (
+                    <div>
+                    {offers.map((offer,i) => {
+                        return(
+                        <div key={i}>
+                        <span>Api: {offer.api}</span><span> N: {offer.offerNum}</span>
+                        <span> Price: {offer.total.toFixed(2)}</span><span> Quantity: {offer.quantity}</span>
+                        <span> Per: {offer.per.toFixed(2)}</span>
+                        </div>
+                        );
+                    })}
+                    </div>
+                );
+            }
+        }
+    ];
+    const data = useMemo(() => props.data, [props.data]);
+    const columns = useMemo(() => headers, [props.headers]);
+    const {
+        getTableProps,
+        getTableBodyProps,
+        headerGroups,
+        rows,
+        prepareRow,
+    } = useTable({columns, data});
+    return (
+    <Table {...getTableProps()}>
+        <thead className='TableHeader'>
+            {headerGroups.map(headerGroup => (
+            <tr {...headerGroup.getHeaderGroupProps()}>
+                {headerGroup.headers.map(column => (
+                <th
+                    {...column.getHeaderProps()}
+                >
+                    {column.render('Header')}
+                </th>
+                ))}
+            </tr>
+            ))}
+        </thead>
+        <tbody {...getTableBodyProps()}>
+            {rows.map(row => {
+            prepareRow(row);
+            return (
+                <tr {...row.getRowProps()}>
+                {row.cells.map(cell => {
+                    return (
+                    <td {...cell.getCellProps()}>
+                        {cell.render('Cell')}
+                    </td>
+                    );
+                })}
+                </tr>
+            )
+            })}
+        </tbody>
+    </Table>
+    );
+}
+
+/*[...Array(rowData.maxOffers)].map((e, i) => {
+    const rk = 'row'+rn+'offer'+i;
+    const rowProps = i === 0 ? {...row.getRowProps()} : {}
+    return(
+    <>
+    <tr key={rk} {...rowProps} >
+        {row.cells.map((cell,c) => {
+            const k = 'cell'+cell.column.id+'offer'+i;
+            if(isAPICell(c)){
+                if(cell.column.id in rowData){
+                    const offers = rowData[cell.column.id].offers;
+                    if(i < offers.length){
+                        const offer = offers[i];
+                        return(
+                            <>
+                            {props.apiSubHeadings.map((heading, j) => 
+                                <td key={k+'heading'+j}>
+                                    {heading.accessor in offer && offer[heading.accessor]}
+                                </td>
+                            )}
+                            </>
+                        );
+                    }else{
+                        return <td key={k} colSpan={props.apiSubHeadings.length}></td>;
+                    }
+                }else{
+                    return NoOffer(k);
+                }
+            }else{
+                if(cell.column.id === 'n'){
+                    return(
+                        <td key={k} {...cell.getCellProps()} className='Ver'>
+                            <span>{i+1}</span>
+                            <button onClick={handleShowPrice(rn, i)}>Prices</button>
+                        </td>
+                    );
+                }else{
+                    if(i === 0){
+                        return(
+                        <td key={k} {...cell.getCellProps()} 
+                        rowSpan={rowData.maxOffers+showPriceOffers[rn].ntrue}>
+                            {cell.render('Cell')}
+                        </td>
+                        );
+                    }
+                }
+            }
+        })}
+    </tr>
+    { showPriceOffers[rn].switches[i] &&
+    <tr key={rk+'2'}>
+        {row.cells.map((cell,c) => {
+            if(isAPICell(c)){
+                if(cell.column.id in rowData){
+                    const offers = rowData[cell.column.id].offers;
+                    if(i < offers.length){
+                        const offer = offers[i];
+                        //console.log(offer);
+                        return(
+                            <td colSpan={props.apiSubHeadings.length}>
+                                <PricingTable pricing={offer.pricing}/>
+                            </td>
+                        );
+                    }else{
+                        return <td colSpan={props.apiSubHeadings.length}></td>;
+                    }
+                }else{
+                    return <td colSpan={props.apiSubHeadings.length}></td>;
+                }
+            }else if(cell.column.id === 'n'){
+                return <td className='CellHeading'>Price</td>;
+            }
+        })}
+    </tr>
+    }
+    </>
+    );
+})*/
+
+export function PricingTable(props){
     //console.log(props.pricing);
     return(
     <>

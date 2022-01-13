@@ -6,7 +6,9 @@ import {ExcelDisplayTable, CheckboxRowCustomColumnTable} from './Tables';
 const tableHeaders = [
     {Header:'_remove', accessor: '_'},
     {Header:'Custom', accessor: 'custom'}, {Header:'Manufacturer Part Number', accessor: 'mpn'}, 
-    {Header:'Manufacturer', accessor: 'manufacturer'}, {Header:'Quantity', accessor: 'quantity'}
+    {Header:'Manufacturer', accessor: 'manufacturer'}, {Header:'Quantity', accessor: 'quantity'},
+    {Header: 'Internal Part Number', accessor: 'ipn'}, {Header: 'Customer Part Number', accessor: 'cpn'},
+    {Header: 'Description', accessor: 'description'}, {Header: 'Reference Designator', accessor: 'reference'}
 ];
 const columnOptions = tableHeaders.map((obj) => obj.Header);
 const headerToAccessor = tableHeaders.reduce(function(map, obj) {
@@ -46,7 +48,7 @@ function BOMEditInterface(props){
     function handleConfirm(){
         switch(editState){
             case 0: // editBOM based on the editTableState
-                console.log(editTableState);
+                //console.log(editTableState);
                 const editedRowsBOM = [];
                 for(var i=0; i<originalSheet.length; i++){
                     if(!editTableState['checkedRows'][i]) editedRowsBOM.push(originalSheet[i]);
@@ -99,7 +101,7 @@ function BOMEditInterface(props){
         switch(editState){
             case 0:
                 return <div>
-                Remove Selected Lines
+                {/*Remove Selected Lines*/}
                 <CheckboxRowCustomColumnTable sheet={originalSheet} columnOptions={columnOptions}
                 checkedRows={editTableState["checkedRows"]} onCheckBox={handleEditCheckBox} 
                 columnAttributes={editTableState["columnAttributes"]} onColumnChange={handleEditAttributeChange}/>
@@ -112,10 +114,11 @@ function BOMEditInterface(props){
     }
     return(
         <>
-        {/*<button onClick={handleUpload}>Upload BOM</button>*/}
+        <div>
         {editState !== 0 && <button onClick={handleBack}>Back</button>}
         
         <button onClick={handleConfirm}>Confirm</button>
+        </div>
         {renderInterfaceState()}
         </>
     );

@@ -5,7 +5,6 @@ import XLSX from 'xlsx';
 
 function BOMExporter(props){
     const [showModal, setShowModal] = useState(false);
-    //console.log(props.data);
     function handleExport(fn){
         const formatted = formatBOMData();
         const sheet = XLSX.utils.json_to_sheet(formatted);

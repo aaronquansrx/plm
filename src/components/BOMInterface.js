@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 
 import BOMFileUploadInterface from './BOMFileUploadInterface';
 import BOMEditInterface from './BOMEditInterface';
@@ -8,6 +8,9 @@ import BOMTool from './BOMTool';
 import {UploadIcon, EditIcon, SheetIcon} from './Icons';
 
 import './../css/temp.css';
+import axios from 'axios';
+
+const server_url = process.env.REACT_APP_SERVER_URL;
 
 const interfaceStateModes = ["upload", "edit", "main"];
 
@@ -37,6 +40,21 @@ function BOMInterface(props){
     const [interfaceState, setInterfaceState] = useState(0) // 0: upload, 1: main
     //const [initialUploadState, setInitialUploadState] = useState(0);
     const [initialBOMEdit, setInitialBOMEdit] = useState([]); //BOM initial input when editing BOM
+    const [image, setImage] = useState(null);
+
+    /*
+    useEffect(()=>{
+        axios({
+            method: 'get',
+            url: server_url+'api/image?name=digikeypricing.png'
+        }).then(response => {
+            const data = response.data;
+            if(data.found){
+                setImage(data.url);
+            }
+        })
+    })*/
+
     function handleBOMUpload(bom, options){
         //assume first col is MPN
         setUploadedBOM(bom);
@@ -122,6 +140,7 @@ function BOMInterface(props){
     function renderNavigation(){
         const size = 35;
         return(
+
             <div className='IconNav'>
             <UploadIcon onClick={handleNavChange(0)} 
             selected={interfaceState===0} size={size}/>
@@ -133,11 +152,17 @@ function BOMInterface(props){
         );
     }
     return ( 
-        <div>
+        <>
+
+            {/*image && 
+            <img src={image} height={200} width={200}
+            />*/}
+            <div className='FlexNormal'>
             {renderNavigation()}
+            </div>
         {/*interfaceStateModes[interfaceState]*/}
             {renderInterfaceState()}
-        </div>
+        </>
     );
 }
 

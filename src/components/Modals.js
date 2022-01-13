@@ -30,3 +30,30 @@ export function ExportModal(props){
     </Modal>
     )
 }
+
+export function FeedbackModal(props){
+    return (
+        <Modal>
+            
+        </Modal>
+    )
+}
+
+export function UpdateInformationModal(props){
+    const handleClose = () => props.hideAction();
+    return(
+        <Modal show={props.show} onHide={handleClose}>
+        <Modal.Header closeButton>
+            <Modal.Title>Export Excel</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+            Woo
+        </Modal.Body>
+
+        <Modal.Footer>
+            <Button variant="secondary" onClick={handleClose}>Close</Button>
+        </Modal.Footer>
+        </Modal>
+    )
+}
