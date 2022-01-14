@@ -620,7 +620,7 @@ function BOMTool(props){
             {/*<BOMAPITable data={bomdata} bomAttrs={bomAttrs}
              apis={props.BOMData.apis} apiHeaders={apiHeaders} apiAttrs={apiAttrs}/>
             {/*partLookupData.length > 0 && partLookupData[0]*/}
-            {<button onClick={test}> tb</button>}
+            {/*<button onClick={test}> tb</button>*/}
             <div className='MainTable'>
             {displayTableView()}
             </div>
