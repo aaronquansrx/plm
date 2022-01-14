@@ -8,6 +8,7 @@ import _, { set } from 'lodash';
 import {JsonArrayDisplayTable, BOMAPITable, BOMAPITableV2, BestPriceTable} from './Tables'; 
 import {SimpleOffer} from './Offer';
 import {SimpleProgressBar} from './Progress';
+import {CheckBoxModal} from './Modals';
 import BOMExporter from './BOMExporter';
 
 import { RefreshIcon } from './Icons';
@@ -79,6 +80,12 @@ function BOMTool(props){
     const [showProgress, setShowProgress] = useState(false);
     const [bestPriceData, setBestPriceData] = useState(null);
     const [tableView, setTableView] = useState('default');
+
+    const [apiCheckBoxes, setApiCheckBoxes] = useState(Array(props.BOMData.bom.length).fill(apis.map((api) => {
+        return {name: api.accessor, checked: true};
+    })));
+    const [checkBoxLineIndex, setCheckBoxLineIndex] = useState(0);
+    const [showApiLineModal, setShowApiLineModal] = useState(false);
     //console.log(process.env.REACT_APP_SERVER_URL);
     
     useEffect(() => {
@@ -90,7 +97,9 @@ function BOMTool(props){
             map[api] = null;
             return map;
         }, {}));*/
-        
+        setBomApiFinished(false);
+        setBomApiProgress(Array(numParts).fill(null));
+        setShowProgress(0);
         const controller = new AbortController();
         callApis(controller);
 
@@ -442,7 +451,7 @@ function BOMTool(props){
         setBestPriceData(bestPrices);
     }
     function bestPriceLine(line, excluded_apis=[]){
-        const quantity = line.quantity;
+        const quantity = line.quantity ? line.quantity : 0;
         const apiOffers = apis.reduce((offerList,api) => {
             if(api.accessor in line){
                 line[api.accessor].offers.forEach((offer, i) => {
@@ -506,11 +515,11 @@ function BOMTool(props){
             if(offers.length > 0){
                 const minEff = offers.reduce((e, o) => {
                     const qRem = quantityRemaining - o.quantity;
-                    const qUsed = quantityUsed + o.quantity;
+                    const qUsed = quantityUsed + o.quantity > quantity ? quantity : quantityUsed + o.quantity;
                     const used = [...offersUsed];
                     used.push({'api': o.api, 'offerNum': o.offerNum});
                     //console.log(offersUsed);
-                    const usingO = algo(qRem, qUsed, used).concat(o);
+                    const usingO = [o].concat(algo(qRem, qUsed, used));
                     const totalPrice = usingO.reduce((p, o) => {
                         return p+o.total;
                     }, 0);
@@ -547,25 +556,19 @@ function BOMTool(props){
         switch(tableView){
             case 'default':
                 v = <BOMAPITableV2 data={bomdata} bomAttrs={bomAttrs} apis={apiHeaders2} apiSubHeadings={apiAttrs}
-                onChangeQuantity={handleChangeQuantity}/>;
+                onChangeQuantity={handleChangeQuantity} onClickRow={handleShowApiModal}/>;
                 break;
             case 'lowest':
-                v = <BestPriceTable data={bestPriceData}/>
+                v = <>
+                <BestPriceResults data={bestPriceData}/>
+                <BestPriceTable data={bestPriceData}/>
+                </>
                 break;
             default:
-                v = <></>;
+                v = <>Lead Time algorithm not available in this version</>;
                 break;
         }
         return v;
-    }
-    function progressFinder(){
-        console.log(bomApiProgress);
-        const nfinished = bomApiProgress.reduce((n, api_list) => {
-            if(api_list !== null && api_list.length === 0) return n+1;
-            return n
-        }, 0);
-        const ratio = nfinished/numParts;
-        return ratio*100; 
     }
     function progressBar(){
         if(showProgress){
@@ -591,6 +594,18 @@ function BOMTool(props){
     }
     function test(){
         console.log(bomApiProgress);
+        console.log(bomdata);
+    }
+    function handleShowApiModal(row){
+        console.log(row);
+        setCheckBoxLineIndex(row);
+        setShowApiLineModal(true);
+    }
+    function handleLineApisSubmit(){
+        
+    }
+    function hideLineApisModal(){
+        setShowApiLineModal(false);
     }
     //<BOMAPITableV2 data={bomdata} bomAttrs={bomAttrs} apis={apiHeaders2} apiSubHeadings={apiAttrs}
     //onChangeQuantity={handleChangeQuantity}/>
@@ -599,11 +614,13 @@ function BOMTool(props){
             {/*<RefreshIcon onClick={handleReload} size={35}/>*/}
             <BOMToolInterfaceOptions data={bomdata} apiHeaders={apiHeaders2} apiSubHeadings={apiAttrs} 
             status={bomApiFinished} onPriceOptionsChange={handlePriceOptions}/>
+            {<CheckBoxModal show={showApiLineModal} boxes={apiCheckBoxes[checkBoxLineIndex]} 
+            hideAction={hideLineApisModal} submitAction={handleLineApisSubmit}/>}
             {progressBar()}
             {/*<BOMAPITable data={bomdata} bomAttrs={bomAttrs}
              apis={props.BOMData.apis} apiHeaders={apiHeaders} apiAttrs={apiAttrs}/>
             {/*partLookupData.length > 0 && partLookupData[0]*/}
-            {/*<button onClick={test}> tb</button>*/}
+            {<button onClick={test}> tb</button>}
             <div className='MainTable'>
             {displayTableView()}
             </div>
@@ -644,5 +661,14 @@ function PriceHighlightOptions(props){
             )}
         </div>
     );
+}
+
+function BestPriceResults(props){
+    const total = props.data.reduce((t, p) => p.total_price+t, 0);
+    return(
+        <div>
+        Total Price: {total}
+        </div>
+    )
 }
 export default BOMTool;

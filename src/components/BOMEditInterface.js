@@ -1,14 +1,18 @@
 import React, {useEffect, useState} from 'react';
 
 import update from 'immutability-helper';
-import {ExcelDisplayTable, CheckboxRowCustomColumnTable} from './Tables';
+import {ExcelDisplayTable, CheckboxRowCustomColumnTable, ReactTable, ChooseHeaderRowsTable} from './Tables';
+
+import Button from 'react-bootstrap/Button';
+
+import './../css/table.css';
 
 const tableHeaders = [
-    {Header:'_remove', accessor: '_'},
-    {Header:'Custom', accessor: 'custom'}, {Header:'Manufacturer Part Number', accessor: 'mpn'}, 
+    {Header:'_remove', accessor: '_'}, {Header:'Manufacturer Part Number', accessor: 'mpn'}, 
     {Header:'Manufacturer', accessor: 'manufacturer'}, {Header:'Quantity', accessor: 'quantity'},
     {Header: 'Internal Part Number', accessor: 'ipn'}, {Header: 'Customer Part Number', accessor: 'cpn'},
-    {Header: 'Description', accessor: 'description'}, {Header: 'Reference Designator', accessor: 'reference'}
+    {Header: 'Description', accessor: 'description'}, {Header: 'Reference Designator', accessor: 'reference'},
+    {Header:'Custom', accessor: 'custom'}
 ];
 const columnOptions = tableHeaders.map((obj) => obj.Header);
 const headerToAccessor = tableHeaders.reduce(function(map, obj) {
@@ -27,6 +31,7 @@ function BOMEditInterface(props){
         columnAttributes: columnAttrs
     });
     //console.log(columnAttrs);
+    const [editedHeaders, setEditedHeaders] = useState([]);
 
     const [columnAttributes, setColumnAttributes] = useState([]);
 
@@ -39,11 +44,26 @@ function BOMEditInterface(props){
         }));
     }
     function handleEditAttributeChange(i, value){
-        setEditTableState(update(editTableState, {
-            columnAttributes: {[i]: 
-                {$set: value}
+        const valueIndex = editTableState.columnAttributes.reduce((v, h, i) => {
+            if(h === value){
+                return i;
             }
-        }));
+            return v;
+        }, null);
+        if(valueIndex !== null){
+            setEditTableState(update(editTableState, {
+                columnAttributes: {
+                    [i]: {$set: value},
+                    [valueIndex]: {$set: columnOptions[0]}
+                }
+            }));
+        }else{
+            setEditTableState(update(editTableState, {
+                columnAttributes: {[i]: 
+                    {$set: value}
+                }
+            }));
+        }
     }
     function handleConfirm(){
         switch(editState){
@@ -79,6 +99,10 @@ function BOMEditInterface(props){
                 setEditedSheet(editedRowsBOM);
                 setFormattedSheet(editedBOM);
                 setColumnAttributes(attrs);
+                //console.log(editedRowsBOM);
+                //console.log(editedBOM);
+                //console.log(attrs);
+
                 break;
             case 1:
                 props.onFinishEdit(formattedSheet, columnAttributes);
@@ -100,26 +124,35 @@ function BOMEditInterface(props){
     function renderInterfaceState(){
         switch(editState){
             case 0:
-                return <div>
+                return(
+                <div>
                 {/*Remove Selected Lines*/}
-                <CheckboxRowCustomColumnTable sheet={originalSheet} columnOptions={columnOptions}
+                {<CheckboxRowCustomColumnTable sheet={originalSheet} columnOptions={columnOptions}
                 checkedRows={editTableState["checkedRows"]} onCheckBox={handleEditCheckBox} 
-                columnAttributes={editTableState["columnAttributes"]} onColumnChange={handleEditAttributeChange}/>
-                </div>;
+                columnAttributes={editTableState["columnAttributes"]} onColumnChange={handleEditAttributeChange}/>}
+                {/*<ChooseHeaderRowsTable sheet={originalSheet} headings={tableHeaders}/>*/}
+                </div>);
             case 1:
-                return <ExcelDisplayTable sheet={editedSheet}></ExcelDisplayTable>;
+                return( 
+                <ReactTable data={formattedSheet} headers={columnAttributes}/>
+                );
+                //return <ExcelDisplayTable sheet={editedSheet}></ExcelDisplayTable>;
             default:
                 return "Unknown interface state";
         }
     }
     return(
         <>
-        <div>
-        {editState !== 0 && <button onClick={handleBack}>Back</button>}
-        
-        <button onClick={handleConfirm}>Confirm</button>
+        <div className='FlexNormal'>
+            <div className='IconNav2'>
+                {editState !== 0 && <Button onClick={handleBack}>Back</Button>}
+                {' '}
+                <Button onClick={handleConfirm}>Confirm</Button>
+            </div>
         </div>
+        <div className='MainTable'>
         {renderInterfaceState()}
+        </div>
         </>
     );
 }

@@ -20,8 +20,16 @@ function BOMExporter(props){
     }
 
     function formatBOMData(){
+        const ignore = props.apis.map((api) => api.accessor);
+        ignore.push('maxOffers', '_unnamed'); 
         const formatted = props.data.map((line) => {
-            const outline = {'MPN': line.mpn};
+            //const outline = {'MPN': line.mpn, 'Quantity': line.quantity};
+            const outline = Object.entries(line).reduce((obj, [k,v]) => {
+                if(!ignore.includes(k)){
+                    obj[k] = v;
+                }
+                return obj;
+            }, {});
             props.apis.forEach((api) => {
                 if(api.accessor in line && line[api.accessor].offers.length > 0){
                     const offers = line[api.accessor].offers;

@@ -1,3 +1,4 @@
+import { values } from 'lodash';
 import React, {useState} from 'react';
 
 import XLSX from 'xlsx';
@@ -32,8 +33,17 @@ function BOMFileUploadInterface(props){
         const ws = workbook.Sheets[wsname];
         //Convert worksheet to array of arrays
         const data = XLSX.utils.sheet_to_json(ws, {header:1});
-        setUploadedSheet(data);
-        props.onBOMUpload(data, {autofind: autoFind}); //send straight to main bom
+        const passData = data.map(l => {
+            const line = [];
+            for(let i=0; i<l.length; i++){
+                const v = l[i] ? l[i] : '';
+                line.push(v);
+            }
+            return line;
+        });
+        //console.log(passData);
+        setUploadedSheet(passData);
+        props.onBOMUpload(passData, {autofind: autoFind}); //send straight to main bom
         //props.onBOMUpload(data, 1);
         
     }

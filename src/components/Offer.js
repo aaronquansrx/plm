@@ -96,7 +96,7 @@ export function PartRow(props){
             <OfferRow key={i} row={row} rowProps={rowProps} offerIndex={i}
             apiSubHeadings={apiSubHeadings} bomAttrsLength={props.bomAttrsLength}
             onShowPrice={handleShowOffersInc} numShowOffers={numShowOffers}
-            onChangeQuantity={props.onChangeQuantity}/>
+            onChangeQuantity={props.onChangeQuantity} onClickRow={props.onClickRow}/>
             );
         })}
         </>
@@ -128,6 +128,7 @@ function OfferRow(props){
     function handleQuantityClick(){
         //if(newQuantity === null) setNewQuantity(row.original.quantity);
         setSelectedQuantity(true);
+        //console.log('quant');
     }
     function handleOutsideQuantityClick(nq){
         return () => {
@@ -141,6 +142,10 @@ function OfferRow(props){
         //const s = handleOutsideQuantityClick(nq); //try usecallback
         //setQuantityFunction(s);
         //console.log(newQuantity);
+    }
+    function handleClickRow(){
+        //console.log(e);
+        props.onClickRow();
     }
     return (
     <>
@@ -175,12 +180,14 @@ function OfferRow(props){
                             <td key={k} {...cell.getCellProps()} 
                             rowSpan={maxOffers+props.numShowOffers} 
                             onMouseDown={handleQuantityClick}>
-                                {selectedQuantity ? 
+                                <input type='text' value={newQuantity} 
+                                    onChange={handleChangeQuantity} onBlur={handleOutsideQuantityClick(newQuantity)}/>
+                                {/*selectedQuantity ? 
                                 <OutsideAlerterVarFunction f={handleOutsideQuantityClick} q={newQuantity}>
-                                    <input autoFocus type='text' value={newQuantity} 
-                                    onChange={handleChangeQuantity}/>
+                                    <input type='text' value={newQuantity} 
+                                    onChange={handleChangeQuantity} onBlur={handleOutsideQuantityClick(newQuantity)}/>
                                 </OutsideAlerterVarFunction> :
-                                cell.render('Cell')
+                                cell.render('Cell')*/
                                 }
                             </td>
                         );
@@ -189,7 +196,7 @@ function OfferRow(props){
                     if(i === 0){
                         return(
                         <td key={k} {...cell.getCellProps()} 
-                        rowSpan={maxOffers+props.numShowOffers}>
+                        rowSpan={maxOffers+props.numShowOffers} onMouseDown={handleClickRow}>
                             {cell.render('Cell')}
                         </td>
                         );

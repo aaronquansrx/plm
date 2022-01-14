@@ -143,6 +143,11 @@ export function BOMAPITableV2(props){
     function NoOffer(k){
         return <td key={k} colSpan={props.apiSubHeadings.length}>No Offer</td>;
     }
+    function handleClickRow(row){
+        return function(){
+            props.onClickRow(row);
+        }
+    }
     //console.log(data);
     return(
         <Table {...getTableProps()}>
@@ -154,7 +159,7 @@ export function BOMAPITableV2(props){
             if(rowData.maxOffers > 0){
                 return (
                     <PartRow key={rn} row={row} bomAttrsLength={props.bomAttrs.length} 
-                    apiSubHeadings={props.apiSubHeadings}
+                    apiSubHeadings={props.apiSubHeadings} onClickRow={handleClickRow(rn)}
                     onChangeQuantity={handleChangeQuantity(rn)}/>
                 );
             }else{
@@ -451,6 +456,49 @@ export function ExcelDisplayTable(props){
     );
 }
 
+export function ReactTable(props){
+    const data = useMemo(() => props.data, [props.data]);
+    const columns = useMemo(() => props.headers, [props.headers]);
+    const {
+        getTableProps,
+        getTableBodyProps,
+        headerGroups,
+        rows,
+        prepareRow,
+    } = useTable({columns, data});
+    return(
+    <Table {...getTableProps()}>
+        <thead className='TableHeader'>
+            {headerGroups.map(headerGroup => (
+            <tr {...headerGroup.getHeaderGroupProps()}>
+                {headerGroup.headers.map(column => (
+                <th {...column.getHeaderProps()}>
+                    {column.render('Header')}
+                </th>
+                ))}
+            </tr>
+            ))}
+        </thead>
+        <tbody {...getTableBodyProps()}>
+            {rows.map(row => {
+            prepareRow(row);
+            return (
+                <tr {...row.getRowProps()}>
+                {row.cells.map(cell => {
+                    return (
+                    <td {...cell.getCellProps()}>
+                        {cell.render('Cell')}
+                    </td>
+                    );
+                })}
+                </tr>
+            )
+            })}
+        </tbody>
+    </Table>
+    );
+}
+
 function TableHeader(props){
     return(
         <tr>
@@ -590,8 +638,11 @@ export function CheckboxRowCustomColumnTable(props){
     </tr>;
     return (
         <Table bordered hover>
+            <thead className='TableHeading'>
+                {headerRow}
+            </thead>
             <tbody>
-            <PreRowPreColumnTableRows preRow={headerRow} preCol={checkCol} sheet={props.sheet}/>
+            <PreRowPreColumnTableRows preCol={checkCol} sheet={props.sheet}/>
             </tbody>
         </Table>
     );
@@ -618,5 +669,78 @@ function PreRowPreColumnTableRows(props){
         </tr>
     )}
     </>
+    );
+}
+
+export function ChooseHeaderRowsTable(props){
+    const firstHeadings = props.sheet && props.headings ? Array(props.sheet[0].length).fill(props.headings[0].Header) : [];
+    const [selectedRows, setSelectedRows] = useState(Array(props.sheet.length).fill(false));
+    const [selectedHeadings, setSelectedHeadings] = useState(firstHeadings);
+    const headers = props.headings.map((h) => h.Header);
+    function onDropdownChange(i){
+        return function(e){
+            //console.log(e);
+            const eIndex = selectedHeadings.reduce((v, h, i) => {
+                if(h === e){
+                    return i;
+                }
+                return v;
+            }, null);
+            if(eIndex !== null){
+                setSelectedHeadings(update(selectedHeadings, {
+                    [i]: {$set: e},
+                    [eIndex]: {$set: props.headings[0].Header}
+                }));
+            }else{
+                setSelectedHeadings(update(selectedHeadings, {
+                    [i]: {$set: e}
+                }));
+            }
+            //props.onColumnChange(i, item)
+        }
+    }
+    function onCheckBox(e){
+        setSelectedRows(update(selectedRows, {
+            [e]: {$set: !selectedRows[e]}
+        }))
+    }
+    const checkCol = (i) => <td><IdCheckbox i={i} checked={selectedRows[i]} onChange={onCheckBox}/></td>;
+    function headingsRow(){
+        return(
+        <tr>
+            <td></td>
+            {selectedHeadings.map((e, i) =>
+            <td key={i}>
+                <SimpleDropdown items={headers} 
+                selected={e} onChange={onDropdownChange(i)}/>
+            </td>
+            )
+            }
+        </tr>
+        );
+    }
+    function dataRows(){
+        return(
+        <>
+        {props.sheet.map((line, i) => 
+            <tr key={i}>
+                {checkCol(i)}
+                {line.map((val, j) =>
+                    <td key={j}>{val}</td>
+                )}
+            </tr>
+        )}
+        </>
+        );
+    }
+    return(
+    <Table bordered>
+        <thead className='TableHeading'>
+            {headingsRow()}
+        </thead>
+        <tbody>
+            {dataRows()}
+        </tbody>
+    </Table>
     );
 }

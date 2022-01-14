@@ -1,5 +1,5 @@
-import React, {useState} from 'react';
-
+import React, {useEffect, useState} from 'react';
+import update from 'immutability-helper';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 
@@ -53,6 +53,47 @@ export function UpdateInformationModal(props){
 
         <Modal.Footer>
             <Button variant="secondary" onClick={handleClose}>Close</Button>
+        </Modal.Footer>
+        </Modal>
+    )
+}
+
+export function CheckBoxModal(props){
+    const [checkBoxes, setCheckBoxes] = useState(props.boxes.map(b => { return {name: b.name, checked: b.checked};}));
+    useEffect(() => {
+        setCheckBoxes(props.boxes.map(b => { return {name: b.name, checked: b.checked};}));
+    }, []);
+    const handleClose = () => props.hideAction();
+    const handleSubmit = () => {
+        props.submitAction(checkBoxes);
+        props.hideAction();
+    };
+    function handleChange(i){
+        return function(){
+            setCheckBoxes(update(checkBoxes, {
+                [i]: {checked: {$set: !checkBoxes[i].checked}}
+            }));
+        }
+    }
+    return(
+        <Modal show={props.show} onHide={handleClose}>
+        <Modal.Header closeButton>
+            <Modal.Title>Activated APIs</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+            {checkBoxes.map((cb,i) => 
+            <div key={i}>
+                {cb.name}
+                <input className="form-check-input" type="checkbox" 
+                value={cb.name} checked={cb.checked} onChange={handleChange(i)}/>   
+            </div> 
+            )}
+        </Modal.Body>
+
+        <Modal.Footer>
+        <Button variant="secondary" onClick={handleClose}>Close</Button>
+        <Button variant="primary" onClick={handleSubmit}>Submit</Button>
         </Modal.Footer>
         </Modal>
     )
