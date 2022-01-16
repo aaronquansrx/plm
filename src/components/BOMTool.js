@@ -455,7 +455,7 @@ function BOMTool(props){
         switch(opt){
             case 'default':
                 break;
-            case 'lowest':
+            case 'prices':
                 bestApiPrice();
                 break;
             case 'lead':
@@ -478,7 +478,6 @@ function BOMTool(props){
                     return simpleBestPrice(line, activeApis);
                 });
                 setLowPriceHighlighted(lowestPrices);
-                set()
                 break;
         }
         setHighlightView(opt);
@@ -640,7 +639,7 @@ function BOMTool(props){
                 v = <BOMAPITableV2 data={bomdata} bomAttrs={bomAttrs} apis={apiHeaders2} apiSubHeadings={apiAttrs}
                 onChangeQuantity={handleChangeQuantity} onClickRow={handleShowApiModal} highlights={lowPriceHighlighted}/>;
                 break;
-            case 'lowest':
+            case 'prices':
                 v = <>
                 Algorithm currently bugged
                 <BestPriceResults data={bestPriceData}/>
@@ -787,7 +786,7 @@ function HighlightBest(props){
 
 function PriceHighlightOptions(props){
     const options = [{display: 'Default', value: 'default'}, 
-    {display: 'Lowest Price', value: 'lowest'}, {display: 'Lead Time', value: 'lead'}];
+    {display: 'Prices', value: 'prices'}, {display: 'Lead Time', value: 'lead'}];
     const [selectedOption, setSelectedOption] = useState('default');
     function handleOptionChange(event){
         //console.log(event);
