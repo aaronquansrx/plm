@@ -2,3 +2,15 @@
     display: flex;
     flex-direction: column;
 }
+
+.TextBox{
+    border: none;
+}
+
+td.NormalCell{
+    background: rgb(229, 231, 198);
+}
+
+td.HighlightedCell{
+    background: rgb(101, 255, 87);
+}

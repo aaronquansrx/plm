@@ -79,6 +79,53 @@ export function SimpleOffer2(props){
         </>
     );
 }
+
+export function EmptyOffer(props){
+    const row = props.row;
+    const rowData = row.original;
+    function isAPICell(n){
+        return n >= props.bomAttrsLength;
+    }
+    function NoOffer(k){
+        return <td key={k} colSpan={props.apiSubHeadings.length}>No Offer</td>;
+    }
+    const [newQuantity, setNewQuantity] = useState(row.original.quantity);
+    function handleOutsideQuantityClick(nq){
+        return () => {
+            props.onChangeQuantity(nq);
+        }
+    }
+    function handleChangeQuantity(e){
+        const nq = e.target.value;
+        setNewQuantity(nq);
+    }
+    return(
+    <tr {...row.getRowProps()}>
+        {row.cells.map((cell,i) => {
+            const k = i;
+            if(isAPICell(i)){
+                return NoOffer(k);
+            }else{
+                if(cell.column.id === 'quantity'){
+                    return(
+                        <td key={k} {...cell.getCellProps()} /*onMouseDown={handleQuantityClick}*/>
+                            <input className='TextBox' type='text' value={newQuantity} 
+                            onChange={handleChangeQuantity} onBlur={handleOutsideQuantityClick(newQuantity)}/>
+                        </td>
+                    );
+                }else{
+                    return (
+                        <td key={k} {...cell.getCellProps()}>
+                            {cell.render('Cell')}
+                        </td>
+                    );
+                }
+            }
+        })}
+    </tr>
+    );
+}
+
 export function PartRow(props){
     const row = props.row;
     const maxOffers = row.original.maxOffers;
@@ -91,17 +138,20 @@ export function PartRow(props){
         <>
         {[...Array(maxOffers)].map((e, i) => {
             //const offer = props.row;
+            const highlight = props.highlight && props.highlight.offerNum == i ? props.highlight.api : null;
             const rowProps = i === 0 ? {...row.getRowProps()} : {};
             return( 
             <OfferRow key={i} row={row} rowProps={rowProps} offerIndex={i}
             apiSubHeadings={apiSubHeadings} bomAttrsLength={props.bomAttrsLength}
             onShowPrice={handleShowOffersInc} numShowOffers={numShowOffers}
-            onChangeQuantity={props.onChangeQuantity} onClickRow={props.onClickRow}/>
+            onChangeQuantity={props.onChangeQuantity} onClickRow={props.onClickRow}
+            highlight={highlight}/>
             );
         })}
         </>
     )
 }
+
 function OfferRow(props){
     const row = props.row;
     const rowData = row.original;
@@ -154,11 +204,15 @@ function OfferRow(props){
             const k = 'cell'+cell.column.id+'offer'+i;
             if(isAPICell(c)){
                 if(cell.column.id in rowData){
-                    const offers = rowData[cell.column.id].offers;
+                    const api = cell.column.id;
+                    const highlight = props.highlight ? props.highlight === api : false;
+                    //const highlight = api == 'digikey';
+                    const offers = rowData[api].offers;
                     if(i < offers.length){
                         const offer = offers[i];
                         return(
-                            <SubHeadingAttrs key={k} k={k} offer={offer} apiSubHeadings={props.apiSubHeadings} offer={offer}/>
+                            <SubHeadingAttrs key={k} k={k} offer={offer} apiSubHeadings={props.apiSubHeadings} 
+                            offer={offer} highlight={highlight}/>
                         );
                     }else{
                         return <td key={k} colSpan={props.apiSubHeadings.length}></td>;
@@ -180,7 +234,7 @@ function OfferRow(props){
                             <td key={k} {...cell.getCellProps()} 
                             rowSpan={maxOffers+props.numShowOffers} 
                             onMouseDown={handleQuantityClick}>
-                                <input type='text' value={newQuantity} 
+                                <input className='TextBox' type='text' value={newQuantity} 
                                     onChange={handleChangeQuantity} onBlur={handleOutsideQuantityClick(newQuantity)}/>
                                 {/*selectedQuantity ? 
                                 <OutsideAlerterVarFunction f={handleOutsideQuantityClick} q={newQuantity}>
@@ -196,7 +250,7 @@ function OfferRow(props){
                     if(i === 0){
                         return(
                         <td key={k} {...cell.getCellProps()} 
-                        rowSpan={maxOffers+props.numShowOffers} onMouseDown={handleClickRow}>
+                        rowSpan={maxOffers+props.numShowOffers}>
                             {cell.render('Cell')}
                         </td>
                         );
@@ -233,16 +287,24 @@ function OfferRow(props){
     </>
     )
 }
+function EmptyOfferRow(props){
+    //offer without any 
+}
 
 function SubHeadingAttrs(props){
     const k = props.k;
     const offer = props.offer;
+    const highlight = props.highlight;
     return(
         <>
-        {props.apiSubHeadings.map((heading, j) => 
-            <td key={k+'heading'+j}>
+        {props.apiSubHeadings.map((heading, j) => {
+            const out = offer[heading.accessor];
+            const cn = highlight ? 'HighlightedCell': 'NormalCell';
+            return(<td key={k+'heading'+j} className={cn}>
                 {heading.accessor in offer && offer[heading.accessor]}
             </td>
+            );
+        }
         )}
         </>
     );

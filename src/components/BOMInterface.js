@@ -29,7 +29,7 @@ const apis = [
     {Header: 'Future Electronics', accessor: 'futureelectronics'}, 
     {Header: 'Digikey', accessor: 'digikey'},
     {Header: 'Mouser', accessor: 'mouser'},
-    //{Header: 'Element14', accessor: 'element14'},
+    {Header: 'Element14', accessor: 'element14'},
     {Header: 'Verical', accessor: 'verical'}
 ];
 

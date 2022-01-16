@@ -5,7 +5,8 @@ import { useTable, useGroupBy, useExpanded } from 'react-table'
 
 import Table from 'react-bootstrap/Table';
 import {SimpleDropdown} from './Dropdown';
-import {PartRow} from './Offer';
+import {PartRow, EmptyOffer} from './Offer';
+import {IdCheckbox} from './Checkbox';
 
 import './../css/table.css';
 import './../css/temp.css';
@@ -160,10 +161,12 @@ export function BOMAPITableV2(props){
                 return (
                     <PartRow key={rn} row={row} bomAttrsLength={props.bomAttrs.length} 
                     apiSubHeadings={props.apiSubHeadings} onClickRow={handleClickRow(rn)}
-                    onChangeQuantity={handleChangeQuantity(rn)}/>
+                    onChangeQuantity={handleChangeQuantity(rn)} highlight={props.highlights[rn]}/>
                 );
+            
             }else{
                 return(
+                    /*
                 <tr key={rn} {...row.getRowProps()}>
                     {row.cells.map((cell,i) => {
                         const k = 'row'+rn+'cell'+i;
@@ -178,7 +181,10 @@ export function BOMAPITableV2(props){
                             );
                         }
                     })}
-                </tr>
+                </tr>*/
+                <EmptyOffer key={rn} row={row} apiSubHeadings={props.apiSubHeadings}
+                bomAttrsLength={props.bomAttrs.length} onChangeQuantity={handleChangeQuantity(rn)}
+                />
                 );
             }
             })}
@@ -188,7 +194,7 @@ export function BOMAPITableV2(props){
 }
 
 export function BestPriceTable(props){
-    console.log(props.data);
+    //console.log(props.data);
     //const headers = props.headers;
     const headers = [
         {
@@ -269,85 +275,6 @@ export function BestPriceTable(props){
     </Table>
     );
 }
-
-/*[...Array(rowData.maxOffers)].map((e, i) => {
-    const rk = 'row'+rn+'offer'+i;
-    const rowProps = i === 0 ? {...row.getRowProps()} : {}
-    return(
-    <>
-    <tr key={rk} {...rowProps} >
-        {row.cells.map((cell,c) => {
-            const k = 'cell'+cell.column.id+'offer'+i;
-            if(isAPICell(c)){
-                if(cell.column.id in rowData){
-                    const offers = rowData[cell.column.id].offers;
-                    if(i < offers.length){
-                        const offer = offers[i];
-                        return(
-                            <>
-                            {props.apiSubHeadings.map((heading, j) => 
-                                <td key={k+'heading'+j}>
-                                    {heading.accessor in offer && offer[heading.accessor]}
-                                </td>
-                            )}
-                            </>
-                        );
-                    }else{
-                        return <td key={k} colSpan={props.apiSubHeadings.length}></td>;
-                    }
-                }else{
-                    return NoOffer(k);
-                }
-            }else{
-                if(cell.column.id === 'n'){
-                    return(
-                        <td key={k} {...cell.getCellProps()} className='Ver'>
-                            <span>{i+1}</span>
-                            <button onClick={handleShowPrice(rn, i)}>Prices</button>
-                        </td>
-                    );
-                }else{
-                    if(i === 0){
-                        return(
-                        <td key={k} {...cell.getCellProps()} 
-                        rowSpan={rowData.maxOffers+showPriceOffers[rn].ntrue}>
-                            {cell.render('Cell')}
-                        </td>
-                        );
-                    }
-                }
-            }
-        })}
-    </tr>
-    { showPriceOffers[rn].switches[i] &&
-    <tr key={rk+'2'}>
-        {row.cells.map((cell,c) => {
-            if(isAPICell(c)){
-                if(cell.column.id in rowData){
-                    const offers = rowData[cell.column.id].offers;
-                    if(i < offers.length){
-                        const offer = offers[i];
-                        //console.log(offer);
-                        return(
-                            <td colSpan={props.apiSubHeadings.length}>
-                                <PricingTable pricing={offer.pricing}/>
-                            </td>
-                        );
-                    }else{
-                        return <td colSpan={props.apiSubHeadings.length}></td>;
-                    }
-                }else{
-                    return <td colSpan={props.apiSubHeadings.length}></td>;
-                }
-            }else if(cell.column.id === 'n'){
-                return <td className='CellHeading'>Price</td>;
-            }
-        })}
-    </tr>
-    }
-    </>
-    );
-})*/
 
 export function PricingTable(props){
     //console.log(props.pricing);
@@ -543,15 +470,6 @@ export function JsonArrayDisplayTable(props){
 
 export function HeaderExcelDisplayTable(props){
     //const header = 
-}
-
-function IdCheckbox(props){
-    function handleChange(){
-        props.onChange(props.i);
-    }
-    return (
-        <input className="form-check-input" type="checkbox" value={props.key} checked={props.checked} onChange={handleChange}/>
-    );
 }
 
 export function CheckLinesExcelTable(props){

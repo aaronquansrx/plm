@@ -2,6 +2,9 @@ import React, {useEffect, useState} from 'react';
 import update from 'immutability-helper';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
+import { Accordion } from 'react-bootstrap';
+
+import { NamedCheckBox } from './Checkbox';
 
 export function ExportModal(props){
     const [fn, setFn] = useState('');
@@ -97,4 +100,76 @@ export function CheckBoxModal(props){
         </Modal.Footer>
         </Modal>
     )
+}
+
+export function BomApiCheckBoxModal(props){
+    const apis = props.apis;
+    const checkedBoxes = props.bomApiCheckBoxes;
+    const handleClose = () => props.hideAction();
+    const handleSubmit = () => {
+        props.submitAction();
+        props.hideAction();
+    };
+    return(
+        <Modal show={props.show} onHide={handleClose}>
+        <Modal.Header closeButton>
+            <Modal.Title>Activated APIs</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+            <BomApiCheckBoxAccordion data={props.data} apis={apis} 
+            checkedBoxes={checkedBoxes} onCheckChange={props.onCheckChange}/>
+            {/*props.data.map((line, ln) => 
+                //display lines of bom which open up
+                //list of check boxes for each api
+                <div>
+                    {line.mpn}
+                    {apis.map((cb,i) => 
+                    <div key={i}>
+                        {cb.Header}
+                        <input className="form-check-input" type="checkbox" value={cb.accessor} 
+                        checked={checkedBoxes[ln][cb.accessor]} onChange={handleChange(ln,cb.name)}/>   
+                    </div>
+                    )}
+                </div>
+            )*/}
+        </Modal.Body>
+
+        <Modal.Footer>
+        <Button variant="secondary" onClick={handleClose}>Close</Button>
+        <Button variant="primary" onClick={handleSubmit}>Submit</Button>
+        </Modal.Footer>
+        </Modal>
+    )
+}
+
+function BomApiCheckBoxAccordion(props){
+    const data = props.data;
+    const apis = props.apis;
+    const checkedBoxes = props.checkedBoxes;
+    function handleChange(ln, api_name){
+        return function(){
+            props.onCheckChange(ln, api_name);
+        }
+    }
+    /*<input className="form-check-input" type="checkbox" value={cb.accessor} 
+    checked={checkedBoxes[ln][cb.accessor]} onChange={handleChange(ln,cb.accessor)}/>
+    */
+    return(
+        <Accordion>
+            {data.map((line, ln) => 
+                <Accordion.Item key={ln} eventKey={ln}>
+                    <Accordion.Header>{line.mpn}</Accordion.Header>
+                    <Accordion.Body>
+                    {apis.map((cb,i) => 
+                    <div key={i}>
+                        <NamedCheckBox value={cb.accessor+ln} onChange={handleChange(ln,cb.accessor)} label={cb.Header}
+                        checked={checkedBoxes[ln][cb.accessor]}/>
+                    </div>
+                    )}
+                    </Accordion.Body>
+                </Accordion.Item>
+            )}
+        </Accordion>
+    );
 }

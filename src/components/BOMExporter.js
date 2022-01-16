@@ -45,7 +45,10 @@ function BOMExporter(props){
     }
     return (
         <>
-        <ExportExcelIcon size={32} onClick={handleShowExport} show={showModal}/>
+        <div className='Icon'  onClick={handleShowExport}>
+            <ExportExcelIcon size={32} show={showModal}/>
+            <span>Export</span>
+        </div>
         <ExportModal show={showModal} hideAction={handleHideExport} exportAction={handleExport}/>
         </>
     );

@@ -8,10 +8,12 @@ import _, { set } from 'lodash';
 import {JsonArrayDisplayTable, BOMAPITable, BOMAPITableV2, BestPriceTable} from './Tables'; 
 import {SimpleOffer} from './Offer';
 import {SimpleProgressBar} from './Progress';
-import {CheckBoxModal} from './Modals';
+import {CheckBoxModal, BomApiCheckBoxModal} from './Modals';
 import BOMExporter from './BOMExporter';
-
+import { NamedCheckBox } from './Checkbox';
 import { RefreshIcon } from './Icons';
+
+import Button from 'react-bootstrap/Button';
 
 import './../css/temp.css';
 import './../css/table.css';
@@ -81,12 +83,19 @@ function BOMTool(props){
     const [bestPriceData, setBestPriceData] = useState(null);
     const [tableView, setTableView] = useState('default');
 
-    const [apiCheckBoxes, setApiCheckBoxes] = useState(Array(props.BOMData.bom.length).fill(apis.map((api) => {
+    const [apiCheckBoxes, setApiCheckBoxes] = useState(Array(numParts).fill(apis.map((api) => {
         return {name: api.accessor, checked: true};
     })));
-    const [checkBoxLineIndex, setCheckBoxLineIndex] = useState(0);
     const [showApiLineModal, setShowApiLineModal] = useState(false);
-    //console.log(process.env.REACT_APP_SERVER_URL);
+    const [bomApiCheckBoxes, setBomApiCheckBoxes] = useState(Array(numParts).fill(
+        apis.reduce((obj,api) => {
+            obj[api.accessor] = true;
+            return obj;
+        }, {})
+    ));
+    
+    const [highlightView, setHighlightView] = useState('normal');
+    const [lowPriceHighlighted, setLowPriceHighlighted] = useState(Array(numParts).fill(null));
     
     useEffect(() => {
 
@@ -201,8 +210,21 @@ function BOMTool(props){
             });
             setBomdata(ubom);
         }
-        function updateApiProgress(i, ){
-
+        function updateApiProgress(i, apiErrorList){
+            apiProgress = update(apiProgress, {
+                [i]: {$set: apiErrorList}
+            });
+            if(apiErrorList.length === 0){
+                const apiFinished = apiProgress.reduce((b, apisn) => {
+                    if(apisn === null || apisn.length > 0){
+                        b = false;
+                    }
+                    return b;
+                }, true);
+                if(apiFinished){
+                    setBomApiFinished(apiFinished);
+                }
+            }
         }
         let apiBomData = Array(ubom.length).fill({});
         function callApi(line, i, n, controller, api_name=null, api_list=null){
@@ -224,6 +246,7 @@ function BOMTool(props){
                     let maxOffers = 0;
                     //console.log(response);
                     const hasError = [];
+                    console.log(response);
                     props.BOMData.apis.forEach((api_header) => {
                         const api = api_header.accessor;
                         if(api in response.data){
@@ -355,8 +378,15 @@ function BOMTool(props){
         //setBomdata(mergedData); doesnt work (calls before apis return)
         */
     }
-    function bestPriceDisplay(line, moq, pricing){
-        const quantity = 'quantity' in line ? line.quantity : moq;
+    function getPrice(pricing, quantity){
+        let n = 0;
+        while(n+1 < pricing.length && quantity >= pricing[n+1].BreakQuantity){
+            n+=1;
+        }
+        return quantity < pricing[n].BreakQuantity ? null : pricing[n].UnitPrice;
+    }
+    function bestPriceDisplay(line, moq, pricing, overQuantity=null){
+        const quantity = overQuantity ? overQuantity : 'quantity' in line ? line.quantity : moq;
         let n = 0; //quantity bracket index
         while(n+1 < pricing.length && quantity >= pricing[n+1].BreakQuantity){
             n+=1;
@@ -432,6 +462,26 @@ function BOMTool(props){
                 break;
         }
         setTableView(opt);
+    }
+    function handleHighlightOptions(opt, bom=null){
+        switch(opt){
+            case 'normal':
+                setLowPriceHighlighted(Array(numParts).fill(null));
+                break;
+            case 'lowest':
+                const b = bom ? bom : bomdata;
+                const lowestPrices = b.map((line, i) => {
+                    const activeApis = Object.entries(bomApiCheckBoxes[i]).reduce((arr, [k,v]) => {
+                        if(v) arr.push(k);
+                        return arr;
+                    }, []);
+                    return simpleBestPrice(line, activeApis);
+                });
+                setLowPriceHighlighted(lowestPrices);
+                set()
+                break;
+        }
+        setHighlightView(opt);
     }
     function bestApiPrice(){
         //console.log(bomdata);
@@ -551,15 +601,48 @@ function BOMTool(props){
 
         return purchases;
     }
+
+    function simpleBestPrice(line, api_list=[]){
+        //todo find the best price of line regardless of quantity
+        const quantity = line.quantity ? line.quantity : 0;
+        const pricing = line.pricing;
+        if(quantity < line.moq) quantity = line.moq;
+        const apiOffers = api_list.reduce((offerList,api) => {
+            if(api in line){
+                line[api].offers.forEach((offer, i) => {
+                    const price = getPrice(offer.pricing, quantity);
+                    offer['priceComp'] = price;
+                    offer['api'] = api;
+                    offer['offerNum'] = i;
+                    if(price) offerList.push(offer);
+                });
+            }
+            return offerList;
+        }, []);
+        console.log(apiOffers);
+        apiOffers.sort((a,b) => a.priceComp-b.priceComp);
+        let out = null;
+        if(apiOffers.length > 0){
+            //console.log(apiOffers[0]);
+            out = {api: apiOffers[0].api, offerNum: apiOffers[0].offerNum};
+        }
+        return out;
+        
+    }
+    function quantityBestPrice(line, api_list=[]){
+        const quantity = line.quantity ? line.quantity : 0;
+        //todo find best price considering quantity
+    }
     function displayTableView(){
         let v;
         switch(tableView){
             case 'default':
                 v = <BOMAPITableV2 data={bomdata} bomAttrs={bomAttrs} apis={apiHeaders2} apiSubHeadings={apiAttrs}
-                onChangeQuantity={handleChangeQuantity} onClickRow={handleShowApiModal}/>;
+                onChangeQuantity={handleChangeQuantity} onClickRow={handleShowApiModal} highlights={lowPriceHighlighted}/>;
                 break;
             case 'lowest':
                 v = <>
+                Algorithm currently bugged
                 <BestPriceResults data={bestPriceData}/>
                 <BestPriceTable data={bestPriceData}/>
                 </>
@@ -586,26 +669,58 @@ function BOMTool(props){
         return <></>;
     }
     function handleChangeQuantity(row, quantity){
-        const newBom = update(bomdata, {
-            [row]: {quantity: {$set: parseInt(quantity)}}
+        console.log(row);
+        const newQ = parseInt(quantity)
+        const r = bomdata[row];
+        const newRow = {...r};
+        apis.forEach((api) => {
+            if(api.accessor in newRow){
+                const offers = newRow[api.accessor].offers.map(offer => {
+                    offer.price = bestPriceDisplay(r, offer.moq, offer.pricing, newQ);
+                    return offer;
+                });
+            }
+            newRow.quantity = newQ;
         })
-        setBomdata(newBom);
+        const newBom = update(bomdata, {
+            [row]: {$set: newRow}
+                //quantity: {$set: newQ},
+                //price: {$set: bestPriceDisplay(r, r.moq, r.pricing, newQ)}
+        })
         bestPriceLine(newBom[row]);
+        setBomdata(newBom);
+        console.log(highlightView);
+        if(highlightView === 'lowest'){
+            handleHighlightOptions('lowest', newBom); // write one for individual line
+        }
     }
     function test(){
         console.log(bomApiProgress);
         console.log(bomdata);
     }
-    function handleShowApiModal(row){
-        console.log(row);
-        setCheckBoxLineIndex(row);
+    function handleShowApiModal(){
+        //console.log(row);
+        //setCheckBoxLineIndex(row);
         setShowApiLineModal(true);
     }
     function handleLineApisSubmit(){
-        
+        console.log(bomApiCheckBoxes);
+        console.log(highlightView);
+        if(highlightView === 'lowest'){
+            handleHighlightOptions('lowest');
+        }
     }
     function hideLineApisModal(){
         setShowApiLineModal(false);
+    }
+    function handleBomApiModal(ln, api_name){
+        //console.log(ln+' '+api_name);
+        const opp = !bomApiCheckBoxes[ln][api_name];
+        setBomApiCheckBoxes(
+            update(bomApiCheckBoxes, {
+                [ln]: {[api_name]: {$set: opp}}
+            })
+        );
     }
     //<BOMAPITableV2 data={bomdata} bomAttrs={bomAttrs} apis={apiHeaders2} apiSubHeadings={apiAttrs}
     //onChangeQuantity={handleChangeQuantity}/>
@@ -613,10 +728,14 @@ function BOMTool(props){
         <>  
             {/*<RefreshIcon onClick={handleReload} size={35}/>*/}
             <BOMToolInterfaceOptions data={bomdata} apiHeaders={apiHeaders2} apiSubHeadings={apiAttrs} 
-            status={bomApiFinished} onPriceOptionsChange={handlePriceOptions}/>
-            {<CheckBoxModal show={showApiLineModal} boxes={apiCheckBoxes[checkBoxLineIndex]} 
-            hideAction={hideLineApisModal} submitAction={handleLineApisSubmit}/>}
+            status={bomApiFinished} onPriceOptionsChange={handlePriceOptions}
+            onApiModal={handleShowApiModal} onHighlight={handleHighlightOptions} highlightView={highlightView}/>
+            {/*<CheckBoxModal show={showApiLineModal} boxes={apiCheckBoxes[checkBoxLineIndex]} 
+            hideAction={hideLineApisModal} submitAction={handleLineApisSubmit}/>*/}
             {progressBar()}
+            {<BomApiCheckBoxModal show={showApiLineModal} data={bomdata} bomApiCheckBoxes={bomApiCheckBoxes}
+            apis={apis} onCheckChange={handleBomApiModal} hideAction={hideLineApisModal} 
+            submitAction={handleLineApisSubmit}/>}
             {/*<BOMAPITable data={bomdata} bomAttrs={bomAttrs}
              apis={props.BOMData.apis} apiHeaders={apiHeaders} apiAttrs={apiAttrs}/>
             {/*partLookupData.length > 0 && partLookupData[0]*/}
@@ -630,15 +749,38 @@ function BOMTool(props){
 
 function BOMToolInterfaceOptions(props){
     function handlePriceOptionChange(opt){
-        props.onPriceOptionsChange(opt)
+        props.onPriceOptionsChange(opt);
     }
     return(
     <div className='FlexNormal'>
-        <div className='IconNav2'>
+        <div className='IconNav'>
             <BOMExporter data={props.data} apis={props.apiHeaders} apiSubHeadings={props.apiSubHeadings}/>
+            <Button onClick={props.onApiModal}>MPN APIs</Button>
+            <HighlightBest onChange={props.onHighlight} selected={props.highlightView}/>
             <PriceHighlightOptions onChange={handlePriceOptionChange} status={props.status}/>
         </div>
     </div>
+    );
+}
+
+function HighlightBest(props){
+    const options = [{display: 'None', value: 'normal'}, 
+    {display: 'Lowest Price', value: 'lowest'}];
+    //const [selectedOption, setSelectedOption] = useState('normal');
+    function handleOptionChange(event){
+        //setSelectedOption(event.target.value);
+        props.onChange(event.target.value);
+    }
+    return(
+        <div>
+            Highlight
+            {options.map((opt, i) => 
+            <span key={i}>
+                <NamedCheckBox onChange={handleOptionChange}
+                 value={opt.value} label={opt.display} checked={props.selected===opt.value}/>
+            </span>
+            )}
+        </div>
 
     );
 }
@@ -652,11 +794,14 @@ function PriceHighlightOptions(props){
         setSelectedOption(event.target.value);
         props.onChange(event.target.value);
     }
+    /*<input type="radio" disabled={!props.status} onChange={handleOptionChange} 
+    value={opt.value} checked={selectedOption===opt.value}/>{opt.display}*/
     return(
-        <div>
+        <div className='Radios'>
             {options.map((opt, i) => 
             <span key={i}>
-                <input type="radio" disabled={!props.status} onChange={handleOptionChange} value={opt.value} checked={selectedOption===opt.value}/>{opt.display}
+                <NamedCheckBox disabled={!props.status} onChange={handleOptionChange}
+                 value={opt.value} label={opt.display} checked={selectedOption===opt.value}/>
             </span>
             )}
         </div>
