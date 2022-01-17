@@ -259,7 +259,7 @@ function BOMTool(props){
                                 }));*/
                                 const offers = apiresponse.offers;
                                 if(offers.length > 0){
-                                    const trimmedOffers = []
+                                    const trimmedOffers = [];
                                     for(const offer of offers){
                                         trimmedOffers.push({
                                             available: offer.Quantity.Available,
@@ -270,8 +270,9 @@ function BOMTool(props){
                                             price: bestPriceDisplay(line, offer.Quantity.MinimumOrder, offer.Pricing)
                                         });
                                     }
+                                    const sortedOffers = sortOffers(trimmedOffers, line.quantity);
                                     offerOutput = {
-                                        offers: trimmedOffers
+                                        offers: sortedOffers //trimmedOffers
                                         //length: offers.length
                                     }
                                     maxOffers = Math.max(offers.length, maxOffers);
@@ -315,12 +316,12 @@ function BOMTool(props){
                     apiProgress = update(apiProgress, {
                         [i]: {$set: hasError}
                     });
-                    console.log(apiProgress);
+                    //console.log(apiProgress);
                     setBomApiProgress(apiProgress);
                     
                     if(hasError.length > 0){
                         //call apis again
-                        console.log(hasError);
+                        //console.log(hasError);
                     }else{
                         const apiFinished = apiProgress.reduce((b, apisn) => {
                             if(apisn === null || apisn.length > 0){
@@ -378,6 +379,22 @@ function BOMTool(props){
         //setBomdata(mergedData); doesnt work (calls before apis return)
         */
     }
+    function sortOffers(offers, quantity){
+        const offerPrices = offers.map((offer) => {
+            const q = quantity ? quantity : offers.moq;
+            return {
+                offer: offer,
+                price: getPrice(offer.pricing, q)
+            }
+        });
+        offerPrices.sort((a,b) => {
+            if(a.price == null) return 1;
+            if(b.price == null) return -1;
+            return a.price-b.price;
+        });
+        //console.log(offerPrices);
+        return offerPrices.map((op) => op.offer);
+    }
     function getPrice(pricing, quantity){
         let n = 0;
         while(n+1 < pricing.length && quantity >= pricing[n+1].BreakQuantity){
@@ -391,7 +408,7 @@ function BOMTool(props){
         while(n+1 < pricing.length && quantity >= pricing[n+1].BreakQuantity){
             n+=1;
         }
-        return quantity < pricing[n].BreakQuantity ? 'No Price' : pricing[n].UnitPrice;
+        return quantity < pricing[n].BreakQuantity ? pricing[0].UnitPrice : pricing[n].UnitPrice;
     }
     function effectivePrice(offer, quantity){
         const moq = offer.moq; const mpq = offer.mpq; 
@@ -668,30 +685,33 @@ function BOMTool(props){
         return <></>;
     }
     function handleChangeQuantity(row, quantity){
-        console.log(row);
         const newQ = parseInt(quantity)
         const r = bomdata[row];
         const newRow = {...r};
         apis.forEach((api) => {
             if(api.accessor in newRow){
                 const offers = newRow[api.accessor].offers.map(offer => {
-                    offer.price = bestPriceDisplay(r, offer.moq, offer.pricing, newQ);
+                    offer.price = bestPriceDisplay(newRow, offer.moq, offer.pricing, newQ);
                     return offer;
                 });
+                newRow[api.accessor].offers = sortOffers(offers, newQ);
             }
             newRow.quantity = newQ;
-        })
+        });
         const newBom = update(bomdata, {
             [row]: {$set: newRow}
                 //quantity: {$set: newQ},
                 //price: {$set: bestPriceDisplay(r, r.moq, r.pricing, newQ)}
         })
-        bestPriceLine(newBom[row]);
+        bestPriceLine(newRow);
         setBomdata(newBom);
         console.log(highlightView);
         if(highlightView === 'lowest'){
             handleHighlightOptions('lowest', newBom); // write one for individual line
         }
+        //sort offers
+
+
     }
     function test(){
         console.log(bomApiProgress);
@@ -703,8 +723,6 @@ function BOMTool(props){
         setShowApiLineModal(true);
     }
     function handleLineApisSubmit(){
-        console.log(bomApiCheckBoxes);
-        console.log(highlightView);
         if(highlightView === 'lowest'){
             handleHighlightOptions('lowest');
         }
@@ -755,7 +773,7 @@ function BOMToolInterfaceOptions(props){
         <div className='IconNav'>
             <BOMExporter data={props.data} apis={props.apiHeaders} apiSubHeadings={props.apiSubHeadings}/>
             <Button onClick={props.onApiModal}>MPN APIs</Button>
-            <HighlightBest onChange={props.onHighlight} selected={props.highlightView}/>
+            <HighlightBest onChange={props.onHighlight} selected={props.highlightView} status={props.status}/>
             <PriceHighlightOptions onChange={handlePriceOptionChange} status={props.status}/>
         </div>
     </div>
@@ -775,7 +793,7 @@ function HighlightBest(props){
             Highlight
             {options.map((opt, i) => 
             <span key={i}>
-                <NamedCheckBox onChange={handleOptionChange}
+                <NamedCheckBox disabled={!props.status} onChange={handleOptionChange}
                  value={opt.value} label={opt.display} checked={props.selected===opt.value}/>
             </span>
             )}
