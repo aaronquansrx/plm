@@ -380,26 +380,36 @@ function BOMTool(props){
         */
     }
     function sortOffers(offers, quantity){
-        const offerPrices = offers.map((offer) => {
+        let allNull = true;
+        let offerPrices = offers.map((offer) => {
             const q = quantity ? quantity : offers.moq;
+            const p = getPrice(offer.pricing, q);
+            if(p) allNull = false;
             return {
                 offer: offer,
-                price: getPrice(offer.pricing, q)
+                price: p
             }
         });
+        if(allNull){
+            offerPrices = offers.map((offer) => {
+                const q = quantity ? quantity : offers.moq;
+                const p = getPrice(offer.pricing, q, true);
+                return {offer: offer, price: p};
+            });
+        }
         offerPrices.sort((a,b) => {
             if(a.price == null) return 1;
             if(b.price == null) return -1;
             return a.price-b.price;
         });
-        //console.log(offerPrices);
         return offerPrices.map((op) => op.offer);
     }
-    function getPrice(pricing, quantity){
+    function getPrice(pricing, quantity, ignore=false){
         let n = 0;
         while(n+1 < pricing.length && quantity >= pricing[n+1].BreakQuantity){
             n+=1;
         }
+        if(ignore) return pricing[n].UnitPrice;
         return quantity < pricing[n].BreakQuantity ? null : pricing[n].UnitPrice;
     }
     function bestPriceDisplay(line, moq, pricing, overQuantity=null){
