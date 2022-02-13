@@ -25,3 +25,13 @@
     display: flex;
     align-items: center;
 }
+
+.Pointer{
+    cursor: pointer;
+}
+div.Pointer > input{
+    cursor: pointer;
+}
+div.Pointer > label{
+    cursor: pointer;
+}

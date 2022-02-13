@@ -1,12 +1,24 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import {useState /*,useEffect, useCallback*/} from 'react';
 import update from 'immutability-helper';
 
 import {PricingTable} from './Tables';
-import {OutsideAlerter, OutsideAlerterVarFunction} from './Hooks';
-
-import Accordion from 'react-bootstrap/Accordion'
+//import {OutsideAlerter, OutsideAlerterVarFunction} from './Hooks';
+ 
+import Button from 'react-bootstrap/Button';
+import Accordion from 'react-bootstrap/Accordion';
 import Table from 'react-bootstrap/Table';
+
+import {HoverOverlay} from './Tooltips';
 import './../css/offer.css';
+
+export function SimpleLabel(props){
+    return(
+        <div>
+            <span>{props.label}</span>
+            <span>{props.value}</span>
+        </div>
+    );
+}
 
 export function SimpleOffer(props){
     return (
@@ -83,13 +95,16 @@ export function SimpleOffer2(props){
 export function EmptyOffer(props){
     const row = props.row;
     const rowData = row.original;
+    //console.log(row);
     function isAPICell(n){
         return n >= props.bomAttrsLength;
     }
     function NoOffer(k){
-        return <td key={k} colSpan={props.apiSubHeadings.length}>No Offer</td>;
+        return <td key={k} colSpan={props.apiSubHeadings.length}>
+            {props.finished ? 'No Offers' : 'Waiting...'}
+        </td>;
     }
-    const [newQuantity, setNewQuantity] = useState(row.original.quantity);
+    const [newQuantity, setNewQuantity] = useState(rowData.display_quantity);
     function handleOutsideQuantityClick(nq){
         return () => {
             props.onChangeQuantity(nq);
@@ -106,12 +121,13 @@ export function EmptyOffer(props){
             if(isAPICell(i)){
                 return NoOffer(k);
             }else{
-                if(cell.column.id === 'quantity'){
+                //displayQuantity
+                if(cell.column.id === 'display_quantity' && newQuantity !== ''){
                     return(
-                        <td key={k} {...cell.getCellProps()} /*onMouseDown={handleQuantityClick}*/>
-                            <input className='TextBox' type='text' value={newQuantity} 
-                            onChange={handleChangeQuantity} onBlur={handleOutsideQuantityClick(newQuantity)}/>
-                        </td>
+                    <td key={k} {...cell.getCellProps()} /*onMouseDown={handleQuantityClick}*/>
+                        <input className='TextBox' type='text' value={newQuantity} 
+                        onChange={handleChangeQuantity} onBlur={handleOutsideQuantityClick(newQuantity)}/>
+                    </td>
                     );
                 }else{
                     return (
@@ -134,17 +150,18 @@ export function PartRow(props){
     function handleShowOffersInc(inc){
         setNumShowOffers(numShowOffers+inc);
     }
+    //console.log(row);
     return(
         <>
         {[...Array(maxOffers)].map((e, i) => {
             //const offer = props.row;
-            const highlight = props.highlight && props.highlight.offerNum == i ? props.highlight.api : null;
+            const highlight = props.highlight && props.highlight.offerNum === i ? props.highlight.api : null;
             const rowProps = i === 0 ? {...row.getRowProps()} : {};
             return( 
             <OfferRow key={i} row={row} rowProps={rowProps} offerIndex={i}
             apiSubHeadings={apiSubHeadings} bomAttrsLength={props.bomAttrsLength}
             onShowPrice={handleShowOffersInc} numShowOffers={numShowOffers}
-            onChangeQuantity={props.onChangeQuantity} onClickRow={props.onClickRow}
+            onChangeQuantity={props.onChangeQuantity}
             highlight={highlight}/>
             );
         })}
@@ -157,8 +174,8 @@ function OfferRow(props){
     const rowData = row.original;
     const maxOffers = row.original.maxOffers;
     const [showOffers, setShowOffers] = useState(false);
-    const [selectedQuantity, setSelectedQuantity] = useState(false);
-    const [newQuantity, setNewQuantity] = useState(row.original.quantity);
+    //const [selectedQuantity, setSelectedQuantity] = useState(false);
+    const [newQuantity, setNewQuantity] = useState(row.original.display_quantity);
 
     //console.log(quantityFunction);
     const rowProps = props.rowProps;
@@ -175,15 +192,10 @@ function OfferRow(props){
     function NoOffer(k){
         return <td key={k} colSpan={props.apiSubHeadings.length}>No Offer</td>;
     }
-    function handleQuantityClick(){
-        //if(newQuantity === null) setNewQuantity(row.original.quantity);
-        setSelectedQuantity(true);
-        //console.log('quant');
-    }
-    function handleOutsideQuantityClick(nq){
+    function handleQuantitySubmit(nq){
         return () => {
             props.onChangeQuantity(nq);
-            setSelectedQuantity(false);
+            //setSelectedQuantity(false);
         }
     }
     function handleChangeQuantity(e){
@@ -192,10 +204,6 @@ function OfferRow(props){
         //const s = handleOutsideQuantityClick(nq); //try usecallback
         //setQuantityFunction(s);
         //console.log(newQuantity);
-    }
-    function handleClickRow(){
-        //console.log(e);
-        props.onClickRow();
     }
     return (
     <>
@@ -215,27 +223,32 @@ function OfferRow(props){
                             offer={offer} highlight={highlight}/>
                         );
                     }else{
-                        return <td key={k} colSpan={props.apiSubHeadings.length}></td>;
+                        //console.log(rowData);
+                        return <td key={k} colSpan={props.apiSubHeadings.length}>{i === 0 && rowData[api].message}</td>;
                     }
                 }else{
+                    //console.log(rowData);
                     return NoOffer(k);
+                    //return <td key={k} colSpan={props.apiSubHeadings.length}>Waiting...</td>;
                 }
             }else{
                 if(cell.column.id === 'n'){
                     return(
                         <td key={k} {...cell.getCellProps()} className='Ver'>
                             <span>{i+1}</span>
-                            <button onClick={handleShowPrice}>Prices</button>
+                            <HoverOverlay tooltip={showOffers ? 'Hide Offers' : 'Show Offers'}>
+                            <Button onClick={handleShowPrice}>Prices</Button>
+                            </HoverOverlay>
                         </td>
                     );
-                }else if(cell.column.id === 'quantity'){
+                }else if(cell.column.id === 'display_quantity' && newQuantity !== ''){
                     if(i === 0){
                         return(
                             <td key={k} {...cell.getCellProps()} 
                             rowSpan={maxOffers+props.numShowOffers} 
-                            onMouseDown={handleQuantityClick}>
+                            /*onMouseDown={handleQuantityClick}*/>
                                 <input className='TextBox' type='text' value={newQuantity} 
-                                    onChange={handleChangeQuantity} onBlur={handleOutsideQuantityClick(newQuantity)}/>
+                                    onChange={handleChangeQuantity} onBlur={handleQuantitySubmit(newQuantity)}/>
                                 {/*selectedQuantity ? 
                                 <OutsideAlerterVarFunction f={handleOutsideQuantityClick} q={newQuantity}>
                                     <input type='text' value={newQuantity} 
@@ -257,6 +270,7 @@ function OfferRow(props){
                     }
                 }
             }
+            //return <></>;
         })}
     </tr>
     {showOffers &&
@@ -281,6 +295,7 @@ function OfferRow(props){
             }else if(cell.column.id === 'n'){
                 return <td key={c} className='CellHeading'>Price</td>;
             }
+            //return <></>;
         })}
     </tr>
     }
@@ -298,7 +313,7 @@ function SubHeadingAttrs(props){
     return(
         <>
         {props.apiSubHeadings.map((heading, j) => {
-            const out = offer[heading.accessor];
+            //const out = offer[heading.accessor];
             const cn = highlight ? 'HighlightedCell': 'NormalCell';
             return(<td key={k+'heading'+j} className={cn}>
                 {heading.accessor in offer && offer[heading.accessor]}

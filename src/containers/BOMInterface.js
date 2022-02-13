@@ -1,29 +1,32 @@
 import React, {useEffect, useState} from 'react';
 
-import BOMFileUploadInterface from './BOMFileUploadInterface';
-import BOMEditInterface from './BOMEditInterface';
-import BOMTool from './BOMTool';
+import BOMFileUploadInterface from '../components/BOMFileUploadInterface';
+import BOMEditInterface from '../components/BOMEditInterface';
+import BOMTool from '../components/BOMTool';
 
+import {HoverOverlay} from '../components/Tooltips';
 
-import {UploadIcon, EditIcon, SheetIcon} from './Icons';
+import {UploadIcon, EditIcon, SheetIcon} from '../components/Icons';
 
 import './../css/temp.css';
-import axios from 'axios';
+//import axios from 'axios';
 
-const server_url = process.env.REACT_APP_SERVER_URL;
+//const server_url = process.env.REACT_APP_SERVER_URL;
 
-const interfaceStateModes = ["upload", "edit", "main"];
+//const interfaceStateModes = ["upload", "edit", "main"];
 
+/*
 const tableHeaders = [
     {Header:'_remove', accessor: '_'},
     {Header:'Custom', accessor: 'custom'}, {Header:'Manufacturer Part Number', accessor: 'MPN'}, 
     {Header:'Manufacturer', accessor: 'manufacturer'}, {Header:'Quantity', accessor: 'quantity'}
 ];
-const columnOptions = tableHeaders.map((obj) => obj.Header);
-const headerToAccessor = tableHeaders.reduce(function(map, obj) {
+*/
+//const columnOptions = tableHeaders.map((obj) => obj.Header);
+/*const headerToAccessor = tableHeaders.reduce(function(map, obj) {
     map[obj.Header] = obj.accessor;
     return map;
-}, {});
+}, {});*/
 
 const apis = [
     {Header: 'Future Electronics', accessor: 'futureelectronics'}, 
@@ -33,6 +36,22 @@ const apis = [
     {Header: 'Verical', accessor: 'verical'}
 ];
 
+const tableHeaders = [
+    {Header:'_remove', accessor: '_'}, {Header:'Manufacturer Part Number', accessor: 'mpn'}, 
+    {Header:'Quantity', accessor: 'quantity'}, {Header:'Manufacturer', accessor: 'manufacturer'},
+    {Header: 'Internal Part Number', accessor: 'ipn'}, {Header: 'Customer Part Number', accessor: 'cpn'},
+    {Header: 'Description', accessor: 'description'}, {Header: 'Reference Designator', accessor: 'reference'},
+    {Header:'Custom', accessor: 'custom'}
+];
+const uploadHeaders = tableHeaders.reduce((arr, header, i) => {
+    if(i !== 0){
+        arr.push(header);
+    }
+    return arr;
+}, []);
+
+const quantityHeader = {Header:'Quantity', accessor: 'quantity'};
+
 function BOMInterface(props){
     const [uploadedBOM, setUploadedBOM] = useState([]); // bom uploaded from file upload interface
     const [BOMData, setBOMData] = useState({bom: [], bomAttrs: [], apis: []});
@@ -40,7 +59,7 @@ function BOMInterface(props){
     const [interfaceState, setInterfaceState] = useState(0) // 0: upload, 1: main
     //const [initialUploadState, setInitialUploadState] = useState(0);
     const [initialBOMEdit, setInitialBOMEdit] = useState([]); //BOM initial input when editing BOM
-    const [image, setImage] = useState(null);
+    //const [image, setImage] = useState(null);
 
     /*
     useEffect(()=>{
@@ -55,20 +74,12 @@ function BOMInterface(props){
         })
     })*/
 
-    function handleBOMUpload(bom, options){
+    function handleBOMUpload(bom, autoFind={found: false}){
         //assume first col is MPN
         setUploadedBOM(bom);
-        if(options.autofind){
-            const autofind = autoFindMPN(bom);
-            if(autofind.found){
-                console.log('found mpn');
-                //const hs = autofind.headers.concat(apis);
-                const hs = autofind.headers
-                setBOMData({bom: autofind.bom, bomAttrs: autofind.headers, apis: apis});
-                setInterfaceState(2);
-            }else{
-                setInterfaceState(1);
-            }
+        if(autoFind.found){
+            setBOMData({bom: bom, bomAttrs: autoFind.headers, apis: apis});
+            setInterfaceState(2);
         }else{
             setInterfaceState(1);
         }
@@ -90,14 +101,16 @@ function BOMInterface(props){
             //const found = {mpn: mpnCol, quantity: qCol};
             if(mpnCol !== -1){
                 const headers = [{Header: 'MPN', accessor: 'mpn'}];
-                if(qCol !== -1) headers.push({Header:'Quantity', accessor: 'quantity'});
+                /*if(qCol !== -1) */headers.push(quantityHeader); // quantity is required
                 bom.shift();
                 const bomData = bom.map((line) => {
                     const data = {
                         mpn: line[mpnCol]
                     };
                     if(qCol !== -1){
-                        data.quantity = line[qCol]
+                        data.quantity = line[qCol] ? line[qCol] : 1;
+                    }else{
+                        data.quantity = 1;
                     }
                     return data;
                 });
@@ -109,6 +122,17 @@ function BOMInterface(props){
     function handleEditBOM(bom, headers){
         //const hs = headers.concat(apis);
         const hs = headers;
+        const containsQuantity = hs.reduce((b, header) => {
+            if(header.accessor === 'quantity') return true;
+            return b;
+        }, false);
+        if(!containsQuantity){
+            hs.push(quantityHeader)
+            bom = bom.map(line => {
+                const q = line.quantity ? line.quantity : 1;
+                return {...line, quantity: q}
+            });
+        }
         setBOMData({bom: bom, bomAttrs: hs, apis:apis});
         setInterfaceState(2);
     }
@@ -121,9 +145,9 @@ function BOMInterface(props){
     function renderInterfaceState(){
         switch(interfaceState){
             case 0:
-                return <BOMFileUploadInterface onBOMUpload={handleBOMUpload}/>;
+                return <BOMFileUploadInterface onBOMUpload={handleBOMUpload} headers={uploadHeaders}/>;
             case 1:
-                return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState}/>
+                return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 2:
                 return <BOMTool BOMData={BOMData} changeState={changeState}/>;
             default:
@@ -142,12 +166,18 @@ function BOMInterface(props){
         return(
 
             <div className='IconNav'>
+            <HoverOverlay tooltip={'Upload'} placement='bottom'>
             <UploadIcon onClick={handleNavChange(0)} 
             selected={interfaceState===0} size={size}/>
+            </HoverOverlay>
+            <HoverOverlay tooltip={'Edit'} placement='bottom'>
             <EditIcon onClick={handleNavChange(1, [])} 
             selected={interfaceState===1} size={size}/>
+            </HoverOverlay>
+            <HoverOverlay tooltip={'BOMTool'} placement='bottom'>
             <SheetIcon onClick={handleNavChange(2)} 
             selected={interfaceState===2} size={size}/>
+            </HoverOverlay>
             </div>
         );
     }

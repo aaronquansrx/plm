@@ -1,9 +1,11 @@
 import React, {useEffect, useState} from 'react';
 
 import update from 'immutability-helper';
-import {ExcelDisplayTable, CheckboxRowCustomColumnTable, ReactTable, ChooseHeaderRowsTable} from './Tables';
+import {CheckboxRowCustomColumnTable, ReactTable} from './Tables';
 
 import Button from 'react-bootstrap/Button';
+import { WarningToolTipButtonFade } from './Tooltips';
+import {bomEditParse} from './../scripts/Upload';
 
 import './../css/table.css';
 
@@ -21,7 +23,8 @@ const headerToAccessor = tableHeaders.reduce(function(map, obj) {
 }, {});
 
 function BOMEditInterface(props){
-    const [originalSheet, setOriginalSheet] = useState(props.bom); // bom before editing
+    const originalSheet = props.bom;
+    //const [originalSheet, setOriginalSheet] = useState(props.bom); // bom before editing
     const [editedSheet, setEditedSheet] = useState(props.bom); // edited bom (display)
     const [formattedSheet, setFormattedSheet] = useState([]); // will be sent to BOMInterface (array of same object)
     //keeps track of the edited table state
@@ -30,8 +33,6 @@ function BOMEditInterface(props){
         checkedRows: Array(props.bom.length).fill(false), 
         columnAttributes: columnAttrs
     });
-    //console.log(columnAttrs);
-    const [editedHeaders, setEditedHeaders] = useState([]);
 
     const [columnAttributes, setColumnAttributes] = useState([]);
 
@@ -65,59 +66,84 @@ function BOMEditInterface(props){
             }));
         }
     }
+    /*
+    function bomEditParse(table, columnAttrs, rowChecked, tableHeaders){
+        const headerToAccessor = tableHeaders.reduce(function(map, obj) {
+            map[obj.Header] = obj.accessor;
+            return map;
+        }, {});
+        //if(hasMPNHeaderSet){
+        const editedRowBom = table.reduce((arr, line, i) => {
+            if(!rowChecked[i]) arr.push(line);
+            return arr;
+        }, []);
+        const editedBom = editedRowBom.reduce((arr, line) => {
+            const bomLine = {_unnamed: []};
+            let mpns = [];
+            line.forEach((cell, i) => {
+                const attr = columnAttrs[i];
+                if(attr !== tableHeaders[0].Header){
+                    if(headerToAccessor[attr] === 'mpn'){
+                        mpns = cell.split(', ');
+                    }else if(headerToAccessor[attr] === 'quantity'){
+                        bomLine.quantity = cell;
+                        bomLine.displayQuantity = cell;
+                    }else{
+                        bomLine[headerToAccessor[attr]] = cell;
+                    }
+                }else{
+                    bomLine["_unnamed"].push(cell);
+                }
+            });
+            mpns.forEach((mpn, i) => {
+                const bl = {...bomLine}; 
+                bl.mpn = mpn;
+                if(i !== 0) bl.displayQuantity = null;
+                arr.push(bl);
+            });
+            return arr;
+        }, []);
+    
+        const bomAttrs =  columnAttrs.reduce((arr, attr) => {
+            if(attr !== tableHeaders[0].Header){
+                arr.push({Header: attr, accessor: headerToAccessor[attr]});
+            }
+            return arr;
+        }, []);
+        bomAttrs.push({Header: 'Display Quantity', accessor: 'displayQuantity'});
+    
+        return {editedBom: editedBom, columnAttributes: bomAttrs};
+    }
+    */
+
     function handleConfirm(){
+        let nextState = true;
         switch(editState){
             case 0: // editBOM based on the editTableState
-                //console.log(editTableState);
-                const editedRowsBOM = [];
-                for(var i=0; i<originalSheet.length; i++){
-                    if(!editTableState['checkedRows'][i]) editedRowsBOM.push(originalSheet[i]);
+                console.log(editTableState.columnAttributes);
+                const hasMPNHeaderSet = editTableState.columnAttributes.reduce((b, attr) => {
+                    if(attr === 'Manufacturer Part Number') return true;
+                    return b;
+                }, false);
+                //use has mpn header set
+                if(hasMPNHeaderSet){
+                   const bomParse = bomEditParse(editedSheet, editTableState.columnAttributes, editTableState.checkedRows, props.headers);
+                   setFormattedSheet(bomParse.editedBom);
+                   setColumnAttributes(bomParse.columnAttributes);
+                   console.log(bomParse.columnAttributes);
+                }else{
+                    nextState = false;
                 }
-                const editedBOM = [];
-                editedRowsBOM.forEach((line) => {
-                    const BOMLine = {"_unnamed": []};
-                    for(var i=0; i<line.length; i++){
-                        const attribute = editTableState['columnAttributes'][i];
-                        if(attribute !== columnOptions[0]){
-                            BOMLine[headerToAccessor[attribute]] = line[i];
-                        }else{
-                            BOMLine["_unnamed"].push(line[i]);
-                        }
-                    }
-                    editedBOM.push(BOMLine);
-                    //display order
-                    //list of obj (bom data)
-                });
-                const attrs = editTableState.columnAttributes.reduce((arr, attr) => {
-                    if(attr !== tableHeaders[0].Header){
-                        arr.push({Header: attr, accessor: headerToAccessor[attr]});
-                    }
-                    return arr;
-                }, []);
-                editedRowsBOM.unshift(editTableState['columnAttributes']);
-                //todo map column field to index
-                setEditedSheet(editedRowsBOM);
-                setFormattedSheet(editedBOM);
-                setColumnAttributes(attrs);
-                //console.log(editedRowsBOM);
-                //console.log(editedBOM);
-                //console.log(attrs);
-
                 break;
-            case 1:
+            case 1: // checking the table
                 props.onFinishEdit(formattedSheet, columnAttributes);
-                //props.onBOMUpload(formattedSheet, tableHeaders); //change 2nd prop
                 break;
             default:
                 console.log("Unknown BOMUpload state");
                 break;
         }
-        setEditState(editState+1);
+        if(nextState) setEditState(editState+1);
     }
-    /*
-    function handleUpload(){
-        props.changeState(0);
-    }*/
     function handleBack(){
         setEditState(editState-1);
     }
@@ -147,7 +173,11 @@ function BOMEditInterface(props){
             <div className='IconNav2'>
                 {editState !== 0 && <Button onClick={handleBack}>Back</Button>}
                 {' '}
-                <Button onClick={handleConfirm}>Confirm</Button>
+                {editState === 0 
+                ? <WarningToolTipButtonFade onClick={handleConfirm} buttonText='Confirm'>
+                    Manufacturer Part Number column not chosen
+                </WarningToolTipButtonFade>
+                : <Button onClick={handleConfirm}>Confirm</Button>}
             </div>
         </div>
         <div className='MainTable'>

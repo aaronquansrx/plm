@@ -1,69 +1,22 @@
 import {useState, useEffect, useMemo} from 'react';
 import update from 'immutability-helper';
 
-import { useTable, useGroupBy, useExpanded } from 'react-table'
+import { useTable/*, useGroupBy, useExpanded*/ } from 'react-table'
 
 import Table from 'react-bootstrap/Table';
 import {SimpleDropdown} from './Dropdown';
 import {PartRow, EmptyOffer} from './Offer';
 import {IdCheckbox} from './Checkbox';
+import {HoverOverlay} from './Tooltips';
 
 import './../css/table.css';
 import './../css/temp.css';
- 
-export function BOMAPITable(props) {
-    const data = useMemo(() => props.data, [props.data]);
-    console.log(props.bomAttrs.concat(props.apiHeaders));
-    const columns = useMemo(() => props.bomAttrs.concat(props.apiHeaders), [props.bomAttrs, props.apiHeaders]);
-    const {
-        getTableProps,
-        getTableBodyProps,
-        headerGroups,
-        rows,
-        prepareRow,
-    } = useTable({columns, data});
-    return (
-    <Table {...getTableProps()}>
-        <thead className='TableHeader'>
-            {headerGroups.map(headerGroup => (
-            <tr {...headerGroup.getHeaderGroupProps()}>
-                {headerGroup.headers.map(column => (
-                <th
-                    {...column.getHeaderProps()}
-                >
-                    {column.render('Header')}
-                </th>
-                ))}
-            </tr>
-            ))}
-        </thead>
-        <tbody {...getTableBodyProps()}>
-            {rows.map(row => {
-            prepareRow(row);
-            return (
-                <>
-                <tr {...row.getRowProps()}>
-                {row.cells.map(cell => {
-                    return (
-                    <td {...cell.getCellProps()} rowSpan={cell.column.parent ? 1 : 2}>
-                        {cell.render('Cell')}
-                    </td>
-                    );
-                })}
-                </tr>
-                </>
-            )
-            })}
-        </tbody>
-    </Table>
-    )
-}
 
-export function BOMAPITableV2(props){
+export function BOMAPITable(props){
     const data = useMemo(() => props.data, [props.data]);
     const columns = useMemo(() => props.bomAttrs.concat(props.apis), [props.bomAttrs, props.apis]);
     //console.log(props.bomAttrs.concat(props.apis));
-    const [showPriceOffers, setShowPriceOffers] = useState(null);
+    //const [showPriceOffers, setShowPriceOffers] = useState(null);
     const {
         getTableProps,
         getTableBodyProps,
@@ -71,14 +24,16 @@ export function BOMAPITableV2(props){
         rows,
         prepareRow,
     } = useTable({columns, data});
+    /*
     useEffect(() => {
         const initShowPriceOffers = props.data.map((row) => {
             return {switches: Array(row.maxOffers).fill(false), ntrue: 0};
         });
         //console.log(initShowPriceOffers);
         setShowPriceOffers(initShowPriceOffers);
-    }, [props.data]);
+    }, [props.data]);*/
     //console.log(props.apiSubHeadings);
+    /*
     function handleShowPrice(rn, i){
         return function(){
             //console.log(rn);
@@ -92,7 +47,7 @@ export function BOMAPITableV2(props){
                 }
             }));
         }
-    }
+    }*/
     function handleChangeQuantity(rn){
         return function(quantity){
             //console.log(props);
@@ -104,16 +59,6 @@ export function BOMAPITableV2(props){
     function isAPICell(i){
         return i >= props.bomAttrs.length;
     }
-     {/*
-        <tr key={'headers'+h}>
-            {headerGroup.headers.map((column, i) => (
-                isAPICell(i) && 
-                props.apiSubHeadings.map((heading, j) => (
-                    <th key={'head'+h+'col'+i+'sub'+j}>{heading.Header}</th>
-                ))
-            ))}
-        </tr>
-        */}
     function renderHeader(){
         return (
         <>
@@ -141,12 +86,13 @@ export function BOMAPITableV2(props){
         </>
         );
     }
+    /*
     function NoOffer(k){
         return <td key={k} colSpan={props.apiSubHeadings.length}>No Offer</td>;
-    }
-    function handleClickRow(row){
+    }*/
+    function handleClickRow(row){ // to be used later maybe?
         return function(){
-            props.onClickRow(row);
+            //props.onClickRow(row);
         }
     }
     //console.log(data);
@@ -160,8 +106,9 @@ export function BOMAPITableV2(props){
             if(rowData.maxOffers > 0){
                 return (
                     <PartRow key={rn} row={row} bomAttrsLength={props.bomAttrs.length} 
-                    apiSubHeadings={props.apiSubHeadings} onClickRow={handleClickRow(rn)}
-                    onChangeQuantity={handleChangeQuantity(rn)} highlight={props.highlights[rn]}/>
+                    apiSubHeadings={props.apiSubHeadings} onClickRow={handleClickRow}
+                    onChangeQuantity={handleChangeQuantity(rn)} 
+                    highlight={props.showHighlights ? props.highlights[rn] : null}/>
                 );
             
             }else{
@@ -184,7 +131,7 @@ export function BOMAPITableV2(props){
                 </tr>*/
                 <EmptyOffer key={rn} row={row} apiSubHeadings={props.apiSubHeadings}
                 bomAttrsLength={props.bomAttrs.length} onChangeQuantity={handleChangeQuantity(rn)}
-                />
+                finished={props.rowsFinished[rn]}/>
                 );
             }
             })}
@@ -196,6 +143,7 @@ export function BOMAPITableV2(props){
 export function BestPriceTable(props){
     //console.log(props.data);
     //const headers = props.headers;
+    /*
     const headers = [
         {
             Header: 'MPN',
@@ -231,9 +179,9 @@ export function BestPriceTable(props){
                 );
             }
         }
-    ];
+    ];*/
     const data = useMemo(() => props.data, [props.data]);
-    const columns = useMemo(() => headers, [props.headers]);
+    const columns = useMemo(() => props.headers, [props.headers]);
     const {
         getTableProps,
         getTableBodyProps,
@@ -366,23 +314,6 @@ function ApiPriceRow(props){
     );
 }
 
-//should rename functions more simply
-export function ExcelDisplayTable(props){
-    const tableRow = (cell) => 
-        cell.map((val, i) => <td key={i}>{val}</td>)
-    ;
-    const tableRows = props.sheet.map((row,i) => 
-        <tr key={i}>{tableRow(row)}</tr>
-    );
-    return (
-        <Table bordered hover>
-            <tbody>
-            {tableRows}
-            </tbody>
-        </Table>
-    );
-}
-
 export function ReactTable(props){
     const data = useMemo(() => props.data, [props.data]);
     const columns = useMemo(() => props.headers, [props.headers]);
@@ -426,48 +357,6 @@ export function ReactTable(props){
     );
 }
 
-function TableHeader(props){
-    return(
-        <tr>
-            {props.array.map((str, i) =>
-                str !== "_remove" &&
-                <th key={i}>{str}</th>
-                
-            )}
-        </tr>
-    );
-}
-
-function TableRow(props){
-    return(
-    <tr>
-        {props.map((str, i) =>
-            <td key={i}>{str}</td>
-        )}
-    </tr>
-    );
-}
-
-export function JsonArrayDisplayTable(props){
-    console.log(props.headings);
-    return(
-        <Table bordered hover>
-            <tbody>
-                <TableHeader array={props.headings}/>
-                {props.jsonArray.map((row, i) => 
-                    <tr key={i}>
-                    {props.headings.map((header, j) => 
-                        header !== "_remove" &&
-                        <td key={j}>{row[header]}</td>
-                        
-                    )}
-                    </tr>
-                )}
-            </tbody>
-        </Table>  
-    );
-}
-
 export function HeaderExcelDisplayTable(props){
     //const header = 
 }
@@ -479,32 +368,9 @@ export function CheckLinesExcelTable(props){
     useEffect(() => {
         setCheckedRows(Array(props.sheet.length).fill(false));
     }, [props.sheet])
-    function handleCheckAll(){
-        setAllChecked(!allChecked);
-        //props.handleCheckAll();
-    }
-    function handleSelectAll(){
-        setAllChecked(true); //invoke all false checkboxes
-    }
-    function handleDeselectAll(){
-        setAllChecked(false);
-    }
     function handleCheckBox(i){
         setCheckedRows(update(checkedRows, {[i]: {$set: !checkedRows[i]}}));
     }
-    /*
-    function handleCheckedRows(i){
-        console.log(checkedRows);
-        const newRow = update(checkedRows, {[i]: {$set: !checkedRows[i]}});
-        setCheckedRows(update(checkedRows, {[i]: {$set: !checkedRows[i]}}));
-        console.log(newRow);
-    }*/
-    /*
-    select all buttons
-    <button onClick={handleSelectAll}>Select All</button>
-    <button onClick={handleDeselectAll}>Deselect All</button>
-    */
-    //<input className="form-check-input" type="checkbox" value="all" checked={allChecked} onChange={handleCheckAll}/>
     const headerRow = <tr>
         {numCols > 0 &&
         <td></td>
@@ -541,55 +407,42 @@ export function CheckboxRowCustomColumnTable(props){
     const numCols = props.sheet.length > 0 ? props.sheet[0].length : 0;
     const checkCol = (i) => 
     <td>
+        <HoverOverlay tooltip='Check to remove line'>
         <IdCheckbox i={i} checked={props.checkedRows[i]} onChange={props.onCheckBox}/>
+        </HoverOverlay>
     </td>;
-    const headerRow = <tr>
+    const headerRow = (
+    <tr>
         {numCols > 0 &&
         <td></td>
         }
-    {[...Array(numCols)].map((e, i) => 
-    <td key={i}>
-        <SimpleDropdown items={props.columnOptions} 
-        selected={props.columnAttributes[i]} onChange={(item) => props.onColumnChange(i, item)}/>
-    </td>
-    )}
-    </tr>;
+        {[...Array(numCols)].map((e, i) => 
+        <td key={i}>
+            <SimpleDropdown items={props.columnOptions} 
+            selected={props.columnAttributes[i]} onChange={(item) => props.onColumnChange(i, item)}/>
+        </td>
+        )}
+    </tr>
+    );
     return (
         <Table bordered hover>
             <thead className='TableHeading'>
                 {headerRow}
             </thead>
             <tbody>
-            <PreRowPreColumnTableRows preCol={checkCol} sheet={props.sheet}/>
+            {props.sheet.map((row,i) => 
+                <tr key={i}>
+                    {checkCol(i)}
+                    {row.map((val, j) => 
+                    <td key={j}>{val}</td>
+                    )}
+                </tr>
+            )}
             </tbody>
         </Table>
     );
 }
-
-function PreColumnTableRow(props){
-    return(
-        <>
-        {props.preCol}
-        {props.columns.map((val, i) => 
-        <td key={i}>{val}</td>
-        )}
-        </>
-    )
-}
-
-function PreRowPreColumnTableRows(props){
-    return(
-    <>
-    {props.preRow}
-    {props.sheet.map((row,i) => 
-        <tr key={i}>
-            <PreColumnTableRow preCol={props.preCol(i)} columns={row}/>
-        </tr>
-    )}
-    </>
-    );
-}
-
+/*
 export function ChooseHeaderRowsTable(props){
     const firstHeadings = props.sheet && props.headings ? Array(props.sheet[0].length).fill(props.headings[0].Header) : [];
     const [selectedRows, setSelectedRows] = useState(Array(props.sheet.length).fill(false));
@@ -662,3 +515,52 @@ export function ChooseHeaderRowsTable(props){
     </Table>
     );
 }
+
+export function BOMAPITableOld(props) {
+    const data = useMemo(() => props.data, [props.data]);
+    console.log(props.bomAttrs.concat(props.apiHeaders));
+    const columns = useMemo(() => props.bomAttrs.concat(props.apiHeaders), [props.bomAttrs, props.apiHeaders]);
+    const {
+        getTableProps,
+        getTableBodyProps,
+        headerGroups,
+        rows,
+        prepareRow,
+    } = useTable({columns, data});
+    return (
+    <Table {...getTableProps()}>
+        <thead className='TableHeader'>
+            {headerGroups.map(headerGroup => (
+            <tr {...headerGroup.getHeaderGroupProps()}>
+                {headerGroup.headers.map(column => (
+                <th
+                    {...column.getHeaderProps()}
+                >
+                    {column.render('Header')}
+                </th>
+                ))}
+            </tr>
+            ))}
+        </thead>
+        <tbody {...getTableBodyProps()}>
+            {rows.map(row => {
+            prepareRow(row);
+            return (
+                <>
+                <tr {...row.getRowProps()}>
+                {row.cells.map(cell => {
+                    return (
+                    <td {...cell.getCellProps()} rowSpan={cell.column.parent ? 1 : 2}>
+                        {cell.render('Cell')}
+                    </td>
+                    );
+                })}
+                </tr>
+                </>
+            )
+            })}
+        </tbody>
+    </Table>
+    )
+}
+*/

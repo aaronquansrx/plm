@@ -8,13 +8,19 @@ import { NamedCheckBox } from './Checkbox';
 
 export function ExportModal(props){
     const [fn, setFn] = useState('');
+    const [options, setOptions] = useState({bestPrice: false});
     const handleClose = () => props.hideAction();
     const handleExport = () => {
-        props.exportAction(fn);
+        props.exportAction(fn, options);
         props.hideAction();
     };
     function handleChange(e){
         setFn(e.target.value);
+    }
+    function handleBPOptionChange(e){
+        setOptions(update(options, {
+            bestPrice: {$set: !options.bestPrice}
+        }));
     }
     return(
     <Modal show={props.show} onHide={handleClose}>
@@ -24,6 +30,8 @@ export function ExportModal(props){
 
     <Modal.Body>
         File Name: <input type='text' value={fn} onChange={handleChange}/>
+        <NamedCheckBox value='bestPrice' label='Best Price' 
+        onChange={handleBPOptionChange} checked={options.bestPrice}/>
     </Modal.Body>
 
     <Modal.Footer>
@@ -171,5 +179,32 @@ function BomApiCheckBoxAccordion(props){
                 </Accordion.Item>
             )}
         </Accordion>
+    );
+}
+
+export function AutoColumnOptionModal(props){
+    const handleClose = () => props.hideAction();
+    function handleChange(i){
+        return function(){
+            props.onCheckChange(i);
+        }
+    }
+    return(
+    <Modal show={props.show} onHide={handleClose}>
+        <Modal.Header closeButton>
+            <Modal.Title>Auto Column Options</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+            {props.attributes.map((header, i) => 
+                <div>
+                <NamedCheckBox value={header.accessor} checked={header.active}
+                label={header.Header} onChange={handleChange(i)} disabled={i===0}/>
+                </div>
+            )}
+        </Modal.Body>
+        <Modal.Footer>
+        <Button variant="secondary" onClick={handleClose}>Close</Button>
+        </Modal.Footer>
+    </Modal>
     );
 }
