@@ -84,6 +84,7 @@ function BOMInterface(props){
             setInterfaceState(1);
         }
     };
+    /*
     function autoFindMPN(bom, options={}){
         const searchMPN = ['mpn', 'manufacturing part number'];
         const searchQuantity = ['q', 'quantity'];
@@ -101,7 +102,8 @@ function BOMInterface(props){
             //const found = {mpn: mpnCol, quantity: qCol};
             if(mpnCol !== -1){
                 const headers = [{Header: 'MPN', accessor: 'mpn'}];
-                /*if(qCol !== -1) */headers.push(quantityHeader); // quantity is required
+                //(qCol !== -1) 
+                headers.push(quantityHeader); // quantity is required
                 bom.shift();
                 const bomData = bom.map((line) => {
                     const data = {
@@ -118,10 +120,11 @@ function BOMInterface(props){
             }
         }
         return {found: false};
-    }
+    }*/
     function handleEditBOM(bom, headers){
         //const hs = headers.concat(apis);
         const hs = headers;
+        /*
         const containsQuantity = hs.reduce((b, header) => {
             if(header.accessor === 'quantity') return true;
             return b;
@@ -132,7 +135,7 @@ function BOMInterface(props){
                 const q = line.quantity ? line.quantity : 1;
                 return {...line, quantity: q}
             });
-        }
+        }*/
         setBOMData({bom: bom, bomAttrs: hs, apis:apis});
         setInterfaceState(2);
     }

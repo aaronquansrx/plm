@@ -126,7 +126,7 @@ function BOMFileUploadInterface(props){
                 <NamedCheckBox label='Auto Columns' 
                 onChange={handleCheckboxChange} checked={autoFind} value='auto'/>
                 </HoverOverlay>
-                <Button onClick={handleShowAutoOptions}>Options</Button>
+                <Button onClick={handleShowAutoOptions}>Options (Beta)</Button>
             </div>
             <AutoColumnOptionModal show={autoOptionsModal} hideAction={handleCloseOptions} 
             attributes={activatedFindAttributes} onCheckChange={handleCheckChange}/>

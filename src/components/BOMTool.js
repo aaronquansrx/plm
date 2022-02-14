@@ -65,8 +65,9 @@ const bestPriceHeaders = [
         }
     }
 ];
-
-const server_url = process.env.REACT_APP_SERVER_URL;
+const build_type = process.env.NODE_ENV;
+const server_url = build_type === 'production' ? 
+process.env.REACT_APP_SERVER_URL : process.env.REACT_APP_TEST_URL;
 
 const apiAttrs = [
     {
@@ -144,7 +145,9 @@ function BOMTool(props){
         setBomApiProgress(Array(numParts).fill(null));
         setShowProgress(0);
         const controller = new AbortController();
-        if(numParts.length > 0){
+        console.log(numParts);
+        if(numParts > 0){
+            console.log('calling post parts');
             axios({
                 method: 'post',
                 url: server_url+'api/part', //?part
@@ -204,12 +207,7 @@ function BOMTool(props){
 
     }, [props.BOMData.apis])
     useEffect(() => {
-        const apiFinished = bomApiProgress.reduce((b, apisn) => {
-            if(apisn === null || apisn.length > 0){
-                b = false;
-            }
-            return b;
-        }, true);
+        const apiFinished = bomApisFinished();
         //console.log(apiFinished);
         if(apiFinished){
             //const lowestPrices = getLowestPrices(bomdata);
@@ -231,7 +229,7 @@ function BOMTool(props){
                 const best = response.data.best;
                 const lowestPrices = best.map((line) => {
                     const simple = line.simple;
-                    return {api: simple.api, offerNum: simple.offerNum};
+                    return simple ? {api: simple.api, offerNum: simple.offerNum} : null;
                 });
                 //console.log(lowestPrices);
                 setLowestPriceOffers(lowestPrices);
@@ -257,6 +255,7 @@ function BOMTool(props){
                 const bd = response.data.multioffers_breakdown;
                 setPriceEvaluation(update(priceEvaluation, {
                     totalPrice: {$set: bd.total_price},
+                    offers: {$set: bestOffers},
                     partsComplete: {$set: bd.num_completed_offers}
                 }));
             });
@@ -268,6 +267,14 @@ function BOMTool(props){
     useEffect(() => {
 
     }, []);
+    function bomApisFinished(){
+        return bomApiProgress.reduce((b, apis) => {
+            if(apis === null || apis.length > 0){
+                b = false;
+            }
+            return b;
+        }, true);
+    }
 
     function callApis(controller){
         let apiProgress = bomApiProgress;
@@ -486,7 +493,7 @@ function BOMTool(props){
     function handleHighlightOptions(opt, bom=null){
         switch(opt){
             case 'normal':
-                setLowestPriceOffers(Array(numParts).fill(null));
+                //setLowestPriceOffers(Array(numParts).fill(null));
                 break;
             case 'lowest':
                 const b = bom ? bom : bomdata;
@@ -564,61 +571,64 @@ function BOMTool(props){
         return <></>;
     }
     function handleChangeQuantity(row, quantity){
-        const newQ = parseInt(quantity);
-        const r = bomdata[row];
-        const newRow = {...r};
-        apis.forEach((api) => {
-            if(api.accessor in newRow){
-                const offers = newRow[api.accessor].offers.map(offer => {
-                    offer.price = bestPriceDisplay(newRow, offer.moq, offer.pricing, newQ);
-                    return offer;
-                });
-                newRow[api.accessor].offers = sortOffers(offers, newQ);
-            }
-            newRow.quantity = newQ;
-            newRow.display_quantity = quantity;
-        });
-        let newBom = update(bomdata, {
-            [row]: {$set: newRow}
-                //quantity: {$set: newQ},
-                //price: {$set: bestPriceDisplay(r, r.moq, r.pricing, newQ)}
-        });
-        //change rows for the (alternate mpns) i.e rows that have no display quantity
-        let nrow = row+1;
-        while(nrow < bomdata.length && bomdata[nrow].display_quantity === ''){
-            newBom = update(newBom, {
-                [nrow]: {quantity: {$set: newQ}}
+        const isFinished = bomApisFinished();
+        if(isFinished){
+            const newQ = parseInt(quantity);
+            const r = bomdata[row];
+            const newRow = {...r};
+            apis.forEach((api) => {
+                if(api.accessor in newRow){
+                    const offers = newRow[api.accessor].offers.map(offer => {
+                        offer.price = bestPriceDisplay(newRow, offer.moq, offer.pricing, newQ);
+                        return offer;
+                    });
+                    newRow[api.accessor].offers = sortOffers(offers, newQ);
+                }
+                newRow.quantity = newQ;
+                newRow.display_quantity = quantity;
             });
-            nrow++;
-        }
-        setBomdata(newBom);
-        //console.log(highlightView);
-        if(highlightView === 'lowest'){
-            handleHighlightOptions('lowest', newBom); // write one for individual line
-        }
-        //sort offers
-        const apiNames = getActiveApis(row);
-        axios({
-            method: 'POST',
-            url: server_url+'api/bestprice',
-            data: {
-                line: newRow,
-                apis: apiNames,
-                algorithms: 'simple'
-            }
-        }).then(response => {
-            console.log(response.data);
-            /*
-            console.log(response.data);
-            const best = response.data.best;
-                const lowestPrices = best.map((line) => {
-                    const simple = line.simple;
-                    return {api: simple.api, offerNum: simple.offerNum};
+            let newBom = update(bomdata, {
+                [row]: {$set: newRow}
+                    //quantity: {$set: newQ},
+                    //price: {$set: bestPriceDisplay(r, r.moq, r.pricing, newQ)}
+            });
+            //change rows for the (alternate mpns) i.e rows that have no display quantity
+            let nrow = row+1;
+            while(nrow < bomdata.length && bomdata[nrow].display_quantity === ''){
+                newBom = update(newBom, {
+                    [nrow]: {quantity: {$set: newQ}}
                 });
+                nrow++;
+            }
+            setBomdata(newBom);
+            //console.log(highlightView);
+            //if(highlightView === 'lowest'){
+            //handleHighlightOptions('lowest', newBom); // write one for individual line
+            //}
+            //sort offers
+            const apiNames = getActiveApis(row);
+            axios({
+                method: 'POST',
+                url: server_url+'api/bestprice',
+                data: {
+                    line: newRow,
+                    apis: apiNames,
+                    algorithms: ['simple']
+                }
+            }).then(response => {
+                console.log(response.data);
+                const data = response.data;
+                const simple = data.simple;
+                const bestOffer = simple ? {api: simple.api, offerNum: simple.offerNum} : null;
                 //console.log(lowestPrices);
-                setLowestPriceOffers(lowestPrices);
-            */
-        });
+                //simple.total;
+                const oldOfferTotal = lowestPriceOffers.offers[row];
+                console.log(oldOfferTotal);
+                //setLowestPriceOffers(update(lowestPriceOffers, {
+
+                //}));
+            });
+        }
 
     }
     function test(){
@@ -639,9 +649,9 @@ function BOMTool(props){
         setShowApiLineModal(true);
     }
     function handleLineApisSubmit(){
-        if(highlightView === 'lowest'){
-            handleHighlightOptions('lowest');
-        }
+        //if(highlightView === 'lowest'){
+        handleHighlightOptions('lowest');
+        //}
     }
     function hideLineApisModal(){
         setShowApiLineModal(false);
@@ -654,6 +664,7 @@ function BOMTool(props){
                 [ln]: {[api_name]: {$set: opp}}
             })
         );
+
     }
     return (
         <>  
@@ -672,7 +683,7 @@ function BOMTool(props){
             {/*<BOMAPITable data={bomdata} bomAttrs={bomAttrs}
              apis={props.BOMData.apis} apiHeaders={apiHeaders} apiAttrs={apiAttrs}/>
             {/*partLookupData.length > 0 && partLookupData[0]*/}
-            {<button onClick={test}> tb</button>}
+            {/*<button onClick={test}> tb</button>*/}
             <div className='MainTable'>
             {displayTableView()}
             </div>
@@ -684,9 +695,9 @@ function PricesEvaluationInterface(props){
     const percentageComplete = props.priceEvaluation.partsComplete ? (props.priceEvaluation.partsComplete/props.numParts)*100 : null; 
     return(
         <div>
-            {props.priceEvaluation.totalPrice && <SimpleLabel label='Total Price' value={props.priceEvaluation.totalPrice}/>}
-            <SimpleLabel label='Parts Evaluated' value={props.numParts}/>
-            {percentageComplete && <SimpleLabel label='Percent' value={percentageComplete}/>}
+            {props.priceEvaluation.totalPrice && <SimpleLabel label='Total Price: ' value={props.priceEvaluation.totalPrice}/>}
+            <SimpleLabel label='Number Of Parts: ' value={props.numParts}/>
+            {percentageComplete && <SimpleLabel label='BOM Percent: ' value={percentageComplete}/>}
         </div>
     );
 }
@@ -702,7 +713,7 @@ function BOMToolInterfaceOptions(props){
             lowestOffers={props.lowestOffers} bomAttrs={props.bomAttrs}/>
             <Button onClick={props.onApiModal}>MPN APIs</Button>
             <HighlightBest onChange={props.onHighlight} selected={props.highlightView} status={props.status}/>
-            <PriceHighlightOptions onChange={handlePriceOptionChange} status={props.status}/>
+            {<PriceHighlightOptions onChange={handlePriceOptionChange} status={props.status}/>}
         </div>
     </div>
     );

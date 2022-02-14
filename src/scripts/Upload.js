@@ -47,7 +47,7 @@ export function bomEditParse(table, columnAttrs, rowChecked, tableHeaders){
         return arr;
     }, []);
     bomAttrs.push({Header: 'Quantity', accessor: 'display_quantity'});
-
+    //console.log(bomAttrs);
     return {editedBom: editedBom, columnAttributes: bomAttrs};
 }
 

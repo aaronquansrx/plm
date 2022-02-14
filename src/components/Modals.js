@@ -189,6 +189,9 @@ export function AutoColumnOptionModal(props){
             props.onCheckChange(i);
         }
     }
+    function disabledProps(accessor){
+        return accessor !== 'quantity';
+    }
     return(
     <Modal show={props.show} onHide={handleClose}>
         <Modal.Header closeButton>
@@ -198,7 +201,7 @@ export function AutoColumnOptionModal(props){
             {props.attributes.map((header, i) => 
                 <div>
                 <NamedCheckBox value={header.accessor} checked={header.active}
-                label={header.Header} onChange={handleChange(i)} disabled={i===0}/>
+                label={header.Header} onChange={handleChange(i)} disabled={disabledProps(header.accessor)}/>
                 </div>
             )}
         </Modal.Body>
