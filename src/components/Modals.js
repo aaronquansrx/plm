@@ -199,7 +199,7 @@ export function AutoColumnOptionModal(props){
         </Modal.Header>
         <Modal.Body>
             {props.attributes.map((header, i) => 
-                <div>
+                <div key={i}>
                 <NamedCheckBox value={header.accessor} checked={header.active}
                 label={header.Header} onChange={handleChange(i)} disabled={disabledProps(header.accessor)}/>
                 </div>

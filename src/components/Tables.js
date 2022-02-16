@@ -141,45 +141,6 @@ export function BOMAPITable(props){
 }
 
 export function BestPriceTable(props){
-    //console.log(props.data);
-    //const headers = props.headers;
-    /*
-    const headers = [
-        {
-            Header: 'MPN',
-            accessor: 'mpn'
-        },
-        {
-            Header: 'Total Price',
-            accessor: 'total_price',
-            Cell: (r) => r.value.toFixed(2)
-        },
-        {
-            Header: 'Quantity Buying',
-            accessor: 'quantity'
-        },
-        {
-            Header: 'Offers',
-            accessor: 'offers',
-            Cell: (r) => {
-                const offers = r.value;
-                //console.log(offers);
-                return (
-                    <div>
-                    {offers.map((offer,i) => {
-                        return(
-                        <div key={i}>
-                        <span>Api: {offer.api}</span><span> N: {offer.offerNum}</span>
-                        <span> Price: {offer.total.toFixed(2)}</span><span> Quantity: {offer.quantity}</span>
-                        <span> Per: {offer.per.toFixed(2)}</span>
-                        </div>
-                        );
-                    })}
-                    </div>
-                );
-            }
-        }
-    ];*/
     const data = useMemo(() => props.data, [props.data]);
     const columns = useMemo(() => props.headers, [props.headers]);
     const {
