@@ -824,7 +824,8 @@ function PricesEvaluationInterface(props){
     const percentageComplete = pc ? (pc/props.numParts)*100 : null; 
     return(
         <div className='WideInfoBar'>
-            {props.priceEvaluation.totalPrice && <SimpleLabel label='Total Price: ' value={props.priceEvaluation.totalPrice.toFixed(2)}/>}
+            {props.priceEvaluation.totalPrice && 
+            <SimpleLabel label='Total Price: ' value={props.priceEvaluation.totalPrice.toFixed(2)} post=' USD'/>}
             <SimpleLabel label='Number Of Parts: ' value={props.numParts}/>
             {pc && <SimpleLabel label='Parts Fully Evaluated: ' value={pc}/>}
             {percentageComplete && <SimpleLabel label='Quoted: ' value={percentageComplete.toFixed(2)+'%'}/>}

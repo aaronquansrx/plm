@@ -30,7 +30,7 @@ export function ExportModal(props){
 
     <Modal.Body>
         File Name: <input type='text' value={fn} onChange={handleChange}/>
-        <NamedCheckBox value='bestPrice' label='Best Price' 
+        <NamedCheckBox value='bestPrice' label='Lowest Price' 
         onChange={handleBPOptionChange} checked={options.bestPrice}/>
     </Modal.Body>
 

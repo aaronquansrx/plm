@@ -16,6 +16,7 @@ export function SimpleLabel(props){
         <div>
             <span>{props.label}</span>
             <span>{props.value}</span>
+            {props.post && <span>{props.post}</span>}
         </div>
     );
 }
