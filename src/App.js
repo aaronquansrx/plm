@@ -31,16 +31,20 @@ function App() {
   function handleHideVersion(){
     setShowVersionModal(false);
   }
+  function path(p){
+    const prePath = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
+    return prePath+p;
+  }
   console.log(showVersionModal);
   return (
     <div className="App">
       <MainNavbar username={username} onLogout={handleLogout} onVersionClick={handleVersionClick}/>
       {showVersionModal && <VersionModal show={showVersionModal} hideAction={handleHideVersion}/>}
       <Routes>
-        <Route path='/' element={<BOMInterface/>}/>
-        <Route path='/login' element={<Login onLogin={handleLogin}/>}/>
-        <Route path='/partsearch' element={<PartSearch/>}/>
-        <Route path='/partdetails/:partId' element={<PartDetails/>}/>
+        <Route path={path('')} element={<BOMInterface/>}/>
+        <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
+        <Route path={path('partsearch')} element={<PartSearch/>}/>
+        <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
       </Routes>
     </div>
   );
