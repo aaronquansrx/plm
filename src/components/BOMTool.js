@@ -6,7 +6,7 @@ import axios from 'axios';
 import _ from 'lodash';
 
 import {BOMAPITable, BestPriceTable} from './Tables'; 
-import {SimpleProgressBar} from './Progress';
+import {SimpleProgressBar, BomApiProgressBar} from './Progress';
 import {BomApiCheckBoxModal} from './Modals';
 import BOMExporter from './BOMExporter';
 import { NamedCheckBox } from './Checkbox';
@@ -100,19 +100,53 @@ const apiAttrs = [
     }
 ];
 
-const numHeader = [{
+const numHeader = [
+{
     Header: 'N',
     accessor: 'n'
-}];
+},
+/*
+{
+    Header: 'Octopart',
+    accessor: 'octopart',
+    Cell: (r) => {
+        return <Button onClick={requestOctopart(r.value)}>Req</Button>
+    }
+}*/
+];
 
 function BOMTool(props){
     //console.log(props.BOMData);
     const apis = props.BOMData.apis;
+    //console.log(apis);
     const numParts = props.BOMData.bom.length;
-    const bomAttrs = props.BOMData.bomAttrs.concat(numHeader);
+    const initBomAttrs = props.BOMData.bomAttrs.concat(numHeader);
+    const initBom = props.BOMData.bom;
+    
+    if(build_type !== 'production'){
+        function reqOcto(mpn){
+            return function(){
+                console.log(mpn);
+                requestOctopart(mpn);
+            }
+        }
+        const octopartHeader = {
+            Header: 'Octopart',
+            accessor: 'octopart',
+            Cell: (r) => {
+                return <Button onClick={reqOcto(r.value)}>Req</Button>
+            }
+        }
+        initBomAttrs.push(octopartHeader);
+        initBom.forEach((line) => {
+            line.octopart = line.mpn;
+        });
+    }
+    
+    
     //const [partLookupData, setPartLookupData] = useState(Array(props.BOMData.bom.length).fill(null));
-    const [bomdata, setBomdata] = useState(props.BOMData.bom);
-    //const [bomAttrs, setBomAttrs] = useState(props.BOMData.bomAttrs.concat(numHeader));
+    const [bomdata, setBomdata] = useState(initBom);
+    const [bomAttrs, setBomAttrs] = useState(initBomAttrs);
     const [apiHeaders, setApiHeaders] = useState([]);
     //const [hasEvaluatedBOMData, setHasEvaluatedBOMData] = useState(null);
     const [bomApiFinished, setBomApiFinished] = useState(false);
@@ -140,7 +174,29 @@ function BOMTool(props){
     });
     const [bestOfferTable, setBestOfferTable] = useState(Array(numParts).fill(null));
     
+    const [octopartMonthlyCalls, setOctopartMonthlyCalls] = useState(null);
+
     useEffect(() => {
+        axios({
+            method: 'get',
+            url: server_url+'api/octopart'
+        }).then(res => {
+            setOctopartMonthlyCalls(res.data.limit);
+        })
+    }, []);
+    useEffect(() => {
+
+        //test axios call
+        /*
+        axios({
+            method: 'get',
+            url: server_url+'api/part',
+            params: {'save_parts': false, part: 'TSAL6100'},
+            //signal: controller.signal
+        }).then(res =>{
+            console.log(res.data);
+        });*/
+
         const mpnList = bomdata.map(line => line.mpn);
         //call api
 
@@ -157,7 +213,8 @@ function BOMTool(props){
                 method: 'post',
                 url: server_url+'api/part', //?part
                 data: new URLSearchParams({
-                    parts: mpnList
+                    parts: mpnList,
+
                 }),
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
@@ -217,81 +274,8 @@ function BOMTool(props){
         //console.log(bomApiFinished);
         if(apiFinished){
             //const lowestPrices = getLowestPrices(bomdata);
-            
-            //setLowestPriceOffers(lowestPrices);
-
-            const apiNames = apis.map(api => api.accessor);
-            //full bom request
-            axios({
-                method: 'POST',
-                url: server_url+'api/bestprice',
-                data: {
-                    bom: bomdata,
-                    apis: apiNames,
-                    algorithms: ['simple']
-                }
-            }).then(response => {
-                //console.log(response.data);
-                
-                const best = response.data.best;
-                const lowestPrices = best.map((line) => {
-                    const simple = line.simple;
-                    return simple ? {api: simple.api, offerNum: simple.offerNum} : null;
-                });
-                setLowestPriceOffers(lowestPrices);
-                
-            });
-            
-            axios({
-                method: 'POST',
-                url: server_url+'api/bestprice',
-                data: {
-                    bom: bomdata,
-                    apis: apiNames,
-                    algorithms: ['multioffers']
-                }
-            }).then(response => {
-                //console.log(response.data);
-                
-                const best = response.data.best;
-                const bestOffers = best.map((line) => {
-                    const best = line.multioffers;
-                    return {offers: best.offers, total: best.total};
-                });
-                const bestOfferTableFormat = best.map((line, i) => {
-                    const offs = line.multioffers.offers;
-                    const tableOffers = offs.map((offer) => {
-                        return {
-                            api: offer.api, offerNum: offer.offerNum,
-                            per: offer.price_per, total: offer.total, quantity: offer.quantity
-                        };
-                    });
-                    return {
-                        mpn: bomdata[i].mpn, total_price: line.multioffers.total,
-                        quantity: line.multioffers.quantity_offered, offers: tableOffers
-                    };
-                });
-                //console.log(bestOfferTableFormat);
-                setBestOfferTable(bestOfferTableFormat);
-
-                const partialComplete = best.reduce((v, line) => {
-                    const mo = line.multioffers;
-                    if(mo.complete && mo.quantity_offered >= 0){
-                        return v+1;
-                    }
-                    return v;
-                }, 0);
-                
-                const bd = response.data.multioffers_breakdown;
-                setPriceEvaluation(update(priceEvaluation, {
-                    totalPrice: {$set: bd.total_price},
-                    offers: {$set: bestOffers},
-                    partsComplete: {$set: bd.num_completed_offers},
-                    partialComplete: {$set: partialComplete}
-                }));
-            });
-
-            //setLowestPriceOffers();
+            fullBomRunAlgorithms();
+        
         }
     }, [bomApiProgress]);
 
@@ -299,13 +283,30 @@ function BOMTool(props){
 
     }, []);
     function bomApisFinished(){
-        return bomApiProgress.reduce((b, apis) => {
-            if(apis === null || apis.length > 0){
+        return bomApiProgress.reduce((b, apisn) => {
+            if(apisn === null || apisn.length > 0){
                 b = false;
             }
             return b;
         }, true);
     }
+
+    function requestOctopart(mpn=null, limit=1){
+        console.log(mpn);
+        const requestOptions = {
+            method: 'get',
+            url: server_url+'api/octopart'
+        }
+        if(mpn){
+            requestOptions.params = {search: mpn, limit: limit};
+        } 
+        console.log(requestOptions);
+        axios(requestOptions).then(res => {
+            console.log(res.data);
+            setOctopartMonthlyCalls(res.data.limit);
+        });
+    }
+    
 
     function callApis(controller){
         let apiProgress = bomApiProgress;
@@ -344,12 +345,13 @@ function BOMTool(props){
             setShowProgress(true);
             const mpn = line.mpn;
             if(n <= maxCalls){
-                const callUrl = api_name!==null 
-                ? server_url+'api/part?part='+mpn+'&api='+api_name
-                : server_url+'api/part?part='+mpn;
+                const callUrl = server_url+'api/part?part';
+                const params = {part: mpn, save_parts: true};
+                if(api_name !== null) params.api = api_name;
                 axios({
                     method: 'get',
                     url: callUrl,
+                    params: params,
                     signal: controller.signal
                 }).then(response => {
                     const apisOutput = api_name ? {}:{
@@ -438,24 +440,7 @@ function BOMTool(props){
                     });
                     //console.log(apiProgress);
                     setBomApiProgress(apiProgress);
-                    
-                    if(hasError.length > 0){
-                        //call apis again
-                        //console.log(hasError);
-                    }else{
-                        /*
-                        const apiFinished = apiProgress.reduce((b, apisn) => {
-                            if(apisn === null || apisn.length > 0){
-                                b = false;
-                            }
-                            return b;
-                        }, true);*/
-                        /*
-                        if(apiFinished){
-                            setBomApiFinished(apiFinished);
-                        }*/
-                        //setBomApiFinished(apiFinished);
-                    }
+
                     if(api_name!==null){
                         if(maxOffers < ubom[i].maxOffers){
                             maxOffers = ubom[i].maxOffers;
@@ -479,18 +464,7 @@ function BOMTool(props){
                 });
                 //console.log(apiProgress);
                 setBomApiProgress(apiProgress);
-                /*
-                const apiFinished = apiProgress.reduce((b, apisn) => {
-                    if(apisn === null || apisn.length > 0){
-                        b = false;
-                    }
-                    return b;
-                }, true);
-                */
-                /*
-                if(apiFinished){
-                    setBomApiFinished(apiFinished);
-                }*/
+
             }
         }
         const maxCalls = 4
@@ -498,21 +472,81 @@ function BOMTool(props){
             if('mpn' in line) callApi(line, i, 0, maxCalls, controller);
         });
 
-        /*
-        const mergedData = ubom.map((line, i) => {
-            return {...line, ...apiBomData[i]};
-        });
-        //setBomdata(mergedData); doesnt work (calls before apis return)
-        */
     }
-    /*
-    function BOMDataToArray(data, headers){
-        return data.map((line) => {
-            const out = headers.map((header) => {
-                //line 
+    function fullBomRunAlgorithms(){
+        const apiNames = getActiveApis();
+        //full bom request
+        axios({
+            method: 'POST',
+            url: server_url+'api/bestprice',
+            data: {
+                bom: bomdata,
+                apis_list: apiNames,
+                algorithms: ['simple']
+            }
+        }).then(response => {
+            console.log(response.data);
+            
+            const best = response.data.best;
+            const lowestPrices = best.map((line) => {
+                const simple = line.simple;
+                return simple ? {api: simple.api, offerNum: simple.offerNum} : null;
             });
+            setLowestPriceOffers(lowestPrices);
+            
         });
-    }*/
+        
+        axios({
+            method: 'POST',
+            url: server_url+'api/bestprice',
+            data: {
+                bom: bomdata,
+                apis_list: apiNames,
+                algorithms: ['multioffers']
+            }
+        }).then(response => {
+            console.log(response.data);
+            
+            const best = response.data.best;
+            const bestOffers = best.map((line) => {
+                const best = line.multioffers;
+                return {offers: best.offers, total: best.total};
+            });
+            const bestOfferTableFormat = best.map((line, i) => {
+                const offs = line.multioffers.offers;
+                const tableOffers = offs.map((offer) => {
+                    return {
+                        api: offer.api, offerNum: offer.offerNum,
+                        per: offer.price_per, total: offer.total, quantity: offer.quantity
+                    };
+                });
+                const diff = line.multioffers.quantity_offered - bomdata[i].quantity;
+                return {
+                    mpn: bomdata[i].mpn, total_price: line.multioffers.total,
+                    quantity: line.multioffers.quantity_offered, offers: tableOffers,
+                    diff: diff
+                };
+            });
+            //console.log(bestOfferTableFormat);
+            setBestOfferTable(bestOfferTableFormat);
+
+            const partialComplete = best.reduce((v, line) => {
+                const mo = line.multioffers;
+                if(mo.complete && mo.quantity_offered >= 0){
+                    return v+1;
+                }
+                return v;
+            }, 0);
+            
+            const bd = response.data.multioffers_breakdown;
+            setPriceEvaluation(update(priceEvaluation, {
+                totalPrice: {$set: bd.total_price},
+                offers: {$set: bestOffers},
+                partsComplete: {$set: bd.num_completed_offers},
+                partialComplete: {$set: partialComplete}
+            }));
+        });
+    }
     function handlePriceOptions(opt){
         //console.log(opt);
         switch(opt){
@@ -577,7 +611,7 @@ function BOMTool(props){
             case 'default':
                 v = <BOMAPITable data={bomdata} bomAttrs={bomAttrs} apis={apiHeaders} apiSubHeadings={apiAttrs}
                 onChangeQuantity={handleChangeQuantity} highlights={lowestPriceOffers} 
-                rowsFinished={bomApiProgress.map((apis) => apis !== null && apis.length === 0)}
+                rowsFinished={bomApiProgress.map((a) => a !== null && a.length === 0)}
                 showHighlights={highlightView === 'lowest'}/>;
                 break;
             case 'prices':
@@ -592,21 +626,6 @@ function BOMTool(props){
                 break;
         }
         return v;
-    }
-    function progressBar(){
-        if(showProgress){
-            const nFinished = bomApiProgress.reduce((n, api_list) => {
-                if(api_list !== null && api_list.length === 0) return n+1;
-                return n
-            }, 0);
-            const ratio = nFinished/numParts;
-            const percentage = ratio*100;
-            if(ratio >= 1){
-                setTimeout(() => setShowProgress(false), 2000);
-            }
-            return <SimpleProgressBar now={percentage}/>
-        }
-        return <></>;
     }
     function handleChangeQuantity(row, quantity){
         const isFinished = bomApisFinished();
@@ -631,62 +650,106 @@ function BOMTool(props){
                     //price: {$set: bestPriceDisplay(r, r.moq, r.pricing, newQ)}
             });
             //change rows for the (alternate mpns) i.e rows that have no display quantity
-            //const eval = priceEvaluation;
-            /*
-            function algorithmsOnRow(n, line){
-                const apiNames = getActiveApis(n);
-                axios({
-                    method: 'POST',
-                    url: server_url+'api/bestprice',
-                    data: {
-                        line: line,
-                        apis: apiNames,
-                        algorithms: ['simple', 'multioffers']
-                    }
-                }).then(response => {
-                    console.log(response.data);
-                    const data = response.data;
-                    const bestOffer = data.simple ? {api: data.simple.api, offerNum: data.simple.offerNum} : null;
-                    setLowestPriceOffers(update(lowestPriceOffers, {
+
+            const rows = [row];
+            let nrow = row+1;
+            while(nrow < bomdata.length && bomdata[nrow].display_quantity === ''){
+                newBom = update(newBom, {
+                    [nrow]: {quantity: {$set: newQ}}
+                });
+                rows.push(nrow);
+                nrow++;
+            }
+            setBomdata(newBom);
+
+            //change rows for the (alternate mpns) i.e rows that have no display quantity (from rows)
+            //do algorithm for multi lines
+            const apiNames = rows.map((n) => getActiveApis(n));
+            console.log(apiNames);
+            axios({
+                method: 'POST',
+                url: server_url+'api/bestprice',
+                data: {
+                    bom: newBom,
+                    lines: rows,
+                    apis_list: apiNames,
+                    algorithms: ['simple', 'multioffers']
+                }
+            }).then(response => {
+                //console.log(response.data);
+                const best = response.data.best;
+                let lpo = lowestPriceOffers; let pe = priceEvaluation; let bot = bestOfferTable;
+                let fullDiff = 0;
+                best.forEach((obj, i) => {
+                    const simple = obj.simple;
+                    const multioffers = obj.multioffers;
+                    const n = rows[i];
+                    const bestOffer = simple ? {api: simple.api, offerNum: simple.offerNum} : null;
+                    lpo = update(lpo, {
                         [n]: {$set: bestOffer}
-                    }));
-                    const newTotal = data.multioffers.total;
-                    const oldOffers = priceEvaluation.offers[row];
+                    });
+                    const newTotal = multioffers.total;
+                    const oldOffers = priceEvaluation.offers[n];
                     const oldTotal = oldOffers.total;
                     const diff = oldTotal-newTotal;
-                    setPriceEvaluation(update(priceEvaluation, {
-                        totalPrice: {$set: priceEvaluation.totalPrice-diff},
-                        offers: {[n]: {$set: data.multioffers}}
-                    }));
-                    const offs = data.multioffers.offers;
+                    fullDiff += diff;
+                    pe = update(pe, {
+                        //totalPrice: {$set: priceEvaluation.totalPrice-diff},
+                        offers: {[n]: {$set: multioffers}}
+                    });
+                    const offs = multioffers.offers;
                     const tableOffers = offs.map((offer) => {
                         return {
                             api: offer.api, offerNum: offer.offerNum,
                             per: offer.price_per, total: offer.total, quantity: offer.quantity
                         };
                     });
+                    const qdiff = multioffers.quantity_offered - newBom[n].quantity;
                     const tableLine = {
                         mpn: bomdata[n].mpn, total_price: newTotal,
-                        quantity: data.multioffers.quantity_offered, offers: tableOffers
+                        quantity: multioffers.quantity_offered, offers: tableOffers,
+                        diff: qdiff
                     };
-                    setBestOfferTable(update(bestOfferTable, {
+                    bot = update(bot, {
                         [n]: {$set: tableLine}
-                    }));
+                    });
                 });
-            }*/
-            //algorithmsOnRow(row, newRow);
-            let nrow = row+1;
-            while(nrow < bomdata.length && bomdata[nrow].display_quantity === ''){
-                newBom = update(newBom, {
-                    [nrow]: {quantity: {$set: newQ}}
+                pe = update(pe, {
+                    totalPrice: {$set: priceEvaluation.totalPrice-fullDiff},
                 });
-                //const r = nrow;
-                //algorithmsOnRow(r, newBom[r]);
-                nrow++;
-            }
-            setBomdata(newBom);
-
-            //do algorithm for multi lines
+                setLowestPriceOffers(lpo);
+                setPriceEvaluation(pe);
+                setBestOfferTable(bot);
+                /*
+                const data = response.data;
+                const bestOffer = data.simple ? {api: data.simple.api, offerNum: data.simple.offerNum} : null;
+                setLowestPriceOffers(update(lowestPriceOffers, {
+                    [n]: {$set: bestOffer}
+                }));
+                const newTotal = data.multioffers.total;
+                const oldOffers = priceEvaluation.offers[row];
+                const oldTotal = oldOffers.total;
+                const diff = oldTotal-newTotal;
+                setPriceEvaluation(update(priceEvaluation, {
+                    totalPrice: {$set: priceEvaluation.totalPrice-diff},
+                    offers: {[n]: {$set: data.multioffers}}
+                }));
+                const offs = data.multioffers.offers;
+                const tableOffers = offs.map((offer) => {
+                    return {
+                        api: offer.api, offerNum: offer.offerNum,
+                        per: offer.price_per, total: offer.total, quantity: offer.quantity
+                    };
+                });
+                const tableLine = {
+                    mpn: bomdata[n].mpn, total_price: newTotal,
+                    quantity: data.multioffers.quantity_offered, offers: tableOffers
+                };
+                setBestOfferTable(update(bestOfferTable, {
+                    [n]: {$set: tableLine}
+                }));
+                */
+            });
         }
 
     }
@@ -710,6 +773,7 @@ function BOMTool(props){
     function handleLineApisSubmit(){
         //if(highlightView === 'lowest'){
         handleHighlightOptions('lowest');
+        fullBomRunAlgorithms();
         //}
     }
     function hideLineApisModal(){
@@ -725,6 +789,9 @@ function BOMTool(props){
         );
 
     }
+    function handleHideBar(){
+        setShowProgress(false);
+    }
     return (
         <>  
             {/*<RefreshIcon onClick={handleReload} size={35}/>*/}
@@ -735,7 +802,8 @@ function BOMTool(props){
             lowestOffers={lowestPriceOffers} bomAttrs={props.BOMData.bomAttrs}/>
             {/*<CheckBoxModal show={showApiLineModal} boxes={apiCheckBoxes[checkBoxLineIndex]} 
             hideAction={hideLineApisModal} submitAction={handleLineApisSubmit}/>*/}
-            {progressBar()}
+            {<BomApiProgressBar show={showProgress} bomApiProgress={bomApiProgress} 
+            numParts={numParts} onHideBar={handleHideBar}/>}
             {<BomApiCheckBoxModal show={showApiLineModal} data={bomdata} bomApiCheckBoxes={bomApiCheckBoxes}
             apis={apis} onCheckChange={handleBomApiModal} hideAction={hideLineApisModal} 
             submitAction={handleLineApisSubmit}/>}
@@ -743,9 +811,10 @@ function BOMTool(props){
              apis={props.BOMData.apis} apiHeaders={apiHeaders} apiAttrs={apiAttrs}/>
             {/*partLookupData.length > 0 && partLookupData[0]*/}
             {/*<button onClick={test}> tb</button>*/}
-            <div className='MainTable'>
+            {/*<div className='MainTable'>*/}
+            {build_type !== 'production' && <div>{octopartMonthlyCalls}</div>}
             {displayTableView()}
-            </div>
+            {/*</div>*/}
         </>
     );
 }
@@ -754,12 +823,12 @@ function PricesEvaluationInterface(props){
     const pc = props.priceEvaluation.partsComplete;
     const percentageComplete = pc ? (pc/props.numParts)*100 : null; 
     return(
-        <div>
-            
-            {props.priceEvaluation.totalPrice && <SimpleLabel label='Total Price: ' value={props.priceEvaluation.totalPrice}/>}
+        <div className='WideInfoBar'>
+            {props.priceEvaluation.totalPrice && <SimpleLabel label='Total Price: ' value={props.priceEvaluation.totalPrice.toFixed(2)}/>}
             <SimpleLabel label='Number Of Parts: ' value={props.numParts}/>
             {pc && <SimpleLabel label='Parts Fully Evaluated: ' value={pc}/>}
-            {percentageComplete && <SimpleLabel label='BOM Percent: ' value={percentageComplete}/>}
+            {percentageComplete && <SimpleLabel label='Quoted: ' value={percentageComplete.toFixed(2)+'%'}/>}
+            {percentageComplete && <SimpleLabel label='Unquoted: ' value={(100-percentageComplete).toFixed(2)+'%'}/>}
         </div>
     );
 }

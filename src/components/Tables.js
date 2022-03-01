@@ -8,15 +8,20 @@ import {SimpleDropdown} from './Dropdown';
 import {PartRow, EmptyOffer} from './Offer';
 import {IdCheckbox} from './Checkbox';
 import {HoverOverlay} from './Tooltips';
+import {PageInterface} from './Pagination';
 
 import './../css/table.css';
 import './../css/temp.css';
+import { slice } from 'lodash';
 
 export function BOMAPITable(props){
     const data = useMemo(() => props.data, [props.data]);
     const columns = useMemo(() => props.bomAttrs.concat(props.apis), [props.bomAttrs, props.apis]);
-    //console.log(props.bomAttrs.concat(props.apis));
-    //const [showPriceOffers, setShowPriceOffers] = useState(null);
+
+    const pageSize = 5;
+    const [pageNumber, setPageNumber] = useState(0);
+    const numPages = Math.ceil(props.data.length / pageSize);
+    const displayWidth = 3;
     const {
         getTableProps,
         getTableBodyProps,
@@ -24,36 +29,10 @@ export function BOMAPITable(props){
         rows,
         prepareRow,
     } = useTable({columns, data});
-    /*
-    useEffect(() => {
-        const initShowPriceOffers = props.data.map((row) => {
-            return {switches: Array(row.maxOffers).fill(false), ntrue: 0};
-        });
-        //console.log(initShowPriceOffers);
-        setShowPriceOffers(initShowPriceOffers);
-    }, [props.data]);*/
-    //console.log(props.apiSubHeadings);
-    /*
-    function handleShowPrice(rn, i){
-        return function(){
-            //console.log(rn);
-            const inc = showPriceOffers[rn].switches[i] ? -1 : 1;
-            const opp = !showPriceOffers[rn].switches[i];
-            setShowPriceOffers(update(showPriceOffers, {
-                [rn]: 
-                {
-                    switches:{[i]: {$set: opp}}, 
-                    ntrue: {$apply: (n) => n+inc}
-                }
-            }));
-        }
-    }*/
+
     function handleChangeQuantity(rn){
         return function(quantity){
-            //console.log(props);
             props.onChangeQuantity(rn, quantity);
-            //console.log(rn);
-            //console.log(quantity);
         }
     }
     function isAPICell(i){
@@ -86,57 +65,49 @@ export function BOMAPITable(props){
         </>
         );
     }
-    /*
-    function NoOffer(k){
-        return <td key={k} colSpan={props.apiSubHeadings.length}>No Offer</td>;
-    }*/
     function handleClickRow(row){ // to be used later maybe?
         return function(){
-            //props.onClickRow(row);
         }
     }
-    //console.log(data);
+    function handlePageChange(pn){
+        //console.log(pn);
+        setPageNumber(pn);
+    }
+    const pageRows = slice(rows, pageNumber*pageSize, pageNumber*pageSize+pageSize);
     return(
+        <>
+        <div className='MainTable'>
         <Table {...getTableProps()}>
         {renderHeader()}
         <tbody {...getTableBodyProps()}>
-            {rows.map((row, rn) => {
-            prepareRow(row);
-            const rowData = row.original;
-            if(rowData.maxOffers > 0){
-                return (
-                    <PartRow key={rn} row={row} bomAttrsLength={props.bomAttrs.length} 
-                    apiSubHeadings={props.apiSubHeadings} onClickRow={handleClickRow}
-                    onChangeQuantity={handleChangeQuantity(rn)} 
-                    highlight={props.showHighlights ? props.highlights[rn] : null}/>
-                );
-            
-            }else{
-                return(
-                    /*
-                <tr key={rn} {...row.getRowProps()}>
-                    {row.cells.map((cell,i) => {
-                        const k = 'row'+rn+'cell'+i;
-                        if(isAPICell(i)){
-                            return NoOffer(k);
-                        }else{
-                            //const maxOffers = rowData.maxOffers ? rowData.maxOffers : 0;
-                            return (
-                            <td key={k} {...cell.getCellProps()}>
-                                {cell.render('Cell')}
-                            </td>
-                            );
-                        }
-                    })}
-                </tr>*/
-                <EmptyOffer key={rn} row={row} apiSubHeadings={props.apiSubHeadings}
-                bomAttrsLength={props.bomAttrs.length} onChangeQuantity={handleChangeQuantity(rn)}
-                finished={props.rowsFinished[rn]}/>
-                );
+            {pageRows.map((row, rn) => {
+                prepareRow(row);
+                const rowData = row.original;
+                if(rowData.maxOffers > 0){
+                    return (
+                        <PartRow key={rn} row={row} bomAttrsLength={props.bomAttrs.length} 
+                        apiSubHeadings={props.apiSubHeadings} onClickRow={handleClickRow}
+                        onChangeQuantity={handleChangeQuantity(rn)} 
+                        highlight={props.showHighlights ? props.highlights[rn] : null}/>
+                    );
+                
+                }else{
+                    return(
+                    <EmptyOffer key={rn} row={row} apiSubHeadings={props.apiSubHeadings}
+                    bomAttrsLength={props.bomAttrs.length} onChangeQuantity={handleChangeQuantity(rn)}
+                    finished={props.rowsFinished[rn]}/>
+                    );
+                }
+            })
             }
-            })}
         </tbody>
         </Table>
+        </div>
+        <div className='PageInterface'>
+        <PageInterface current={pageNumber} max={numPages} 
+        displayWidth={displayWidth} onPageClick={handlePageChange}/>
+        </div>
+        </>
     );
 }
 
@@ -365,6 +336,7 @@ Dropdown list for each column
 Checkbox column displayed given checkedRow array (boolean array)
 */
 export function CheckboxRowCustomColumnTable(props){
+    console.log(props);
     const numCols = props.sheet.length > 0 ? props.sheet[0].length : 0;
     const checkCol = (i) => 
     <td>

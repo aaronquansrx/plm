@@ -122,7 +122,7 @@ export function EmptyOffer(props){
                 return NoOffer(k);
             }else{
                 //displayQuantity
-                if(cell.column.id === 'display_quantity' && newQuantity !== ''){
+                if(cell.column.id === 'display_quantity' && rowData.display_quantity !== ''){
                     return(
                     <td key={k} {...cell.getCellProps()} /*onMouseDown={handleQuantityClick}*/>
                         <input className='TextBox' type='text' value={newQuantity} 
@@ -176,7 +176,7 @@ function OfferRow(props){
     const [showOffers, setShowOffers] = useState(false);
     //const [selectedQuantity, setSelectedQuantity] = useState(false);
     const [newQuantity, setNewQuantity] = useState(row.original.display_quantity);
-
+    const [showPartDetails, setShowPartDetails] = useState(false);
     //console.log(quantityFunction);
     const rowProps = props.rowProps;
     const i = props.offerIndex;
@@ -205,6 +205,11 @@ function OfferRow(props){
         //setQuantityFunction(s);
         //console.log(newQuantity);
     }
+    function handleMpnClick(mpn){
+        return function(){
+            window.open('/partdetails/'+mpn, '_blank');
+        };
+    }
     return (
     <>
     <tr {...rowProps}>
@@ -223,11 +228,9 @@ function OfferRow(props){
                             offer={offer} highlight={highlight}/>
                         );
                     }else{
-                        //console.log(rowData);
                         return <td key={k} colSpan={props.apiSubHeadings.length}>{i === 0 && rowData[api].message}</td>;
                     }
                 }else{
-                    //console.log(rowData);
                     return NoOffer(k);
                     //return <td key={k} colSpan={props.apiSubHeadings.length}>Waiting...</td>;
                 }
@@ -245,17 +248,19 @@ function OfferRow(props){
                     if(i === 0){
                         return(
                             <td key={k} {...cell.getCellProps()} 
-                            rowSpan={maxOffers+props.numShowOffers} 
-                            /*onMouseDown={handleQuantityClick}*/>
+                            rowSpan={maxOffers+props.numShowOffers}>
                                 <input className='TextBox' type='text' value={newQuantity} 
                                     onChange={handleChangeQuantity} onBlur={handleQuantitySubmit(newQuantity)}/>
-                                {/*selectedQuantity ? 
-                                <OutsideAlerterVarFunction f={handleOutsideQuantityClick} q={newQuantity}>
-                                    <input type='text' value={newQuantity} 
-                                    onChange={handleChangeQuantity} onBlur={handleOutsideQuantityClick(newQuantity)}/>
-                                </OutsideAlerterVarFunction> :
-                                cell.render('Cell')*/
-                                }
+                            </td>
+                        );
+                    }
+                }else if(cell.column.id === 'mpn'){
+                    if(i === 0){
+                        const mpn = cell.value;
+                        return(
+                            <td key={k} {...cell.getCellProps()} rowSpan={maxOffers+props.numShowOffers} 
+                            onClick={handleMpnClick(mpn)}>
+                                {cell.render('Cell')}
                             </td>
                         );
                     }

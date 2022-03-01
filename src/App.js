@@ -1,10 +1,47 @@
+import {useState} from 'react';
+import {Routes, Route} from "react-router-dom";
+
+import './css/App.css';
+import BOMInterface from './containers/BOMInterface';
+import PartDetails from './pages/PartDetails';
+import PartSearch from './pages/PartSearch';
+import Login from './pages/Login';
+import { MainNavbar } from './containers/Navbar';
+import { VersionModal } from './components/Modals';
+import useUsername from './hooks/useUsername';
 import './css/App.css';
 
-import BOMInterface from './containers/BOMInterface';
 function App() {
+  const {username, setUsername} = useUsername();
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  //console.log(username);
+  //console.log(setUsername);
+  //const [loggedIn, setLoggedIn] = useState(null);
+  function handleLogin(u){
+    setUsername(u);
+  }
+  function handleLogout(){
+    setUsername(false);
+  }
+  function handleVersionClick(){
+    const version = true;
+    setShowVersionModal(version);
+    console.log(version);
+  }
+  function handleHideVersion(){
+    setShowVersionModal(false);
+  }
+  console.log(showVersionModal);
   return (
     <div className="App">
-        <BOMInterface/>
+      <MainNavbar username={username} onLogout={handleLogout} onVersionClick={handleVersionClick}/>
+      {showVersionModal && <VersionModal show={showVersionModal} hideAction={handleHideVersion}/>}
+      <Routes>
+        <Route path='/' element={<BOMInterface/>}/>
+        <Route path='/login' element={<Login onLogin={handleLogin}/>}/>
+        <Route path='/partsearch' element={<PartSearch/>}/>
+        <Route path='/partdetails/:partId' element={<PartDetails/>}/>
+      </Routes>
     </div>
   );
 }

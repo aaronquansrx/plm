@@ -78,9 +78,8 @@ function BOMFileUploadInterface(props){
                 return arr;
             }, []);
             const autoFound = autoFindAttributes(passData, attributes);
-            console.log(autoFound);
             if(autoFound.found){
-                props.onBOMUpload(autoFound.bom, {found: true, headers: autoFound.headers});
+                props.onBOMUpload(passData, {found: true, headers: autoFound.headers, bom: autoFound.bom});
             }else{
                 props.onBOMUpload(passData);
             }

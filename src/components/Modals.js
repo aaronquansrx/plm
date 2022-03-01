@@ -127,20 +127,7 @@ export function BomApiCheckBoxModal(props){
         <Modal.Body>
             <BomApiCheckBoxAccordion data={props.data} apis={apis} 
             checkedBoxes={checkedBoxes} onCheckChange={props.onCheckChange}/>
-            {/*props.data.map((line, ln) => 
-                //display lines of bom which open up
-                //list of check boxes for each api
-                <div>
-                    {line.mpn}
-                    {apis.map((cb,i) => 
-                    <div key={i}>
-                        {cb.Header}
-                        <input className="form-check-input" type="checkbox" value={cb.accessor} 
-                        checked={checkedBoxes[ln][cb.accessor]} onChange={handleChange(ln,cb.name)}/>   
-                    </div>
-                    )}
-                </div>
-            )*/}
+            {/*<GlobalApiCheckBoxes apis={apis}/>*/}
         </Modal.Body>
 
         <Modal.Footer>
@@ -149,6 +136,32 @@ export function BomApiCheckBoxModal(props){
         </Modal.Footer>
         </Modal>
     )
+}
+
+function GlobalApiCheckBoxes(props){
+    const apis = props.apis;
+    console.log(apis);
+    const [checked, setChecked] = useState(apis.reduce((obj, api) => {
+        obj[api.accessor] = true;
+        return obj;
+    }), {});
+    function handleChange(api){
+        return function(){
+            setChecked(update(checked, {
+                [api]: {$set: !checked[api]}
+            }));
+        }
+    }
+    return(
+        <>
+        {apis.map((cb,i) => 
+            <div key={i}>
+                <NamedCheckBox value={cb.accessor} onChange={handleChange(cb.accessor)} label={cb.Header}
+                checked={checked[cb.accessor]}/>
+            </div>
+        )}
+        </>
+    );
 }
 
 function BomApiCheckBoxAccordion(props){
@@ -209,5 +222,19 @@ export function AutoColumnOptionModal(props){
         <Button variant="secondary" onClick={handleClose}>Close</Button>
         </Modal.Footer>
     </Modal>
+    );
+}
+
+export function VersionModal(props){
+    const handleClose = () => props.hideAction();
+    return(
+        <Modal show={props.show} onHide={handleClose}>
+            <Modal.Header closeButton>
+                <Modal.Title>Version Details</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                In development
+            </Modal.Body>
+        </Modal>
     );
 }

@@ -23,7 +23,7 @@ const headerToAccessor = tableHeaders.reduce(function(map, obj) {
 }, {});
 
 function BOMEditInterface(props){
-    const originalSheet = props.bom;
+    const originalSheet = props.bom ? props.bom : [];
     //const [originalSheet, setOriginalSheet] = useState(props.bom); // bom before editing
     const [editedSheet, setEditedSheet] = useState(props.bom); // edited bom (display)
     const [formattedSheet, setFormattedSheet] = useState([]); // will be sent to BOMInterface (array of same object)

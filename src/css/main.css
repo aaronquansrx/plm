@@ -2,3 +2,19 @@
     display: flex;
     justify-content: center;
 }
+
+.ProgressBar{
+    height: 15px;
+}
+
+.WideInfoBar{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+}
+
+.Login{
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}

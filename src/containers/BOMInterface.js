@@ -78,65 +78,16 @@ function BOMInterface(props){
         //assume first col is MPN
         setUploadedBOM(bom);
         if(autoFind.found){
-            setBOMData({bom: bom, bomAttrs: autoFind.headers, apis: apis});
+            //console.log(apis);
+            setBOMData({bom: autoFind.bom, bomAttrs: autoFind.headers, apis: apis});
             setInterfaceState(2);
         }else{
             setInterfaceState(1);
         }
     };
-    /*
-    function autoFindMPN(bom, options={}){
-        const searchMPN = ['mpn', 'manufacturing part number'];
-        const searchQuantity = ['q', 'quantity'];
-        if(bom.length > 0){
-            const mpnCol = bom[0].findIndex((val) => {
-                return (typeof val === 'string') 
-                ? searchMPN.includes(val.toLowerCase()) 
-                : false;
-            });
-            const qCol = bom[0].findIndex((val) => {
-                return (typeof val === 'string') 
-                ? searchQuantity.includes(val.toLowerCase()) 
-                : false;
-            });
-            //const found = {mpn: mpnCol, quantity: qCol};
-            if(mpnCol !== -1){
-                const headers = [{Header: 'MPN', accessor: 'mpn'}];
-                //(qCol !== -1) 
-                headers.push(quantityHeader); // quantity is required
-                bom.shift();
-                const bomData = bom.map((line) => {
-                    const data = {
-                        mpn: line[mpnCol]
-                    };
-                    if(qCol !== -1){
-                        data.quantity = line[qCol] ? line[qCol] : 1;
-                    }else{
-                        data.quantity = 1;
-                    }
-                    return data;
-                });
-                return {found: true, bom: bomData, headers: headers};
-            }
-        }
-        return {found: false};
-    }*/
     function handleEditBOM(bom, headers){
-        //const hs = headers.concat(apis);
         const hs = headers;
-        /*
-        const containsQuantity = hs.reduce((b, header) => {
-            if(header.accessor === 'quantity') return true;
-            return b;
-        }, false);
-        if(!containsQuantity){
-            hs.push(quantityHeader)
-            bom = bom.map(line => {
-                const q = line.quantity ? line.quantity : 1;
-                return {...line, quantity: q}
-            });
-        }*/
-        setBOMData({bom: bom, bomAttrs: hs, apis:apis});
+        setBOMData({bom: bom, bomAttrs: hs, apis: apis});
         setInterfaceState(2);
     }
     function changeState(state, bom=[]){
