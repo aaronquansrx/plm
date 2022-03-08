@@ -7,8 +7,26 @@ function BOMExporter(props){
     const [showModal, setShowModal] = useState(false);
     function handleExport(fn, options={}){
         const headers = props.bomAttrs.map(attr => attr.accessor);
-        console.log(headers);
-        const formatted = options.bestPrice ? bestPriceFormat() : formatBOMData();
+        const selectedOption = Object.entries(options).reduce((str, [k,v]) => {
+            if(v) return k;
+            return str;
+        }, null);
+        let formatted;
+        switch(selectedOption){
+            case 'lowestPrice':
+                formatted = lowestPriceFormat();
+                break;
+            case 'lowestLead':
+                formatted = lowestLeadFormat();
+                break;
+            default:
+                formatted = formatBOMData();
+                break;
+        }
+        //console.log(selectedOption);
+
+        //const formatted = options.lowestPrice ? lowestPriceFormat() : formatBOMData();
+        
         if(formatted){
             const sheet = XLSX.utils.json_to_sheet(formatted, {header: headers});
             const wb = XLSX.utils.book_new();
@@ -22,7 +40,7 @@ function BOMExporter(props){
     function handleHideExport(){
         setShowModal(false);
     }
-    function bestPriceFormat(){
+    function lowestPriceFormat(){
         const ignore = props.apis.map((api) => api.accessor);
         ignore.push('maxOffers', '_unnamed', 'quantity');
         console.log(props.lowestOffers);
@@ -44,8 +62,30 @@ function BOMExporter(props){
             }
             return outline;
         });
-        //console.log(formatted);
-        //for()
+        return formatted;
+    }
+    function lowestLeadFormat(){
+        const ignore = props.apis.map((api) => api.accessor);
+        ignore.push('maxOffers', '_unnamed', 'quantity');
+        const formatted = props.data.map((line, i) => {
+            const outline = Object.entries(line).reduce((obj, [k,v]) => {
+                if(!ignore.includes(k)){
+                    obj[k] = v;
+                }
+                return obj;
+            }, {});
+            if(props.lowestLeadTime[i]){
+                outline.distributer = props.lowestLeadTime[i].api;
+                outline.offerNumber = props.lowestLeadTime[i].offerNum;
+                const offer = line[props.lowestLeadTime[i].api].offers[props.lowestLeadTime[i].offerNum]
+                //console.log(offer);
+                props.apiSubHeadings.forEach((heading) => {
+                    outline[heading.accessor] = offer[heading.accessor];
+                });
+                outline.leadtimedays = offer.leadtimedays;
+            }
+            return outline;
+        });
         return formatted;
     }
     function formatBOMData(){
@@ -74,10 +114,7 @@ function BOMExporter(props){
     }
     return (
         <>
-        <div className='Icon' onClick={handleShowExport}>
-            <ExportExcelIcon size={32} show={showModal}/>
-            <span>Export</span>
-        </div>
+        <ExportExcelIcon size={32} show={showModal} onClick={handleShowExport}/>
         <ExportModal show={showModal} hideAction={handleHideExport} exportAction={handleExport}/>
         </>
     );

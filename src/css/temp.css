@@ -3,11 +3,28 @@
     flex-direction: column;
 }
 
+.Hori{
+    display: flex;
+    flex-direction: row;
+}
+
+.SmallText{
+    width: 75px;
+}
+
 .FlexNormal {
     flex-grow: 0;
     flex-shrink: 1;
     flex-basis: auto;
 }
+
+.Flex2 {
+    flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: auto;
+}
+
+
 .IconNav {
     display: flex;
     flex-direction: row;

@@ -178,6 +178,7 @@ function OfferRow(props){
     //const [selectedQuantity, setSelectedQuantity] = useState(false);
     const [newQuantity, setNewQuantity] = useState(row.original.display_quantity);
     const [showPartDetails, setShowPartDetails] = useState(false);
+    //const []
     //console.log(quantityFunction);
     const rowProps = props.rowProps;
     const i = props.offerIndex;
@@ -226,7 +227,7 @@ function OfferRow(props){
                         const offer = offers[i];
                         return(
                             <SubHeadingAttrs key={k} k={k} offer={offer} apiSubHeadings={props.apiSubHeadings} 
-                            offer={offer} highlight={highlight}/>
+                            highlight={highlight}/>
                         );
                     }else{
                         return <td key={k} colSpan={props.apiSubHeadings.length}>{i === 0 && rowData[api].message}</td>;
@@ -259,10 +260,12 @@ function OfferRow(props){
                     if(i === 0){
                         const mpn = cell.value;
                         return(
+                            <>
                             <td key={k} {...cell.getCellProps()} rowSpan={maxOffers+props.numShowOffers} 
                             onClick={handleMpnClick(mpn)}>
                                 {cell.render('Cell')}
                             </td>
+                            </>
                         );
                     }
                 }else{
