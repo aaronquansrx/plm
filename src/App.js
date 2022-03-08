@@ -33,7 +33,7 @@ function App() {
   }
   function path(p){
     const prePath = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
-    return prePath+p;
+    return '/'+prePath+p;
   }
   console.log(showVersionModal);
   return (

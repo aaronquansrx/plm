@@ -208,7 +208,8 @@ function OfferRow(props){
     }
     function handleMpnClick(mpn){
         return function(){
-            window.open('/partdetails/'+mpn, '_blank');
+            const path = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
+            window.open('/'+path+'partdetails/'+mpn, '_blank');
         };
     }
     return (
