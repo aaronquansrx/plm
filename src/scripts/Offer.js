@@ -67,3 +67,14 @@ export function bestPriceDisplay(line, moq, pricing, overQuantity=null){
     }
     return quantity < pricing[n].BreakQuantity ? pricing[0].UnitPrice : pricing[n].UnitPrice;
 }
+
+export function findPartialComplete(best){
+    const partialComplete = best.reduce((v, line) => {
+        const mo = line.multioffers;
+        if(mo.complete && mo.quantity_offered >= 0){
+            return v+1;
+        }
+        return v;
+    }, 0);
+    return partialComplete;
+}

@@ -68,6 +68,7 @@ export function ExportExcelIcon(props){
     return (
         <div className='Icon' onClick={props.onClick}>
         <span><BsFileEarmarkExcel size={size}/></span>
+        <span>Export</span>
         </div>
     );
 }

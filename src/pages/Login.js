@@ -14,6 +14,11 @@ function Login(props){
         //console.log(username);
         props.onLogin(username);
     }
+    function path(p){
+        const prePath = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
+        const server = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_SERVER : process.env.REACT_APP_SERVER_TEST;
+        return server+prePath+p;
+    }
     return(
         <div className='Login'>
             <Form>
@@ -26,7 +31,7 @@ function Login(props){
                 <Form.Label>Password</Form.Label>
                 <Form.Control type="password" placeholder="Password" />
             </Form.Group>
-            <Button href='/' variant="primary" onClick={handleLogin}>
+            <Button href={path('')} variant="primary" onClick={handleLogin}>
                 Login
             </Button>
             </Form>

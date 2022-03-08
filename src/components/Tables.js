@@ -15,8 +15,30 @@ import './../css/temp.css';
 import { slice } from 'lodash';
 
 export function BOMAPITable(props){
+    //const [init, setInit] = useState(false);
     const data = useMemo(() => props.data, [props.data]);
-    const columns = useMemo(() => props.bomAttrs.concat(props.apis), [props.bomAttrs, props.apis]);
+    
+    const columns = useMemo(() => {
+        //let bomAttrs = props.bomAttrs;
+        /*
+        if(bomAttrs[0].accessor !== 'checkbox'){
+            const checkboxColumn = {
+                Header: 'CBox',
+                accessor: 'checkbox',
+                Cell: (r) => {
+                    const i = r.row.index;
+                    return <IdCheckbox onChange={handleChangeCBox} checked={checkboxRows[i]} i={i}/>
+                }
+            }
+            bomAttrs.unshift(checkboxColumn);
+            //setInit(true);
+        }
+        bomAttrs = bomAttrs.concat(props.apis);
+        */
+        return props.bomAttrs.concat(props.apis);
+    }, [props.bomAttrs, props.apis]);
+
+    const [checkboxRows, setCheckboxRows] = useState(props.data.map(() => false));
 
     const pageSize = 5;
     const [pageNumber, setPageNumber] = useState(0);
@@ -30,6 +52,14 @@ export function BOMAPITable(props){
         prepareRow,
     } = useTable({columns, data});
 
+    ///not working as intended
+    function handleChangeCBox(i){
+        console.log(i);
+        console.log(checkboxRows);
+        setCheckboxRows(update(checkboxRows, {
+            [i]: {$set: !checkboxRows[i]}
+        }));
+    }
     function handleChangeQuantity(rn){
         return function(quantity){
             props.onChangeQuantity(rn, quantity);
@@ -88,14 +118,15 @@ export function BOMAPITable(props){
                         <PartRow key={rn} row={row} bomAttrsLength={props.bomAttrs.length} 
                         apiSubHeadings={props.apiSubHeadings} onClickRow={handleClickRow}
                         onChangeQuantity={handleChangeQuantity(rn)} 
-                        highlight={props.showHighlights ? props.highlights[rn] : null}/>
+                        highlight={props.showHighlights ? props.highlights[rn] : null}
+                        checked={checkboxRows[rn]}/>
                     );
                 
                 }else{
                     return(
                     <EmptyOffer key={rn} row={row} apiSubHeadings={props.apiSubHeadings}
                     bomAttrsLength={props.bomAttrs.length} onChangeQuantity={handleChangeQuantity(rn)}
-                    finished={props.rowsFinished[rn]}/>
+                    finished={props.rowsFinished[rn]} checked={checkboxRows[rn]}/>
                     );
                 }
             })
