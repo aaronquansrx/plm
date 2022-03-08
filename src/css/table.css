@@ -16,6 +16,10 @@
     justify-content: center;
 }
 
+.Select{
+    cursor: pointer;
+}
+
 .OverflowTable {
     /*overflow: auto;*/
 }

@@ -2,12 +2,16 @@ import {useState, useEffect} from 'react';
 
 import Table from 'react-bootstrap/Table';
 
+import {useClientUrl} from '../hooks/Urls';
+
+import './../css/table.css';
+
 const renderers = {
-    'mpn': (p) => <MPNRenderer/>,
-    'quantity': (p) => <QuantityRenderer/>,
-    //'default': 
+    'mpn': (p) => <MPNRenderer {...p}/>,
+    'quantity': (p) => <QuantityRenderer {...p}/>,
 };
 
+const defaultRenderer = (p) => <DefaultRenderer/>
 
 export function BOMAPITableV2(props){
     const data = props.data;
@@ -21,10 +25,12 @@ export function BOMAPITableV2(props){
     const apiAttrsAccessors = apiAttrs.map((attr) => attr.accessor);
     const apiAttrsHeaders = apiAttrs.map((attr) => attr.Header);
     const normalAttributes = props.bomAttrs.map((attr) => {
+        const custom = (attr.accessor in renderers)
+        ? renderers[attr.accessor] : null;
         return {
             attribute: attr.accessor,
             type: 'normal',
-            custom: null // custom renderer for cell?
+            custom: custom // custom renderer for cell?
         };
     });
     const apiAttributes = apis.map((api) => {
@@ -38,7 +44,8 @@ export function BOMAPITableV2(props){
         return {
             attribute: api.accessor,
             subAttributes: sa,
-            type: 'api'
+            type: 'api',
+            custom: (p) => <APIRenderer {...p}/>
         }
     });
 
@@ -78,13 +85,17 @@ function BOMRow(props){
 
 function BOMAttributeRenderer(props){
     //console.log(props.subAttributes);
+    /*
     const fromType = {
         api: <APIRenderer {...props}/>,
         normal: <td>{props.value}</td>
     }
+    const renderer = props.custom({...props});
+    */
+    //console.log(props);
     return(
         <>
-        {fromType[props.type]}
+        {props.custom ? props.custom({...props}) : <DefaultRenderer {...props}/>}
         </>
     );
 }
@@ -148,9 +159,22 @@ function Checkbox(){
 }
 
 function MPNRenderer(props){
-    
+    const clientUrl = useClientUrl();
+    const mpn = props.value;
+    function handleMPNClick(){
+        window.open(clientUrl+'partdetails/'+mpn, '_blank');
+    }
+    return(
+        <td className='Select' onClick={handleMPNClick}>{mpn}</td>
+    );
 }
 
 function QuantityRenderer(props){
 
+}
+
+function DefaultRenderer(props){
+    return(
+        <td>{props.value}</td>
+    )
 }

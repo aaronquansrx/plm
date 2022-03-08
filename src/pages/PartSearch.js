@@ -6,7 +6,7 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import ListGroup from 'react-bootstrap/ListGroup';
 
-import useServerUrl from '../hooks/useServerUrl';
+import {useServerUrl} from '../hooks/Urls';
 import { ListGroupItem } from 'react-bootstrap';
 
 function PartSearch(props){

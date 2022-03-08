@@ -946,7 +946,7 @@ function BOMTool(props){
             {/*<div className='MainTable'>*/}
             {/*build_type !== 'production' && <div>{octopartMonthlyCalls}</div>*/}
             {displayTableView()}
-            {/*<BOMAPITableV2 checkbox data={bomdata} bomAttrs={bomAttrs} apis={apiHeaders} apiAttrs={apiAttrs}/>*/}
+            {<BOMAPITableV2 checkbox data={bomdata} bomAttrs={bomAttrs} apis={apiHeaders} apiAttrs={apiAttrs}/>}
             {/*</div>*/}
         </>
     );
