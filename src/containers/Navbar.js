@@ -1,9 +1,12 @@
 import React, {useEffect, useState} from 'react';
 
+import {useClientUrl} from './../hooks/Urls';
+
 import styled from 'styled-components';
 
 import Nav from 'react-bootstrap/Nav'
 import Navbar from 'react-bootstrap/Navbar';
+
 
 import { Container } from 'react-bootstrap';
 import background from './../bg_srx_pattern_grey.gif';
@@ -21,10 +24,13 @@ const LoggedAs = styled.span`
 
 export function MainNavbar(props){
     //console.log(props.username);
+    const clientUrl = useClientUrl();
     function path(p){
         const prePath = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
         const server = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_SERVER : process.env.REACT_APP_SERVER_TEST;
-        return server+prePath+p;
+        console.log(clientUrl+p);
+        return clientUrl+'/'+p;
+        //return server+prePath+p;
     }
     return(
         <SRXBackgroundNavbar bg="dark" variant='dark' expand="lg">
@@ -46,7 +52,7 @@ export function MainNavbar(props){
                 style={{ maxHeight: '100px' }}
                 navbarScroll
             >
-                <Nav.Link href={path("")}>BOM Tool</Nav.Link>
+                <Nav.Link href={path("bomtool")}>BOM Tool</Nav.Link>
                 <Nav.Link href={path("partsearch")}>Part Search</Nav.Link>
                 {/*<Nav.Link href="#action2">Link</Nav.Link>*/}
                 {/*<Nav.Link href="#" disabled>

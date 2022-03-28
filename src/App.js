@@ -2,10 +2,12 @@ import {useState} from 'react';
 import {Routes, Route} from "react-router-dom";
 
 import './css/App.css';
-import BOMInterface from './containers/BOMInterface';
+//import BOMInterface from './containers/BOMInterface';
 import PartDetails from './pages/PartDetails';
 import PartSearch from './pages/PartSearch';
 import Login from './pages/Login';
+import Index from './pages/Index';
+import BOMMain from './pages/BOMMain';
 import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
 import useUsername from './hooks/useUsername';
@@ -41,7 +43,8 @@ function App() {
       <MainNavbar username={username} onLogout={handleLogout} onVersionClick={handleVersionClick}/>
       {showVersionModal && <VersionModal show={showVersionModal} hideAction={handleHideVersion}/>}
       <Routes>
-        <Route path={path('')} element={<BOMInterface/>}/>
+        <Route path={path('')} element={<Index/>}/>
+        <Route path={path('bomtool')} element={<BOMMain/>}/>
         <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
         <Route path={path('partsearch')} element={<PartSearch/>}/>
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
