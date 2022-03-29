@@ -11,7 +11,7 @@ import {NamedCheckBox} from './Checkbox';
 import {HoverOverlay} from './Tooltips';
 import { AutoColumnOptionModal } from './Modals';
 
-import {autoFindAttributes} from './../scripts/Upload';
+import {autoFindAttributesV2} from './../scripts/Upload';
 
 import './../css/main.css';
 //import {ExcelDisplayTable, CheckboxRowCustomColumnTable} from './Tables';
@@ -77,7 +77,7 @@ function BOMFileUploadInterface(props){
                 }
                 return arr;
             }, []);
-            const autoFound = autoFindAttributes(passData, attributes);
+            const autoFound = autoFindAttributesV2(passData, attributes);
             if(autoFound.found){
                 props.onBOMUpload(passData, {found: true, headers: autoFound.headers, bom: autoFound.bom});
             }else{

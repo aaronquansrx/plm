@@ -33,7 +33,7 @@ function BOMEditInterface(props){
         checkedRows: Array(props.bom.length).fill(false), 
         columnAttributes: columnAttrs
     });
-
+    
     const [columnAttributes, setColumnAttributes] = useState([]);
 
     const [editState, setEditState] = useState(0);
@@ -115,6 +115,8 @@ function BOMEditInterface(props){
         return {editedBom: editedBom, columnAttributes: bomAttrs};
     }
     */
+
+   //const editedBomData = useBomParse(editState, );
 
     function handleConfirm(){
         let nextState = true;

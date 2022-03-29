@@ -1,7 +1,10 @@
 import React, {useEffect, useState} from 'react';
 
+import update from 'immutability-helper';
+
 import BOMFileUploadInterface from '../components/BOMFileUploadInterface';
 import BOMEditInterface from '../components/BOMEditInterface';
+import BOMEditInterfaceV2 from '../components/BOMEditInterfaceV2';
 import BOMTool from '../components/BOMTool';
 import BOMToolV3 from '../components/BOMToolV3';
 import {HoverOverlay} from '../components/Tooltips';
@@ -50,9 +53,8 @@ function BOMInterface(props){
             setInterfaceState(1);
         }
     };
-    function handleEditBOM(bom, headers){
-        const hs = headers;
-        setBOMData({bom: bom, attrs: hs, apis: apis});
+    function handleFinishEditBOM(bom, headers){
+        setBOMData({bom: bom, attrs: headers, apis: apis});
         setInterfaceState(2);
     }
     function changeState(state, bom=[]){
@@ -60,20 +62,26 @@ function BOMInterface(props){
         setInterfaceState(state);
         setInitialBOMEdit(bom);
     }
+
+    function updateApiDataMap(joinMap){
+        const newApiData = new Map([...apiData, ...joinMap]);
+        setApiData(newApiData);
+    }
     //renders the body of interface depending on state
     function renderInterfaceState(){
         switch(interfaceStates[interfaceState]){
             case 'upload':
                 return <BOMFileUploadInterface onBOMUpload={handleBOMUpload} headers={uploadHeaders}/>;
             case 'edit':
-                return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
+                return <BOMEditInterfaceV2 bom={uploadedBOM} onFinishEdit={handleFinishEditBOM} tableHeaders={tableHeaders}/>
+                //return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 'tool':
-                return <BOMToolV3 BOMData={BOMData} changeState={changeState}/>;
+                return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} 
+                updateApiDataMap={updateApiDataMap} apiData={apiData}/>;
             default:
                 return "Unknown interface state";
         }
     }
-
     return ( 
         <>
             <Navigation interfaceState={interfaceState} onNavChange={changeState}/>

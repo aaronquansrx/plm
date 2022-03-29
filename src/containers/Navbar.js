@@ -28,7 +28,6 @@ export function MainNavbar(props){
     function path(p){
         const prePath = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
         const server = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_SERVER : process.env.REACT_APP_SERVER_TEST;
-        console.log(clientUrl+p);
         return clientUrl+'/'+p;
         //return server+prePath+p;
     }
