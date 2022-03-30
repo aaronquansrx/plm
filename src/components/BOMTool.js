@@ -6,7 +6,7 @@ import axios from 'axios';
 import _ from 'lodash';
 
 import {BOMAPITable, BestPriceTable} from './Tables'; 
-import {BOMAPITableV2} from './TableBOM';
+import {BOMAPITableV2} from './BOMAPITable';
 import {SimpleProgressBar, BomApiProgressBar} from './Progress';
 import {BomApiCheckBoxModal} from './Modals';
 import BOMExporter from './BOMExporter';

@@ -1,6 +1,6 @@
 import {useState, useEffect, useMemo} from 'react';
 
-export function useTableBOM(bom, tableHeaders, apis, apiData){
+export function useTableBOM(req, bom, tableHeaders, apis, apiData){
     const initTableBOM = useMemo(() => {
         return bom.map((line) => {
             line.mpns = {
@@ -21,8 +21,8 @@ export function useTableBOM(bom, tableHeaders, apis, apiData){
             mpn: 'mpns',
             quantity: 'quantities'
         };
-        const headers = tableHeaders.concat(apis);
-        return headers.map((header) => {
+        //const headers = tableHeaders.concat(apis);
+        return tableHeaders.map((header) => {
             if(header.accessor in headerChangeMap){
                 header.accessor = headerChangeMap[header.accessor];
             }
@@ -32,12 +32,26 @@ export function useTableBOM(bom, tableHeaders, apis, apiData){
     const [updateTable, setUpdateTable] = useState(0);
     useEffect(() => {
 
-        const updateTimeout = setTimeout(
+        const updateTimeout = null;
+        /* = setTimeout(
             () => setUpdateTable(updateTable+1)
-        , 1000);
+        , 1000);*/
         return () => {
             clearTimeout(updateTimeout);
         }
     }, [updateTable]);
     return [tableBOM, setTableBOM, headers];
+}
+
+export function useApiAttributes(){
+    const initApiAttrs = [
+        {Header: 'Stock', accessor: 'available'},
+        {Header: 'MOQ', accessor: 'moq'},
+        {Header: 'Lead Time', accessor: 'leadtime'},
+        {Header: 'Price', accessor: 'price'},
+        {Header: 'SPQ', accessor: 'spq'},
+        {Header: 'Currency', accessor: 'currency'}
+    ];
+    const [apiAttrs, setApiAttrs] = useState(initApiAttrs);
+    return apiAttrs;
 }

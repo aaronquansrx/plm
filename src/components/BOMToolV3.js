@@ -4,8 +4,9 @@ import update from 'immutability-helper';
 
 import Button from 'react-bootstrap/Button';
 
-import {useTableBOM} from './../hooks/BOMTable';
+import {useTableBOM, useApiAttributes} from './../hooks/BOMTable';
 import {useApiData} from './../hooks/BOMData';
+import {BOMAPITableV2} from './BOMAPITable';
 
 function BOMToolV3(props){
     //console.log(props.apiData);
@@ -16,9 +17,10 @@ function BOMToolV3(props){
     }, []), [props.bom]);
     const [requestApis, setRequestApis] = useState(0);
     const apiData = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap);
-    const [tableBOM, setTableBOM, tableColumns] 
-    = useTableBOM(requestApis, props.bom, props.tableHeaders, 
+    const [tableBOM, setTableBOM, tableColumns] = useTableBOM(requestApis, 
+        props.bom, props.tableHeaders, 
         props.apis, props.apiData);
+    const apiAttrs = useApiAttributes();
     function handleRequestApis(){
         setRequestApis(requestApis+1);
     }
@@ -27,7 +29,8 @@ function BOMToolV3(props){
     return(
         <div>
             <Button onClick={handleRequestApis}>Call APIs</Button>
-            Hi
+            <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
+            apis={props.apis} apiAttrs={apiAttrs}/>
         </div>
     );
 }

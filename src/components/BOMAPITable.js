@@ -8,7 +8,8 @@ import './../css/table.css';
 
 const renderers = {
     'mpn': (p) => <MPNRenderer {...p}/>,
-    'quantity': (p) => <QuantityRenderer {...p}/>,
+    'mpns': (p) => <MPNsRenderer {...p}/>,
+    'quantities': (p) => <QuantitiesRenderer {...p}/>
 };
 
 const defaultRenderer = (p) => <DefaultRenderer/>
@@ -35,6 +36,7 @@ export function BOMAPITableV2(props){
     });
     const apiAttributes = apis.map((api) => {
         const sa = apiAttrs.map((attr) => {
+            //set custom renderers here
             return {
                 attribute: attr.accessor,
                 type: 'subattr',
@@ -61,8 +63,8 @@ export function BOMAPITableV2(props){
             <BOMAPITableHeader checkbox={props.checkbox} bomAttrs={props.bomAttrs} 
             apis={props.apis} apiAttrs={props.apiAttrs}/>
             <tbody>
-                {data.map((line) => 
-                    <BOMRow data={line} checkbox={props.checkbox} attributeOrder={attributeOrder}/>
+                {data.map((line, i) => 
+                    <BOMRow key={i} data={line} checkbox={props.checkbox} attributeOrder={attributeOrder}/>
                 )}
             </tbody>
         </Table>
@@ -73,13 +75,21 @@ function BOMRow(props){
     //console.log(props.data);
     return(
         <tr>
-            <td><Checkbox/></td>
+            {props.checkbox &&
+                <td><Checkbox/></td>
+            }
             {props.attributeOrder.map((attr) => {
                 return (
                     <BOMAttributeRenderer {...attr} value={props.data[attr.attribute]}/> 
                 );
             })}
         </tr>
+    );
+}
+
+function BOMOffer(props){
+    return (
+        <></>
     );
 }
 
@@ -169,9 +179,18 @@ function MPNRenderer(props){
     );
 }
 
-function QuantityRenderer(props){
-
+function MPNsRenderer(props){
+    return (
+        <td>{props.value.mpn}</td>
+    );
 }
+
+function QuantitiesRenderer(props){
+    return (
+        <td>{props.value.single}</td>
+    );
+}
+
 
 function DefaultRenderer(props){
     return(
