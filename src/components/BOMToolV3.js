@@ -19,13 +19,13 @@ function BOMToolV3(props){
     const apiData = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap);
     const [tableBOM, setTableBOM, tableColumns] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
-        props.apis, props.apiData);
+        props.apis, props.apiData
+    );
     const apiAttrs = useApiAttributes();
     function handleRequestApis(){
         setRequestApis(requestApis+1);
     }
     console.log(tableBOM);
-    //console.log(tableColumns);
     return(
         <div>
             <Button onClick={handleRequestApis}>Call APIs</Button>

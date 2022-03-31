@@ -78,9 +78,9 @@ function BOMRow(props){
             {props.checkbox &&
                 <td><Checkbox/></td>
             }
-            {props.attributeOrder.map((attr) => {
+            {props.attributeOrder.map((attr, i) => {
                 return (
-                    <BOMAttributeRenderer {...attr} value={props.data[attr.attribute]}/> 
+                    <BOMAttributeRenderer key={i} {...attr} value={props.data[attr.attribute]}/> 
                 );
             })}
         </tr>

@@ -1,5 +1,7 @@
 import {useState, useEffect, useMemo} from 'react';
 
+import { findPriceBracket } from '../scripts/Offer';
+
 export function useTableBOM(req, bom, tableHeaders, apis, apiData){
     const initTableBOM = useMemo(() => {
         return bom.map((line) => {
@@ -30,12 +32,30 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData){
         });
     });
     const [updateTable, setUpdateTable] = useState(0);
+    const [mpnsInitialEvaluated, setMpnsInitialEvaluated] = useState(new Set());
     useEffect(() => {
 
-        const updateTimeout = null;
-        /* = setTimeout(
+        const updateTimeout = setTimeout(
             () => setUpdateTable(updateTable+1)
-        , 1000);*/
+        , 1000);
+        //test new table (also put in new function)
+        const newTable = [...tableBOM].map((line) => {
+            apis.forEach(api => {
+                const newOffers = line[api].offers.map((offer) => {
+                    const {price, index} = findPriceBracket(offer.pricing, line.quantity, offer.moq);
+                    offer.price = price;
+                    offer.prices = {
+                        price: price,
+                        pricingIndex: index
+                    }
+                    return offer;
+                });
+                line[api].offers = newOffers;
+            });
+            return line;
+        });
+        setTableBOM(newTable);
+
         return () => {
             clearTimeout(updateTimeout);
         }

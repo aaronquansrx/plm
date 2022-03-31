@@ -78,3 +78,13 @@ export function findPartialComplete(best){
     }, 0);
     return partialComplete;
 }
+
+export function findPriceBracket(pricing, qu, moq){
+    const quantity = moq > qu ? moq : qu;
+    let n = 0; //quantity bracket index
+    while(n+1 < pricing.length && quantity >= pricing[n+1].BreakQuantity){
+        n+=1;
+    }
+    const price = quantity < pricing[n].BreakQuantity ? pricing[0].UnitPrice : pricing[n].UnitPrice;
+    return {price: price, index: n};
+}
