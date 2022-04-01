@@ -11,11 +11,15 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap){
         const controller = new AbortController();
         if(req > 0){
             const apiDataMap = new Map();
-            function apiCallback(mpn, apiData){
-                //console.log(mpn);
-                apiDataMap.set(mpn, apiData);
+            function apiCallback(mpn, apiData, maxOffers){
+                const now = Date.now();
+                const data = {
+                    apis: apiData,
+                    maxOffers: maxOffers
+                };
+
+                apiDataMap.set(mpn, {data:data, date: now});
                 updateApiDataMap(apiDataMap);
-                //addApiData(mpn, apiData);
             }
 
             mpnList.forEach(mpn => {
@@ -29,6 +33,10 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap){
     }, [req]);
 }
 
+export function useApiProgress(mpnList, apiData){
+
+}
+
 function callApi(mpn, serverUrl, controller, apis, callback){
     axios({
         method: 'GET',
@@ -36,14 +44,12 @@ function callApi(mpn, serverUrl, controller, apis, callback){
         params: {part: mpn},
         signal: controller.signal
     }).then(response => {
-        console.log(response.data);
-        callback(mpn, response.data.apis);
-        formatApiData(response.data.apis);
+        const formattedApiData = formatApiData(response.data.apis);
+        callback(mpn, formattedApiData, response.data.maxOffers);
     });
 }
 
 function formatApiData(rawApiData){
-    //todo
     const formattedData = Object.entries(rawApiData).reduce((obj, [k,v]) => {
         const success = v.status === 'success';
         const offers = success 
@@ -60,9 +66,10 @@ function formatApiData(rawApiData){
         }) : [];
         obj[k] = {
             offers: offers,
-            success: success
+            message: v.message
         };
-        console.log(obj[k]);
+        //console.log(obj[k]);
         return obj;
     }, {});
+    return formattedData;
 }

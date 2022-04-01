@@ -32,8 +32,9 @@ const headerToAccessor = tableHeaders.reduce(function(map, obj) {
 */
 
 const autoSearchStrings = {
-    mpn: ['mpn', 'manufacturing part number'],
-    quantity: ['q', 'quantity']
+    mpn: ['mpn', 'manufacturing part number', 'manufacturer part number'],
+    quantity: ['q', 'quantity'],
+
 }
 
 function BOMFileUploadInterface(props){
@@ -60,7 +61,7 @@ function BOMFileUploadInterface(props){
         const passData = data.map(l => {
             const line = [];
             for(let i=0; i<l.length; i++){
-                const v = l[i] ? l[i] : '';
+                const v = l[i] ? l[i].toString() : '';
                 line.push(v);
             }
             return line;

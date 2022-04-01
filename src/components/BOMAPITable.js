@@ -73,23 +73,39 @@ export function BOMAPITableV2(props){
 
 function BOMRow(props){
     //console.log(props.data);
+    const [showAllOffers, setShowAllOffers] = useState(false);
     return(
+        <>
         <tr>
             {props.checkbox &&
                 <td><Checkbox/></td>
             }
-            {props.attributeOrder.map((attr, i) => {
-                return (
-                    <BOMAttributeRenderer key={i} {...attr} value={props.data[attr.attribute]}/> 
-                );
-            })}
+            <BOMOffer offerNum={0} attributeOrder={props.attributeOrder} data={props.data}/>
         </tr>
+        {props.data.maxOffers > 1 && showAllOffers &&
+        [...Array(props.data.maxOffers-1).keys()].map((i) => {
+            const offerNum = i+1;
+            return(
+            <tr>       
+                <BOMOffer key={i} offerNum={offerNum} attributeOrder={props.attributeOrder} data={props.data}/>
+            </tr>
+            );
+        })
+        }
+        </>
+        
     );
 }
 
 function BOMOffer(props){
     return (
-        <></>
+        <>
+        {props.attributeOrder.map((attr, i) => {
+            return (
+                <BOMAttributeRenderer key={i} {...attr} value={props.data[attr.attribute]} offerNum={props.offerNum}/> 
+            );
+        })}
+        </>
     );
 }
 
@@ -119,9 +135,7 @@ function APIRenderer(props){
         ? ((props.value.offers.length > 0) 
         ? props.subAttributes.map((attr, i) => {
             return (
-            <td key={i}>
-                <BOMAttributeRenderer value={props.value.offers[0][attr.attribute]} type='normal'/>
-            </td>
+                <BOMAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]} type='normal'/>
             )
         })
         : <td colSpan={props.subAttributes.length}>{props.value.message}</td>)
@@ -181,7 +195,7 @@ function MPNRenderer(props){
 
 function MPNsRenderer(props){
     return (
-        <td>{props.value.mpn}</td>
+        <td>{props.value.current}</td>
     );
 }
 
