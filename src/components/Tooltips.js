@@ -4,6 +4,7 @@ import Button from 'react-bootstrap/Button';
 import Overlay from 'react-bootstrap/Overlay';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
+import Popover from 'react-bootstrap/Popover';
 
 import './../css/temp.css';
 
@@ -88,4 +89,20 @@ export function WarningToolTipButton(props){
     </Overlay>
     </>
     );
+}
+
+export function SimplePopover(props){
+    const popover = (
+        <Popover id="popover-basic">
+          <Popover.Header as="h3">{props.popoverHeader}</Popover.Header>
+          <Popover.Body>
+            {props.popoverBody}
+          </Popover.Body>
+        </Popover>
+      );
+    return (
+        <OverlayTrigger trigger={props.trigger} placement={props.placement} overlay={popover}>
+            {props.children}
+        </OverlayTrigger>
+    )
 }

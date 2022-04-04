@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useMemo} from 'react';
 
 import update from 'immutability-helper';
 import axios from 'axios';
@@ -33,8 +33,49 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap){
     }, [req]);
 }
 
-export function useApiProgress(mpnList, apiData){
+export function useApiDataProgress(mpnList, apiData){
+    const [progress, setProgress] = useState({
+        finished: false,
+        mpnsNotEvaluated: new Set(
+            mpnList.reduce((arr, mpn) => {
+                if(!apiData.has(mpn)) arr.push(mpn);
+                return arr;
+            }, [])
+        )
+    });
+    //const [mpnsToDo, setMpnsToDo] = useState(new Set([...mpnList]));
+    useEffect(() => {
+        const leftMpns = [...progress.mpnsNotEvaluated].reduce((arr, mpn) => {
+            if(apiData.has(mpn)){
+                arr.push(mpn);
+            }
+            return arr;
+        }, []);
+        /*
+        const newMpnsToDo = update(mpnsToDo, {
+            $remove: leftMpns
+        });
+        
+        setMpnsToDo(newMpnsToDo);
+        const updateMpnEvaluated = leftMpns.map((mpn) => {
+            return [mpn, true];
+        });
+        */
+        const fin = progress.mpnsNotEvaluated.size - leftMpns.length === 0;
+        //console.log(progress.mpnsNotEvaluated.size);
+        //console.log(leftMpns.length);
+        const newProgress = update(progress, {
+            finished: {$set: fin},
+            mpnsNotEvaluated: {$remove: leftMpns}
+        });
+        setProgress(newProgress);
+        //console.log(newProgress);
+    }, [apiData]);
 
+    function mpnIsEvaluated(mpn){
+        return progress.mpnsNotEvaluated.has(mpn);
+    }
+    return progress;
 }
 
 function callApi(mpn, serverUrl, controller, apis, callback){

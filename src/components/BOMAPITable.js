@@ -1,15 +1,21 @@
 import {useState, useEffect} from 'react';
+import styled from 'styled-components';
 
 import Table from 'react-bootstrap/Table';
 
-import {useClientUrl} from '../hooks/Urls';
+import {useClientUrl} from './../hooks/Urls';
+
+import {SimplePopover, HoverOverlay} from './Tooltips';
+import {PricingTable} from './Tables';
+import {NumberInput} from './Forms';
 
 import './../css/table.css';
 
 const renderers = {
     'mpn': (p) => <MPNRenderer {...p}/>,
     'mpns': (p) => <MPNsRenderer {...p}/>,
-    'quantities': (p) => <QuantitiesRenderer {...p}/>
+    'quantities': (p) => <QuantitiesRenderer {...p}/>,
+    'prices': (p) => <PricesRenderer {...p}/>
 };
 
 const defaultRenderer = (p) => <DefaultRenderer/>
@@ -28,19 +34,26 @@ export function BOMAPITableV2(props){
     const normalAttributes = props.bomAttrs.map((attr) => {
         const custom = (attr.accessor in renderers)
         ? renderers[attr.accessor] : null;
+        const functions = (attr.accessor in props.functions)
+        ? props.functions[attr.accessor] : null;
         return {
             attribute: attr.accessor,
             type: 'normal',
-            custom: custom // custom renderer for cell?
+            custom: custom, // custom renderer for cell?
+            functions: functions
         };
     });
     const apiAttributes = apis.map((api) => {
         const sa = apiAttrs.map((attr) => {
-            //set custom renderers here
+            const custom = (attr.accessor in renderers)
+            ? renderers[attr.accessor] : null;
+            const saFunctions = (attr.accessor in props.functions)
+            ? props.functions[attr.accessor] : null;
             return {
                 attribute: attr.accessor,
                 type: 'subattr',
-                custom: null
+                custom: custom,
+                functions: saFunctions
             }
         });
         return {
@@ -50,59 +63,94 @@ export function BOMAPITableV2(props){
             custom: (p) => <APIRenderer {...p}/>
         }
     });
-
-    const headerOrder = [];
     const attributeOrder = normalAttributes.concat(apiAttributes);
-    //console.log(attributeOrder);
     function handleMainCheckBox(){
 
     }
-
     return (
+        <div className='MainTable'>
         <Table>
             <BOMAPITableHeader checkbox={props.checkbox} bomAttrs={props.bomAttrs} 
             apis={props.apis} apiAttrs={props.apiAttrs}/>
             <tbody>
                 {data.map((line, i) => 
-                    <BOMRow key={i} data={line} checkbox={props.checkbox} attributeOrder={attributeOrder}/>
+                    <BOMRow key={i} rowNum={i} data={line} checkbox={props.checkbox} attributeOrder={attributeOrder}/>
                 )}
             </tbody>
         </Table>
+        </div>
     );
 }
+
+const HoverToggleSolidColour = styled.div`
+    height: 15px;
+    background: ${props => props.toggle ? 'blue' : 'green'};
+    &:hover {
+        background: red;
+    }
+`;
 
 function BOMRow(props){
     //console.log(props.data);
     const [showAllOffers, setShowAllOffers] = useState(false);
+    function changeShowOffers(){
+        setShowAllOffers(!showAllOffers);
+    }
+    const firstRowCellProps = showAllOffers ? {rowSpan: props.data.maxOffers} : {};
+    const numTableCols = props.attributeOrder.reduce((c, attr) => {
+        if(attr.type == 'api'){
+            return c+attr.subAttributes.length;
+        }
+        return c+1;
+    }, 0);
     return(
         <>
         <tr>
             {props.checkbox &&
                 <td><Checkbox/></td>
             }
-            <BOMOffer offerNum={0} attributeOrder={props.attributeOrder} data={props.data}/>
+            <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={props.attributeOrder} 
+            data={props.data} cellProps={firstRowCellProps}/>
         </tr>
         {props.data.maxOffers > 1 && showAllOffers &&
         [...Array(props.data.maxOffers-1).keys()].map((i) => {
             const offerNum = i+1;
             return(
-            <tr>       
-                <BOMOffer key={i} offerNum={offerNum} attributeOrder={props.attributeOrder} data={props.data}/>
+            <tr key={i}>       
+                <BOMOffer offerNum={offerNum} rowNum={props.rowNum} attributeOrder={props.attributeOrder} data={props.data}/>
             </tr>
             );
-        })
+        })}
+        {props.data.maxOffers > 1 &&
+        <tr onClick={changeShowOffers}>
+            <td colSpan={numTableCols} className='NoPadding'>
+            <HoverOverlay placement='auto' 
+            tooltip={showAllOffers ? 'Close offers' : 'Open offers'}>
+            <HoverToggleSolidColour toggle={showAllOffers}/>
+            </HoverOverlay>
+            </td>
+
+        </tr>
         }
-        </>
-        
+        </> 
     );
 }
 
 function BOMOffer(props){
+    const attrOrder = props.offerNum === 0 ? props.attributeOrder
+    : props.attributeOrder.reduce((arr, attr) => {
+        if(attr.type === 'api'){
+            arr.push(attr);
+        }
+        return arr;
+    }, []);
+    //const cellProps = props.offerNum === 0 ? {rowSpan: props.data.maxOffers} : {};
     return (
         <>
-        {props.attributeOrder.map((attr, i) => {
+        {attrOrder.map((attr, i) => {
             return (
-                <BOMAttributeRenderer key={i} {...attr} value={props.data[attr.attribute]} offerNum={props.offerNum}/> 
+                <BOMAttributeRenderer key={i} {...attr} cellProps={props.cellProps}
+                value={props.data[attr.attribute]} offerNum={props.offerNum} rowNum={props.rowNum}/> 
             );
         })}
         </>
@@ -132,10 +180,11 @@ function APIRenderer(props){
     return(
         <>
         {props.value 
-        ? ((props.value.offers.length > 0) 
+        ? ((props.value.offers.length > 0 && props.offerNum < props.value.offers.length)
         ? props.subAttributes.map((attr, i) => {
             return (
-                <BOMAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]} type='normal'/>
+                <BOMAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]}
+                 custom={attr.custom} type='normal'/>
             )
         })
         : <td colSpan={props.subAttributes.length}>{props.value.message}</td>)
@@ -151,7 +200,7 @@ function APIRenderer(props){
 function BOMAPITableHeader(props){
     const numApiAttrs = props.apiAttrs.length;
     return(
-    <thead>
+    <thead className='TableHeading'>
         <tr>
         {props.checkbox && 
         <th rowSpan='2'>
@@ -194,20 +243,44 @@ function MPNRenderer(props){
 }
 
 function MPNsRenderer(props){
+    function handleClick(){
+        props.functions.click();
+    }
     return (
-        <td>{props.value.current}</td>
+        <td {...props.cellProps} onClick={handleClick}>{props.value.current}</td>
     );
 }
 
 function QuantitiesRenderer(props){
+    function handleBlur(newQuantity){
+        props.functions.adjustQuantity(newQuantity, props.rowNum);
+    }
+    const quantPop = (
+        <div>
+            Single: {props.value.single}
+            Multi: {props.value.multi}
+        </div>
+    );
     return (
-        <td>{props.value.single}</td>
+        <td {...props.cellProps}>
+            <SimplePopover popoverBody={quantPop} trigger={['hover', 'focus']} placement='auto'>
+            <div><NumberInput onBlur={handleBlur} value={props.value.single}/></div>
+            </SimplePopover>
+        </td>
     );
 }
 
+function PricesRenderer(props){
+    const pt = <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex}/>;
+    return (
+        <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
+            <td>{props.value.price}</td>
+        </SimplePopover>
+    );
+}
 
 function DefaultRenderer(props){
     return(
-        <td>{props.value}</td>
+        <td {...props.cellProps}>{props.value}</td>
     )
 }

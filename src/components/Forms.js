@@ -5,8 +5,8 @@ import Form from 'react-bootstrap/Form';
 import './../css/temp.css';
 
 export function NumberInput(props){
-    const [number, setNumber] = useState(1);
-    const displayNumber = props.value ? props.value : number;
+    const [number, setNumber] = useState(props.value ? props.value : 1);
+    //const displayNumber = props.value ? props.value : number;
     function handleChange(e){
         if(!isNaN(e.nativeEvent.data)){
             //console.log(e.nativeEvent.data);
@@ -14,12 +14,21 @@ export function NumberInput(props){
             if(props.onChange) props.onChange(e.target.value);
         }
     }
+    function handleBlur(e){
+        if(props.onBlur) props.onBlur(e.target.value);
+    }
+    useEffect(() => {
+        setNumber(props.value);
+    }, [props.value]);
+    const disabled = props.disabled ? props.disabled : false;
     return(
         <div className='Hori'>
         {props.label && 
         <Form.Label>{props.label}</Form.Label>
         }
-        <Form.Control className='SmallText' type="text" onChange={handleChange} value={displayNumber}/>
+        <Form.Control className='SmallText' type="text" 
+        onChange={handleChange} onBlur={handleBlur} value={number}
+        disabled={disabled}/>
         </div>
     );
 }
