@@ -4,6 +4,7 @@ import {ExportModal} from './Modals';
 import XLSX from 'xlsx';
 
 function BOMExporter(props){
+    const apiAttrs = props.apiAttrs;
     const [showModal, setShowModal] = useState(false);
     function handleExport(fn, options={}){
         const headers = props.bomAttrs.map(attr => attr.accessor);
@@ -51,12 +52,13 @@ function BOMExporter(props){
                 }
                 return obj;
             }, {});
+            //const apiSubHeadings = 
             if(props.lowestOffers[i]){
                 outline.distributer = props.lowestOffers[i].api;
                 outline.offerNumber = props.lowestOffers[i].offerNum;
                 const offer = line[props.lowestOffers[i].api].offers[props.lowestOffers[i].offerNum]
                 //console.log(offer);
-                props.apiSubHeadings.forEach((heading) => {
+                apiAttrs.forEach((heading) => {
                     outline[heading.accessor] = offer[heading.accessor];
                 });
             }
@@ -79,7 +81,7 @@ function BOMExporter(props){
                 outline.offerNumber = props.lowestLeadTime[i].offerNum;
                 const offer = line[props.lowestLeadTime[i].api].offers[props.lowestLeadTime[i].offerNum]
                 //console.log(offer);
-                props.apiSubHeadings.forEach((heading) => {
+                apiAttrs.forEach((heading) => {
                     outline[heading.accessor] = offer[heading.accessor];
                 });
                 outline.leadtimedays = offer.leadtimedays;
@@ -102,7 +104,7 @@ function BOMExporter(props){
             props.apis.forEach((api) => {
                 if(api.accessor in line && line[api.accessor].offers.length > 0){
                     const offers = line[api.accessor].offers;
-                    props.apiSubHeadings.forEach((heading) => {
+                    apiAttrs.forEach((heading) => {
                         outline[api.accessor+'_'+heading.accessor] = offers[0][heading.accessor];
                     });
                 }

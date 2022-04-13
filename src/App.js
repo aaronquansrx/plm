@@ -1,7 +1,8 @@
 import {useState} from 'react';
 import {Routes, Route} from "react-router-dom";
 
-import './css/App.css';
+import update from 'immutability-helper';
+
 //import BOMInterface from './containers/BOMInterface';
 import PartDetails from './pages/PartDetails';
 import PartSearch from './pages/PartSearch';
@@ -16,9 +17,15 @@ import './css/App.css';
 function App() {
   const {username, setUsername} = useUsername();
   const [showVersionModal, setShowVersionModal] = useState(false);
+  const [options, setOptions] = useState({store: 'AU', currency: 'USD'});
   //console.log(username);
   //console.log(setUsername);
   //const [loggedIn, setLoggedIn] = useState(null);
+  function handleOptionChange(option, value){
+    setOptions(update(options, {
+      [option]: {$set: value}
+    }));
+  }
   function handleLogin(u){
     setUsername(u);
   }
@@ -40,11 +47,14 @@ function App() {
   console.log(showVersionModal);
   return (
     <div className="App">
-      <MainNavbar username={username} onLogout={handleLogout} onVersionClick={handleVersionClick}/>
+      <MainNavbar username={username} 
+      onLogout={handleLogout} onVersionClick={handleVersionClick}
+      store={options.store} currency={options.currency} 
+      onOptionChange={handleOptionChange}/>
       {showVersionModal && <VersionModal show={showVersionModal} hideAction={handleHideVersion}/>}
       <Routes>
         <Route path={path('')} element={<Index/>}/>
-        <Route path={path('bomtool')} element={<BOMMain/>}/>
+        <Route path={path('bomtool')} element={<BOMMain options={options}/>}/>
         <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
         <Route path={path('partsearch')} element={<PartSearch/>}/>
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>

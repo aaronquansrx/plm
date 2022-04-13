@@ -5,7 +5,7 @@ import axios from 'axios';
 
 import {useServerUrl} from './../hooks/Urls';
 
-export function useApiData(req, mpnList, apisList, updateApiDataMap){
+export function useApiData(req, mpnList, apisList, updateApiDataMap, store){
     const serverUrl = useServerUrl();
     useEffect(() => {
         const controller = new AbortController();
@@ -23,7 +23,7 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap){
             }
 
             mpnList.forEach(mpn => {
-                callApi(mpn, serverUrl, controller, apisList, apiCallback);
+                callApi(mpn, serverUrl, controller, apisList, apiCallback, store);
             });
         }
 
@@ -51,25 +51,13 @@ export function useApiDataProgress(mpnList, apiData){
             }
             return arr;
         }, []);
-        /*
-        const newMpnsToDo = update(mpnsToDo, {
-            $remove: leftMpns
-        });
-        
-        setMpnsToDo(newMpnsToDo);
-        const updateMpnEvaluated = leftMpns.map((mpn) => {
-            return [mpn, true];
-        });
-        */
         const fin = progress.mpnsNotEvaluated.size - leftMpns.length === 0;
-        //console.log(progress.mpnsNotEvaluated.size);
-        //console.log(leftMpns.length);
+
         const newProgress = update(progress, {
             finished: {$set: fin},
             mpnsNotEvaluated: {$remove: leftMpns}
         });
         setProgress(newProgress);
-        //console.log(newProgress);
     }, [apiData]);
 
     function mpnIsEvaluated(mpn){
@@ -78,11 +66,11 @@ export function useApiDataProgress(mpnList, apiData){
     return progress;
 }
 
-function callApi(mpn, serverUrl, controller, apis, callback){
+function callApi(mpn, serverUrl, controller, apis, callback, store){
     axios({
         method: 'GET',
         url: serverUrl+'api/part',
-        params: {part: mpn},
+        params: {part: mpn, store: store},
         signal: controller.signal
     }).then(response => {
         const formattedApiData = formatApiData(response.data.apis);
@@ -99,7 +87,8 @@ function formatApiData(rawApiData){
                 available: offer.Quantity.Available,
                 moq: offer.Quantity.MinimumOrder,
                 spq: offer.Quantity.OrderMulti,
-                leadtime: offer.LeadTime,
+                //leadtime: offer.LeadTime,
+                leadtime: offer.LeadTimeWeeks,
                 leadtimedays: offer.LeadTimeDays,
                 pricing: offer.Pricing,
                 currency: offer.Currency

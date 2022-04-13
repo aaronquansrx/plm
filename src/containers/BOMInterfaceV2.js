@@ -9,6 +9,7 @@ import BOMTool from '../components/BOMTool';
 import BOMToolV3 from '../components/BOMToolV3';
 import {HoverOverlay} from '../components/Tooltips';
 import {UploadIcon, EditIcon, SheetIcon} from '../components/Icons';
+import {StoreCurrencyOptions} from '../components/Options';
 
 import './../css/temp.css';
 
@@ -77,7 +78,7 @@ function BOMInterface(props){
                 //return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 'tool':
                 return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} 
-                updateApiDataMap={updateApiDataMap} apiData={apiData}/>;
+                updateApiDataMap={updateApiDataMap} apiData={apiData} store={props.store}/>;
             default:
                 return "Unknown interface state";
         }

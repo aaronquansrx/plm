@@ -1,10 +1,13 @@
 import {useState, useEffect, useMemo} from 'react';
 
+import axios from 'axios';
 import update from 'immutability-helper';
 
 import { findPriceBracket } from '../scripts/Offer';
+import {useServerUrl} from '../hooks/Urls';
 
-export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData){
+export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataProgress, testCall){
+    const serverUrl = useServerUrl();
     const lenBOM = bom.length;
     const initTableBOM = useMemo(() => {
         return bom.map((line) => {
@@ -27,13 +30,14 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData){
             mpn: 'mpns',
             quantity: 'quantities'
         };
-        return tableHeaders.map((header) => {
+        const newHeaders = tableHeaders.concat([{Header: 'Apis', accessor: 'activeApis'}]);
+        return newHeaders.map((header) => {
             if(header.accessor in headerChangeMap){
                 header.accessor = headerChangeMap[header.accessor];
             }
             return header;
         });
-    });
+    }, [tableHeaders]);
     const [updateTable, setUpdateTable] = useState(0);
     const [lineNumsToEvaluate, setLineNumsToEvaluate] = useState(new Set([...Array(lenBOM)].keys()));
     useEffect(() => {
@@ -79,9 +83,22 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData){
         }
     }, [updateTable]);
     useEffect(() => {
-        console.log('Table changed');
-        //setTableBOM(tableBOM);
-    }, [tableBOM]);
+        if(apiDataProgress.finished){
+            const apiNames = tableBOM.map(() => apis);
+            axios({
+                method: 'POST',
+                url: serverUrl+'api/bestprice',
+                data: {
+                    bom: tableBOM,
+                    apis_list: apiNames,
+                    //quantity_multi: quantityMulti,
+                    algorithms: ['simple']
+                }
+            }).then(response => {
+                console.log(response.data);
+            });
+        }
+    }, [apiDataProgress, testCall]);
     function setTable(table){
         setTableBOM(table);
     }

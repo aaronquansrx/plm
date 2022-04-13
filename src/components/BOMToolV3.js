@@ -11,7 +11,10 @@ import {
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
 import {BOMAPITableV2} from './BOMAPITable';
 import {NumberInput} from './Forms';
+import { NamedCheckBox } from './Checkbox';
 import BOMExporter from './BOMExporter';
+
+import './../css/temp.css';
 
 function BOMToolV3(props){
     //console.log(props.apiData);
@@ -21,12 +24,13 @@ function BOMToolV3(props){
         return arr;
     }, []), [props.bom]);
     const [requestApis, setRequestApis] = useState(0);
-    const apiData = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap);
+    const [testCall, setTestCall] = useState(0);
+    useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, props.store);
+    const apiDataProgress = useApiDataProgress(mpnList, props.apiData);
     const [tableBOM, setTable, tableColumns] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
-        apisList, props.apiData
+        apisList, props.apiData, apiDataProgress, testCall
     );
-    const apiDataProgress = useApiDataProgress(mpnList, props.apiData);
     const apiAttrs = useApiAttributes();
     function handleRequestApis(){
         setRequestApis(requestApis+1);
@@ -75,17 +79,55 @@ function BOMToolV3(props){
             adjustQuantity: adjustQuantity
         }
     }
+    //const [highlight, setHighlight] = useState([]);
+    function handleChangeHighlight(obj){
+        console.log(obj);
+    }
+    function handleTest(){
+        setTestCall(testCall+1);
+    }
     return(
         <>
         <div className='FlexNormal'>
+            <div className='Hori'>
             <Button onClick={handleRequestApis}>Call APIs</Button>
             <NumberInput label={'Multi'} value={quantityMultiplier} onBlur={handleMultiBlur} 
             disabled={!apiDataProgress.finished}/>
-            {/*<BOMExporter data={tableBOM} apis={props.apis} bomAttrs={tableColumns}/>*/}
+            {<BOMExporter data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
+            apiAttrs={apiAttrs}/>}
+            <HighlightBest onChange={handleChangeHighlight} status={apiDataProgress.finished}/>
+            <Button onClick={handleTest}>Test</Button>
+            </div>
         </div>
         <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
         apis={props.apis} apiAttrs={apiAttrs} functions={functions}/>
         </>
+    );
+}
+
+function HighlightBest(props){
+    const options = [{display: 'Lowest Price', value: 'lowest'}, {display: 'Lead Time', value: 'lead'}];
+    const [optionsSelected, setOptionsSelected] = useState(options.reduce((obj, opt) => {
+        obj[opt.value] = false;
+        return obj;
+    }, {}));
+    function handleOptionChange(event){
+        const newOptions = update(optionsSelected, {
+            [event.target.value]: {$set: !optionsSelected[event.target.value]}
+        });
+        setOptionsSelected(newOptions);
+        props.onChange(newOptions);
+    }
+    return(
+        <div>
+            Highlight
+            {options.map((opt, i) => 
+            <span key={i}>
+                <NamedCheckBox disabled={!props.status} onChange={handleOptionChange}
+                 value={opt.value} label={opt.display} checked={optionsSelected[opt.value]}/>
+            </span>
+            )}
+        </div>
     );
 }
 

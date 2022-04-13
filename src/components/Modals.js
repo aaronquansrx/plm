@@ -6,6 +6,50 @@ import { Accordion } from 'react-bootstrap';
 
 import { NamedCheckBox } from './Checkbox';
 
+export function ModalController(props){
+    const [show, setShow] = useState(false);
+    function handleClose(){
+        setShow(false);
+    }
+    function handleOpen(){
+        setShow(true);
+    }
+    const tempModal = (
+        <TemplateModal show={show} body={props.body} title={props.title} 
+        footer={props.footer} onClose={handleClose}/>
+    )
+    return (
+        <div>
+            <div onClick={() => handleOpen()}>
+                {props.activateModal}
+            </div>
+            {show && tempModal}
+        </div>
+    )
+}
+
+export function TemplateModal(props){
+    const closeButton = props.closeButton ? props.closeButton : true;
+    function handleClose(){
+        if(props.onClose) props.onClose();
+    }
+    return(
+        <Modal show={props.show} onHide={handleClose}>
+        <Modal.Header closeButton={closeButton}>
+            {props.title && <Modal.Title>{props.title}</Modal.Title>}
+        </Modal.Header>
+
+        {props.body && <Modal.Body>
+            {props.body}
+        </Modal.Body>}
+
+        {props.footer && <Modal.Footer>
+            {props.footer}
+        </Modal.Footer>}
+        </Modal>
+    )
+}
+
 export function ExportModal(props){
     const [fn, setFn] = useState('');
     const [options, setOptions] = useState({lowestPrice: false, lowestLead: false});

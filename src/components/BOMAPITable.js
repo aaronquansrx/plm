@@ -2,12 +2,15 @@ import {useState, useEffect} from 'react';
 import styled from 'styled-components';
 
 import Table from 'react-bootstrap/Table';
+import Button from 'react-bootstrap/Button';
 
 import {useClientUrl} from './../hooks/Urls';
 
 import {SimplePopover, HoverOverlay} from './Tooltips';
 import {PricingTable} from './Tables';
 import {NumberInput} from './Forms';
+import {ModalController} from './Modals';
+import {MultiSelectRadioButtons} from './Forms';
 
 import './../css/table.css';
 
@@ -15,7 +18,8 @@ const renderers = {
     'mpn': (p) => <MPNRenderer {...p}/>,
     'mpns': (p) => <MPNsRenderer {...p}/>,
     'quantities': (p) => <QuantitiesRenderer {...p}/>,
-    'prices': (p) => <PricesRenderer {...p}/>
+    'prices': (p) => <PricesRenderer {...p}/>,
+    'activeApis': (p) => <ActiveApisRenderer {...p}/>
 };
 
 const defaultRenderer = (p) => <DefaultRenderer/>
@@ -277,6 +281,23 @@ function PricesRenderer(props){
             <td>{props.value.price}</td>
         </SimplePopover>
     );
+}
+
+function ActiveApisRenderer(props){
+    const apisActivator = (
+        <Button>Select</Button>
+    );
+    const apis = props.value.map((api) => {
+        return {id: api, label: api};
+    });
+    const apisCheckboxes = (
+        <MultiSelectRadioButtons options={apis}/>
+    );
+    return (
+        <td>
+        <ModalController activateModal={apisActivator} body={apisCheckboxes}/>
+        </td>
+    )
 }
 
 function DefaultRenderer(props){

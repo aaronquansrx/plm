@@ -12,6 +12,7 @@ import { Container } from 'react-bootstrap';
 import background from './../bg_srx_pattern_grey.gif';
 import logo from './../logo_srx_global.png';
 
+import {StoreCurrencyOptions} from './../components/Options';
 const SRXBackgroundNavbar = styled(Navbar)`
     background-image: url(${background});
 `;
@@ -69,6 +70,10 @@ export function MainNavbar(props){
                 <Button variant="outline-success">Search</Button>
             </Form>
             */}
+            <Nav>
+                <StoreCurrencyOptions store={props.store} currency={props.currency} 
+                onOptionChange={props.onOptionChange} />
+            </Nav>
             <Nav><Version className='nav-link' onClick={props.onVersionClick}>V0.0</Version></Nav>
             <div>
             {!props.username ? <a href={path("login")}>Login</a> : 
