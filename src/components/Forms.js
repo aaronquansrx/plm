@@ -78,7 +78,7 @@ export function MultiSelectRadioButtons(props){
         <>
         {props.options.map((opt, i) => 
             <Form.Check key={i} type='checkbox' {...opt} 
-            checked={selected[i]} onChange={handleChange}/>
+            checked={selected[opt.id]} onChange={handleChange}/>
         )}
         </>
     );

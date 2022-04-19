@@ -10,7 +10,7 @@ import {
 } from './../hooks/BOMTable';
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
 import {BOMAPITableV2} from './BOMAPITable';
-import {NumberInput} from './Forms';
+import {NumberInput, SelectSingleRadioButtons} from './Forms';
 import { NamedCheckBox } from './Checkbox';
 import BOMExporter from './BOMExporter';
 
@@ -24,12 +24,12 @@ function BOMToolV3(props){
         return arr;
     }, []), [props.bom]);
     const [requestApis, setRequestApis] = useState(0);
-    const [testCall, setTestCall] = useState(0);
+    const [updateTableCall, setUpdateTableCall] = useState(0);
     useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, props.store);
     const apiDataProgress = useApiDataProgress(mpnList, props.apiData);
     const [tableBOM, setTable, tableColumns] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
-        apisList, props.apiData, apiDataProgress, testCall
+        props.apis, props.apiData, apiDataProgress, updateTableCall
     );
     const apiAttrs = useApiAttributes();
     function handleRequestApis(){
@@ -71,21 +71,47 @@ function BOMToolV3(props){
             }
         }
     }
+    function changeActiveApis(apis, row){
+        const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
+            actApi.active = apis[actApi.accessor];
+            return actApi;
+        });
+        const newTable = update(tableBOM, {
+            [row]: {
+                activeApis: {$set: newActiveApis}
+            }
+        });
+        //setTable(newTable);
+        updateTable(newTable);
+    }
     const functions = {
         mpns: {
             click: () => console.log('click')
         },
         quantities: {
             adjustQuantity: adjustQuantity
+        },
+        activeApis: {
+            submitNewApis: changeActiveApis
         }
     }
-    //const [highlight, setHighlight] = useState([]);
-    function handleChangeHighlight(obj){
-        console.log(obj);
+    const highlightOptions = [
+        {label: 'Lowest Price', id: 'price'}, 
+        {label: 'Lead Time', id: 'lead_time'}
+    ];
+    const [highlightMode, setHighlightMode] = useState(highlightOptions[0].id);
+    function handleChangeHighlight(hlMode){
+        setHighlightMode(hlMode);
+    }
+    function updateTable(table=null){
+        if(table !== null) setTable(table);
+        setUpdateTableCall(updateTableCall+1);
     }
     function handleTest(){
-        setTestCall(testCall+1);
+        updateTable();
+        //console.log(tableBOM);
     }
+
     return(
         <>
         <div className='FlexNormal'>
@@ -95,12 +121,13 @@ function BOMToolV3(props){
             disabled={!apiDataProgress.finished}/>
             {<BOMExporter data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
             apiAttrs={apiAttrs}/>}
-            <HighlightBest onChange={handleChangeHighlight} status={apiDataProgress.finished}/>
+            <HighlightOptions onChange={handleChangeHighlight} options={highlightOptions}/>
             <Button onClick={handleTest}>Test</Button>
             </div>
         </div>
         <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
-        apis={props.apis} apiAttrs={apiAttrs} functions={functions}/>
+        apis={props.apis} apiAttrs={apiAttrs} functions={functions}
+        highlightMode={highlightMode}/>
         </>
     );
 }
@@ -129,6 +156,18 @@ function HighlightBest(props){
             )}
         </div>
     );
+}
+
+function HighlightOptions(props){
+    function handleChange(newOption){
+        props.onChange(newOption);
+    }
+    return(
+        <div>
+        <SelectSingleRadioButtons options={props.options}
+        onChange={handleChange}/>
+        </div>
+    )
 }
 
 export default BOMToolV3;

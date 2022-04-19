@@ -13,6 +13,7 @@ import {ModalController} from './Modals';
 import {MultiSelectRadioButtons} from './Forms';
 
 import './../css/table.css';
+import './../css/offer.css';
 
 const renderers = {
     'mpn': (p) => <MPNRenderer {...p}/>,
@@ -78,7 +79,9 @@ export function BOMAPITableV2(props){
             apis={props.apis} apiAttrs={props.apiAttrs}/>
             <tbody>
                 {data.map((line, i) => 
-                    <BOMRow key={i} rowNum={i} data={line} checkbox={props.checkbox} attributeOrder={attributeOrder}/>
+                    <BOMRow key={i} highlightMode={props.highlightMode} rowNum={i} 
+                    data={line} checkbox={props.checkbox} 
+                    attributeOrder={attributeOrder}/>
                 )}
             </tbody>
         </Table>
@@ -107,6 +110,16 @@ function BOMRow(props){
         }
         return c+1;
     }, 0);
+    const highlights = props.data.highlights;
+    /*
+    function getApiHighlightOffer(offerNum){
+        const hls = Object.entries(highlights).reduce((obj, [k,v]) => {
+            const api = offerNum === v.offerNum ? v.api : null;
+            obj[k] = api;
+            return obj;
+        }, {});
+        return hls;
+    }*/
     return(
         <>
         <tr>
@@ -114,14 +127,15 @@ function BOMRow(props){
                 <td><Checkbox/></td>
             }
             <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={props.attributeOrder} 
-            data={props.data} cellProps={firstRowCellProps}/>
+            data={props.data} cellProps={firstRowCellProps} highlightMode={props.highlightMode}/>
         </tr>
         {props.data.maxOffers > 1 && showAllOffers &&
         [...Array(props.data.maxOffers-1).keys()].map((i) => {
             const offerNum = i+1;
             return(
             <tr key={i}>       
-                <BOMOffer offerNum={offerNum} rowNum={props.rowNum} attributeOrder={props.attributeOrder} data={props.data}/>
+                <BOMOffer offerNum={offerNum} rowNum={props.rowNum} attributeOrder={props.attributeOrder} 
+                data={props.data} highlightMode={props.highlightMode}/>
             </tr>
             );
         })}
@@ -133,7 +147,6 @@ function BOMRow(props){
             <HoverToggleSolidColour toggle={showAllOffers}/>
             </HoverOverlay>
             </td>
-
         </tr>
         }
         </> 
@@ -152,8 +165,15 @@ function BOMOffer(props){
     return (
         <>
         {attrOrder.map((attr, i) => {
+            const specAttrs = attr.type === 'api' 
+            ? {
+                highlight: props.data.highlights,
+                api: attr.attribute,
+                highlightMode: props.highlightMode
+            } 
+            : {};
             return (
-                <BOMAttributeRenderer key={i} {...attr} cellProps={props.cellProps}
+                <BOMAttributeRenderer key={i} {...specAttrs} {...attr} cellProps={props.cellProps}
                 value={props.data[attr.attribute]} offerNum={props.offerNum} rowNum={props.rowNum}/> 
             );
         })}
@@ -181,6 +201,21 @@ function BOMAttributeRenderer(props){
 function APIRenderer(props){
     //console.log(props);
     //const hasOffers = props.value && props.value.offers.length > 0;
+    const hasHighlight = Object.entries(props.highlight).reduce((obj, [k, v]) => {
+        if(v !== null){
+            obj[k] = v.offerNum === props.offerNum && v.api === props.api;
+        }
+        return obj;
+    }, {});
+    const cn = (props.highlightMode in hasHighlight) 
+    ? (hasHighlight[props.highlightMode] ? 'HighlightedCell' : 'NormalCell') 
+    : 'NormalCell';
+    //console.log(props.highlight);
+    //console.log(props.rowNum+' '+props.offerNum);
+    //console.log(hasHighlight);
+    const cellProps = {
+        className: cn
+    };
     return(
         <>
         {props.value 
@@ -188,7 +223,7 @@ function APIRenderer(props){
         ? props.subAttributes.map((attr, i) => {
             return (
                 <BOMAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]}
-                 custom={attr.custom} type='normal'/>
+                 custom={attr.custom} type='normal' rowNum={props.rowNum} cellProps={cellProps}/>
             )
         })
         : <td colSpan={props.subAttributes.length}>{props.value.message}</td>)
@@ -278,7 +313,7 @@ function PricesRenderer(props){
     const pt = <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex}/>;
     return (
         <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
-            <td>{props.value.price}</td>
+            <td {...props.cellProps}>{props.value.price.toFixed(2)}</td>
         </SimplePopover>
     );
 }
@@ -288,14 +323,30 @@ function ActiveApisRenderer(props){
         <Button>Select</Button>
     );
     const apis = props.value.map((api) => {
-        return {id: api, label: api};
+        return {id: api.accessor, label: api.Header};
     });
+    const init = props.value.reduce((obj, api) => {
+        obj[api.accessor] = api.active;
+        return obj;
+    }, {});
+    const [showModal, setShowModal] = useState(0);
+    const [activeApis, setActiveApis] = useState(init);
+    function onChangeApi(newActiveApis){
+        setActiveApis(newActiveApis);
+    }
+    function onSubmit(){
+        props.functions.submitNewApis(activeApis, props.rowNum);
+        setShowModal(showModal+1);
+    };
     const apisCheckboxes = (
-        <MultiSelectRadioButtons options={apis}/>
+        <MultiSelectRadioButtons init={init} options={apis} onChange={onChangeApi}/>
+    );
+    const footer = (
+        <Button onClick={onSubmit}>Submit</Button>
     );
     return (
-        <td>
-        <ModalController activateModal={apisActivator} body={apisCheckboxes}/>
+        <td {...props.cellProps}>
+        <ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' body={apisCheckboxes} footer={footer}/>
         </td>
     )
 }

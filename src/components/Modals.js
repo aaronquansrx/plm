@@ -14,13 +14,16 @@ export function ModalController(props){
     function handleOpen(){
         setShow(true);
     }
+    useEffect(() => {
+        setShow(false);
+    }, [props.hide]);
     const tempModal = (
         <TemplateModal show={show} body={props.body} title={props.title} 
         footer={props.footer} onClose={handleClose}/>
     )
     return (
         <div>
-            <div onClick={() => handleOpen()}>
+            <div onClick={handleOpen}>
                 {props.activateModal}
             </div>
             {show && tempModal}

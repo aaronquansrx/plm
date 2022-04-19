@@ -20,7 +20,17 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataPro
                 single: line.quantity,
                 multi: line.quantity,
             };
-            line.activeApis = apis;
+            line.activeApis = apis.map(api => {
+                return{
+                    Header: api.Header,
+                    accessor: api.accessor,
+                    active: true
+                }
+            });
+            line.highlights = {
+                price: null,
+                lead_time: null
+            }
             return line;
         })
     });
@@ -38,11 +48,11 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataPro
             return header;
         });
     }, [tableHeaders]);
-    const [updateTable, setUpdateTable] = useState(0);
+    const [initUpdateTable, setInitUpdateTable] = useState(0);
     const [lineNumsToEvaluate, setLineNumsToEvaluate] = useState(new Set([...Array(lenBOM)].keys()));
     useEffect(() => {
         const updateTimeout = lineNumsToEvaluate.size !== 0 
-        ? setTimeout(() => setUpdateTable(updateTable+1), 1000)
+        ? setTimeout(() => setInitUpdateTable(initUpdateTable+1), 1000)
         : null;
         //test new table (also put in new function)
         const newMpns = [];
@@ -52,7 +62,8 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataPro
                 if(mpnApiData.has(mpn)){
                     newMpns.push(i);
                     const mpnData = mpnApiData.get(mpn).data;
-                    apis.forEach(api => {
+                    apis.forEach(apiFull => {
+                        const api = apiFull.accessor;
                         const newOffers = mpnData.apis[api].offers.map((offer) => {
                             const {price, index} = findPriceBracket(offer.pricing, 
                                 line.quantity, offer.moq);
@@ -78,31 +89,59 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataPro
             $remove: newMpns
         }));
         setTableBOM(newTable);
+        runBOMAlgorithms(newTable);
         return () => {
             clearTimeout(updateTimeout);
         }
-    }, [updateTable]);
+    }, [initUpdateTable]);
     useEffect(() => {
-        if(apiDataProgress.finished){
-            const apiNames = tableBOM.map(() => apis);
-            axios({
-                method: 'POST',
-                url: serverUrl+'api/bestprice',
-                data: {
-                    bom: tableBOM,
-                    apis_list: apiNames,
-                    //quantity_multi: quantityMulti,
-                    algorithms: ['simple']
-                }
-            }).then(response => {
-                console.log(response.data);
-            });
-        }
-    }, [apiDataProgress, testCall]);
+        runBOMAlgorithms(tableBOM);
+    }, [testCall]);
     function setTable(table){
         setTableBOM(table);
     }
-    return [tableBOM, setTable, headers];
+    function runBOMAlgorithms(bom){
+        if(lineNumsToEvaluate.size === 0){
+            axios({
+                method: 'POST',
+                url: serverUrl+'api/algorithms',
+                data: {
+                    bom: bom,
+                    algorithms: ['simplebestprice', 'leadtime']
+                }
+            }).then(response => {
+                //console.log(response.data);
+                const algos = response.data.data; 
+                const newTableBOM = [...tableBOM].map((line,i) => {
+                    const simpleAlgo = algos[i].simplebestprice;
+                    const newLine = {...line};
+                    newLine.highlights = {
+                        price: simpleAlgo,
+                        lead_time: algos[i].leadtime
+                    }
+                    //console.log(line.highlights);
+                    return newLine;
+                });
+                //console.log(newTableBOM);
+                setTable(newTableBOM);
+            });
+        }
+    }
+    function runBOMLineAlgorithms(row, b=null){
+        const bom = b === null ? tableBOM : b;
+        axios({
+            method: 'POST',
+            url: serverUrl+'api/algorithms',
+            data: {
+                line: bom[row],
+                algorithms: ['simplebestprice', 'leadtime']
+            }
+        }).then(response => {
+
+        });
+
+    }
+    return [tableBOM, setTable, headers, runBOMAlgorithms, runBOMLineAlgorithms];
 }
 
 export function useApiAttributes(){
