@@ -72,7 +72,9 @@ export function MainNavbar(props){
             */}
             <Nav>
                 <StoreCurrencyOptions store={props.store} currency={props.currency} 
-                onOptionChange={props.onOptionChange} />
+                onOptionChange={props.onOptionChange} 
+                stores={props.stores} currencies={props.currencies}
+                dataProcessLock={props.dataProcessLock}/>
             </Nav>
             <Nav><Version className='nav-link' onClick={props.onVersionClick}>V0.0</Version></Nav>
             <div>

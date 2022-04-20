@@ -16,46 +16,50 @@ import {useServerUrl} from './../hooks/Urls';
 import './../css/options.css';
 
 export function StoreCurrencyOptions(props){
-    const stores = [
-        {id: 'AU', label: 'AU'},
-        {id: 'MY', label: 'MY'}
-    ];
-    const currencies = [
-        {id: 'USD', label: 'USD'},
-        {id: 'AUD', label: 'AUD'},
-        {id: 'MYR', label: 'MYR'}
-    ];
+    console.log(props.store);
     const flags = {
         'AU': <Flags.AU className='Flag'/>,
         'MY': <Flags.MY className='Flag'/>
     }
-    //const [store, setStore] = useState(stores[0].id);
-    //const [currency, setCurrency] = useState(currencies[0].id);
+    const [store, setStore] = useState(props.store);
+    const [currency, setCurrency] = useState(props.currency);
+    const [hideCounter, setHideCounter] = useState(0);
     const activator = (
         <div className='Select'>
         {flags[props.store]}/{props.currency}
         </div>
     )
+    useEffect(() => {
+        setStore(props.store);
+        setCurrency(props.currency);
+    }, [props.store, props.currency])
     function handleStoreChange(st){
-        props.onOptionChange('store', st);
+        setStore(st);
     }
     function handleCurrencyChange(curr){
-        props.onOptionChange('currency', curr);
+        setCurrency(curr);
     }
     const body = (
         <div>
             <StoreCurrencyBody onStoreChange={handleStoreChange} 
             onCurrencyChange={handleCurrencyChange}
-            options={stores}/>
+            stores={props.stores} store={props.store}
+            currencies={props.currencies} currency={props.currency}/>
         </div>
     )
+    function submitOptions(){
+        console.log(store);
+        props.onOptionChange(store, currency);
+        setHideCounter(hideCounter+1);
+    }
     const footer = (
         <div>
+            <Button disabled={!props.dataProcessLock} onClick={submitOptions}>Submit</Button>
         </div>
     )
     return (
         <div>
-            <ModalController activateModal={activator} 
+            <ModalController hide={hideCounter} activateModal={activator} 
             body={body} footer={footer}/>
         </div>
     )
@@ -63,16 +67,7 @@ export function StoreCurrencyOptions(props){
 
 function StoreCurrencyBody(props){
     const serverUrl = useServerUrl();
-    const stores = [
-        {id: 'AU', label: 'AU'},
-        {id: 'MY', label: 'MY'}
-    ];
-    const currencies = [
-        {id: 'USD', label: 'USD'},
-        {id: 'AUD', label: 'AUD'},
-        {id: 'MYR', label: 'MYR'}
-    ];
-    const [rates, setRates] = useState(currencies.map((currs) => {
+    const [rates, setRates] = useState(props.currencies.map((currs) => {
         return {
             id: currs.id,
             rate: null
@@ -85,14 +80,12 @@ function StoreCurrencyBody(props){
             url: serverUrl+'api/currencyexchange',
             signal: controller.signal
         }).then(response => {
-            console.log(response.data);
             const newRates = rates.map(r => {
                 return {
                     id: r.id,
                     rate: response.data.conversion_rates[r.id]
                 }
             });
-            console.log(newRates);
             setRates(newRates);
         });
         return () => {
@@ -103,11 +96,13 @@ function StoreCurrencyBody(props){
         <div className='Hori'>
         <div className='FlexNormal'>
             Store
-            <SelectSingleRadioButtons onChange={props.onStoreChange} options={stores}/>
+            <SelectSingleRadioButtons onChange={props.onStoreChange} options={props.stores} 
+            init={props.store}/>
         </div>
         <div className='FlexNormal'>
             Currency
-            <SelectSingleRadioButtons onChange={props.onCurrencyChange} options={currencies}/>
+            <SelectSingleRadioButtons onChange={props.onCurrencyChange} options={props.currencies}
+            init={props.currency}/>
         </div>
         <div className='FlexNormal'>
             Rates

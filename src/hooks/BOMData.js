@@ -5,9 +5,11 @@ import axios from 'axios';
 
 import {useServerUrl} from './../hooks/Urls';
 
-export function useApiData(req, mpnList, apisList, updateApiDataMap, store){
+export function useApiData(req, mpnList, apisList, updateApiDataMap, 
+    store, currency, changeLock){
     const serverUrl = useServerUrl();
     useEffect(() => {
+        console.log(store);
         const controller = new AbortController();
         if(req > 0){
             const apiDataMap = new Map();
@@ -21,19 +23,28 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap, store){
                 apiDataMap.set(mpn, {data:data, date: now});
                 updateApiDataMap(apiDataMap);
             }
-
+            changeLock(true);
             mpnList.forEach(mpn => {
-                callApi(mpn, serverUrl, controller, apisList, apiCallback, store);
+                callApi(mpn, serverUrl, controller, apisList, apiCallback, store, currency);
             });
         }
 
         return () => {
             controller.abort();
         }
-    }, [req]);
+    }, [req, store, currency]);
 }
 
-export function useApiDataProgress(mpnList, apiData){
+export function useApiDataProgress(mpnList, apiData, store, currency, changeLock){
+    const initProgress = {
+        finished: false,
+        mpnsNotEvaluated: new Set(
+            mpnList.reduce((arr, mpn) => {
+                if(!apiData.has(mpn)) arr.push(mpn);
+                return arr;
+            }, [])
+        )
+    }
     const [progress, setProgress] = useState({
         finished: false,
         mpnsNotEvaluated: new Set(
@@ -43,6 +54,7 @@ export function useApiDataProgress(mpnList, apiData){
             }, [])
         )
     });
+
     //const [mpnsToDo, setMpnsToDo] = useState(new Set([...mpnList]));
     useEffect(() => {
         const leftMpns = [...progress.mpnsNotEvaluated].reduce((arr, mpn) => {
@@ -58,7 +70,23 @@ export function useApiDataProgress(mpnList, apiData){
             mpnsNotEvaluated: {$remove: leftMpns}
         });
         setProgress(newProgress);
+        if(fin){
+            changeLock(true);
+        }
     }, [apiData]);
+    useEffect(() => {
+        const mpnsEvaled = new Set(
+            mpnList.reduce((arr, mpn) => {
+                if(!apiData.has(mpn)) arr.push(mpn);
+                return arr;
+            }, [])
+        );
+        const fin = mpnsEvaled.size === 0;
+        const resetProgress = update(progress, {
+            $set: {finished: fin, mpnsNotEvaluated: mpnsEvaled}
+        });
+        setProgress(resetProgress);
+    }, [store, currency]);
 
     function mpnIsEvaluated(mpn){
         return progress.mpnsNotEvaluated.has(mpn);
@@ -66,11 +94,11 @@ export function useApiDataProgress(mpnList, apiData){
     return progress;
 }
 
-function callApi(mpn, serverUrl, controller, apis, callback, store){
+function callApi(mpn, serverUrl, controller, apis, callback, store, currency){
     axios({
         method: 'GET',
         url: serverUrl+'api/part',
-        params: {part: mpn, store: store},
+        params: {part: mpn, store: store, currency: currency},
         signal: controller.signal
     }).then(response => {
         const formattedApiData = formatApiData(response.data.apis);

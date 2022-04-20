@@ -63,10 +63,16 @@ function BOMInterface(props){
         setInterfaceState(state);
         setInitialBOMEdit(bom);
     }
-
+    const SCKey = props.store+':'+props.currency;
     function updateApiDataMap(joinMap){
-        const newApiData = new Map([...apiData, ...joinMap]);
-        setApiData(newApiData);
+        const addToData = getApiData();
+        const newApiData = new Map([...addToData, ...joinMap]);
+        setApiData(update(apiData, {
+            $add: [[SCKey, newApiData]]
+        }));
+    }
+    function getApiData(){
+        return apiData.has(SCKey) ? apiData.get(SCKey) : new Map();
     }
     //renders the body of interface depending on state
     function renderInterfaceState(){
@@ -78,7 +84,8 @@ function BOMInterface(props){
                 //return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 'tool':
                 return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} 
-                updateApiDataMap={updateApiDataMap} apiData={apiData} store={props.store}/>;
+                updateApiDataMap={updateApiDataMap} apiData={getApiData()} 
+                store={props.store} currency={props.currency} changeLock={props.changeLock}/>;
             default:
                 return "Unknown interface state";
         }

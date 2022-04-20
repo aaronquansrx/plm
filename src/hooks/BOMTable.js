@@ -6,7 +6,7 @@ import update from 'immutability-helper';
 import { findPriceBracket } from '../scripts/Offer';
 import {useServerUrl} from '../hooks/Urls';
 
-export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataProgress, testCall){
+export function useTableBOM(req, bom, tableHeaders, apis, apiData, apiDataProgress, testCall){
     const serverUrl = useServerUrl();
     const lenBOM = bom.length;
     const initTableBOM = useMemo(() => {
@@ -34,6 +34,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataPro
             return line;
         })
     });
+    const apisList = apis.map(api => api.accessor);
     const [tableBOM, setTableBOM] = useState(initTableBOM);
     const headers = useMemo(() => {
         const headerChangeMap = {
@@ -57,11 +58,19 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataPro
         //test new table (also put in new function)
         const newMpns = [];
         const newTable = [...tableBOM].map((line, i) => {
-            const mpn = line.mpns.current;
+            const newLine = {...line};
+            const mpn = newLine.mpns.current;
             if(lineNumsToEvaluate.has(i)){
-                if(mpnApiData.has(mpn)){
+                if(apiData.has(mpn)){
                     newMpns.push(i);
-                    const mpnData = mpnApiData.get(mpn).data;
+                    const lineApiData = evalLineApis(newLine, apisList, apiData);
+                    lineApiData.forEach((ad) => {
+                        newLine[ad.api] = {
+                            offers: ad.offers, 
+                            message: ad.message
+                        };
+                    });
+                    /*
                     apis.forEach(apiFull => {
                         const api = apiFull.accessor;
                         const newOffers = mpnData.apis[api].offers.map((offer) => {
@@ -80,16 +89,17 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataPro
                             message: mpnData.apis[api].message
                         };
                     });
-                    line.maxOffers = mpnData.maxOffers;
+                    */
+                    newLine.maxOffers = apiData.get(mpn).data.maxOffers;
                 }
             }
-            return line;
+            return newLine;
         });
-        setLineNumsToEvaluate(update(lineNumsToEvaluate, {
+        const newLineNumsEval = update(lineNumsToEvaluate, {
             $remove: newMpns
-        }));
+        });
         setTableBOM(newTable);
-        runBOMAlgorithms(newTable);
+        setLineNumsToEvaluate(newLineNumsEval);
         return () => {
             clearTimeout(updateTimeout);
         }
@@ -97,6 +107,9 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataPro
     useEffect(() => {
         runBOMAlgorithms(tableBOM);
     }, [testCall]);
+    useEffect(() => {
+        runBOMAlgorithms(tableBOM);
+    }, [lineNumsToEvaluate]);
     function setTable(table){
         setTableBOM(table);
     }
@@ -110,36 +123,42 @@ export function useTableBOM(req, bom, tableHeaders, apis, mpnApiData, apiDataPro
                     algorithms: ['simplebestprice', 'leadtime']
                 }
             }).then(response => {
-                //console.log(response.data);
+                console.log(response.data);
                 const algos = response.data.data; 
-                const newTableBOM = [...tableBOM].map((line,i) => {
-                    const simpleAlgo = algos[i].simplebestprice;
+                const newTableBOM = [...bom].map((line,i) => {
                     const newLine = {...line};
                     newLine.highlights = {
-                        price: simpleAlgo,
+                        price: algos[i].simplebestprice,
                         lead_time: algos[i].leadtime
                     }
-                    //console.log(line.highlights);
                     return newLine;
                 });
-                //console.log(newTableBOM);
                 setTable(newTableBOM);
             });
         }
     }
     function runBOMLineAlgorithms(row, b=null){
         const bom = b === null ? tableBOM : b;
-        axios({
-            method: 'POST',
-            url: serverUrl+'api/algorithms',
-            data: {
-                line: bom[row],
-                algorithms: ['simplebestprice', 'leadtime']
-            }
-        }).then(response => {
-
-        });
-
+        if(lineNumsToEvaluate.size === 0){
+            axios({
+                method: 'POST',
+                url: serverUrl+'api/algorithms',
+                data: {
+                    line: bom[row],
+                    algorithms: ['simplebestprice', 'leadtime']
+                }
+            }).then((response) => {
+                const algos = response.data.data;
+                const newLine = {...tableBOM[row]};
+                newLine.highlights = {
+                    price: algos.simplebestprice,
+                    lead_time: algos.leadtime
+                }
+                setTable(update(tableBOM, {
+                    [row]: {$set: newLine}
+                }));
+            });
+        }
     }
     return [tableBOM, setTable, headers, runBOMAlgorithms, runBOMLineAlgorithms];
 }
@@ -157,30 +176,56 @@ export function useApiAttributes(){
     return apiAttrs;
 }
 
-/*
-export function useQuantityMultiplier(tableBOM, setTable, apiData, apisList){
-    const [multiplier, setMultiplier] = useState(1);
-    useEffect(() => {
-        const newTable = [...tableBOM].map((line) => {
-            const newLine = {...line};
-            newLine.quantities.multi = line.quantities.single*multiplier;
-            const mpnApiData = apiData.get(line.mpns.current).data;
-            const lineApiData = evalLineApis(newLine, apisList, mpnApiData);
-            console.log(lineApiData);
-            lineApiData.forEach((lad) => {
-                newLine[lad.api].offers = lad.offers;
-            });
-            return newLine;
-        });
-        setTable(newTable);
-    }, [multiplier]);
-    return multiplier;
-}
-*/
 
-export function evalLineApis(line, apis, mpnData){
-    //const mpnData = mpnApiData.get(mpn).data;
-    const apiData = apis.map((api) => {
+export function useQuantityMultiplier(tableBOM, apiData, apisList, 
+    runBOMAlgorithms, runBOMLineAlgorithms, apiDataProgress){
+    const [multiplier, setMultiplier] = useState(1);
+    function newLineChangeQuantity(line, single, multi){
+        const newLine = {...line};
+        newLine.quantities.single = single
+        newLine.quantities.multi = multi;
+        //const mpnApiData = apiData.get(newLine.mpns.current).data;
+        const lineApiData = evalLineApis(newLine, apisList, apiData);
+        lineApiData.forEach((lad) => {
+            newLine[lad.api].offers = lad.offers;
+        });
+        return newLine;
+    }
+    function adjustQuantity(newQuantity, row){
+        if(newQuantity !== tableBOM[row].quantities.single){
+            if(!apiDataProgress.mpnsNotEvaluated.has(tableBOM[row].mpns.current)){
+                const newLine = newLineChangeQuantity(tableBOM[row], newQuantity, 
+                    newQuantity*multiplier);
+                const newTable = update(tableBOM, {
+                    [row]: {$set: newLine}
+                });
+                //setTable(newTable);
+                runBOMLineAlgorithms(row, newTable);
+            }
+        }
+    }
+    function handleNewMulti(newMulti){
+        if(apiDataProgress.finished){
+            if(multiplier !== newMulti){
+                const newTable = [...tableBOM].map((line) => {
+                    const newLine = newLineChangeQuantity(line, line.quantities.initial,
+                        line.quantities.initial*newMulti);
+                    return newLine;
+                });
+                //setTable(newTable);
+                runBOMAlgorithms(newTable);
+                setMultiplier(newMulti);
+            }
+        }
+    }
+    return [multiplier, adjustQuantity, handleNewMulti];
+}
+
+export function evalLineApis(line, apis, apiData){
+    //console.log(mpnData);
+    const mpn = line.mpns.current;
+    const mpnData = apiData.get(mpn).data;
+    const outApiData = apis.map((api) => {
         const newOffers = mpnData.apis[api].offers.map((offer) => {
             const {price, index} = findPriceBracket(offer.pricing, 
                 line.quantities.multi, offer.moq);
@@ -198,5 +243,5 @@ export function evalLineApis(line, apis, mpnData){
             message: mpnData.apis[api].message
         };
     });
-    return apiData;
+    return outApiData;
 }

@@ -25,52 +25,21 @@ function BOMToolV3(props){
     }, []), [props.bom]);
     const [requestApis, setRequestApis] = useState(0);
     const [updateTableCall, setUpdateTableCall] = useState(0);
-    useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, props.store);
-    const apiDataProgress = useApiDataProgress(mpnList, props.apiData);
-    const [tableBOM, setTable, tableColumns] = useTableBOM(requestApis, 
+    useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
+        props.store, props.currency, props.changeLock);
+    const apiDataProgress = useApiDataProgress(mpnList, props.apiData, 
+        props.store, props.currency, props.changeLock);
+    const [tableBOM, setTable, tableColumns, runBOMAlgorithms, runBOMLineAlgorithms] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
-        props.apis, props.apiData, apiDataProgress, updateTableCall
+        props.apis, props.apiData, apiDataProgress, 
+        updateTableCall
     );
     const apiAttrs = useApiAttributes();
     function handleRequestApis(){
         setRequestApis(requestApis+1);
     }
-    function newLineChangeQuantity(line, single, multi){
-        const newLine = {...line};
-        newLine.quantities.single = single
-        newLine.quantities.multi = multi;
-        const mpnApiData = props.apiData.get(line.mpns.current).data;
-        const lineApiData = evalLineApis(newLine, apisList, mpnApiData);
-        lineApiData.forEach((lad) => {
-            newLine[lad.api].offers = lad.offers;
-        });
-        return newLine;
-    }
-    function adjustQuantity(newQuantity, row){
-        if(newQuantity !== tableBOM[row].quantities.single){
-            if(!apiDataProgress.mpnsNotEvaluated.has(tableBOM[row].mpns.current)){
-                const newLine = newLineChangeQuantity(tableBOM[row], newQuantity, 
-                    newQuantity*quantityMultiplier);
-                setTable(update(tableBOM, {
-                    [row]: {$set: newLine}
-                }));
-            }
-        }
-    }
-    const [quantityMultiplier, setQuantityMultiplier] = useState(1);
-    function handleMultiBlur(newMulti){
-        if(apiDataProgress.finished){
-            if(quantityMultiplier !== newMulti){
-                const newTable = [...tableBOM].map((line) => {
-                    const newLine = newLineChangeQuantity(line, line.quantities.initial,
-                        line.quantities.initial*newMulti);
-                    return newLine;
-                });
-                setTable(newTable);
-                setQuantityMultiplier(newMulti);
-            }
-        }
-    }
+    const [quantityMultiplier, adjustQuantity, handleMultiBlur] = useQuantityMultiplier(tableBOM, props.apiData, 
+        apisList, runBOMAlgorithms, runBOMLineAlgorithms, apiDataProgress);
     function changeActiveApis(apis, row){
         const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
             actApi.active = apis[actApi.accessor];
@@ -81,8 +50,9 @@ function BOMToolV3(props){
                 activeApis: {$set: newActiveApis}
             }
         });
+        runBOMLineAlgorithms(row, newTable);
         //setTable(newTable);
-        updateTable(newTable);
+        //updateTable(newTable);
     }
     const functions = {
         mpns: {
@@ -103,12 +73,13 @@ function BOMToolV3(props){
     function handleChangeHighlight(hlMode){
         setHighlightMode(hlMode);
     }
+    /*
     function updateTable(table=null){
         if(table !== null) setTable(table);
         setUpdateTableCall(updateTableCall+1);
-    }
+    }*/
     function handleTest(){
-        updateTable();
+        runBOMAlgorithms(tableBOM);
         //console.log(tableBOM);
     }
 
@@ -129,32 +100,6 @@ function BOMToolV3(props){
         apis={props.apis} apiAttrs={apiAttrs} functions={functions}
         highlightMode={highlightMode}/>
         </>
-    );
-}
-
-function HighlightBest(props){
-    const options = [{display: 'Lowest Price', value: 'lowest'}, {display: 'Lead Time', value: 'lead'}];
-    const [optionsSelected, setOptionsSelected] = useState(options.reduce((obj, opt) => {
-        obj[opt.value] = false;
-        return obj;
-    }, {}));
-    function handleOptionChange(event){
-        const newOptions = update(optionsSelected, {
-            [event.target.value]: {$set: !optionsSelected[event.target.value]}
-        });
-        setOptionsSelected(newOptions);
-        props.onChange(newOptions);
-    }
-    return(
-        <div>
-            Highlight
-            {options.map((opt, i) => 
-            <span key={i}>
-                <NamedCheckBox disabled={!props.status} onChange={handleOptionChange}
-                 value={opt.value} label={opt.display} checked={optionsSelected[opt.value]}/>
-            </span>
-            )}
-        </div>
     );
 }
 

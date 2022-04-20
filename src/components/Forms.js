@@ -42,8 +42,10 @@ export function FormAlign(props){
 }
 
 export function SelectSingleRadioButtons(props){
-    const init = props.options.length > 0 ? props.options[0].id : null;
+    const init = props.init ? props.init
+    : props.options.length > 0 ? props.options[0].id : null;
     const [selected, setSelected] = useState(init);
+    const seValue = props.selected ? props.selected : selected;
     function handleChange(e){
         const selValue = selected === e.target.id ? null : e.target.id;
         setSelected(selValue);
