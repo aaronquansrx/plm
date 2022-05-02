@@ -7,10 +7,18 @@
     border: none;
 }
 
+.VerticalAlign{
+    vertical-align: middle;
+}
+
 td.NormalCell{
     background: rgb(229, 231, 198);
 }
 
 td.HighlightedCell{
     background: rgb(101, 255, 87);
+}
+
+.Lock:checked[type=checkbox]{
+    background-image: url('../lock-128.png');
 }

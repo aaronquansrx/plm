@@ -13,11 +13,11 @@ import {BOMAPITableV2} from './BOMAPITable';
 import {NumberInput, SelectSingleRadioButtons} from './Forms';
 import { NamedCheckBox } from './Checkbox';
 import BOMExporter from './BOMExporter';
+import BOMExporterV2 from './BOMExporterV2';
 
 import './../css/temp.css';
 
 function BOMToolV3(props){
-    //console.log(props.apiData);
     const apisList = useMemo(() => props.apis.map((api => api.accessor)));
     const mpnList = useMemo(() => props.bom.reduce((arr, line) => {
         line.mpnOptions.forEach(mpn => arr.push(mpn));
@@ -26,13 +26,14 @@ function BOMToolV3(props){
     const [requestApis, setRequestApis] = useState(0);
     const [updateTableCall, setUpdateTableCall] = useState(0);
     useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
-        props.store, props.currency, props.changeLock);
+        props.store, props.currency, props.changeLock, props.apiData);
     const apiDataProgress = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
-    const [tableBOM, setTable, tableColumns, runBOMAlgorithms, runBOMLineAlgorithms] = useTableBOM(requestApis, 
+    const [tableBOM, setTable, tableColumns, 
+        runBOMAlgorithms, runBOMLineAlgorithms, resortOffers] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, apiDataProgress, 
-        updateTableCall
+        updateTableCall, props.store, props.currency
     );
     const apiAttrs = useApiAttributes();
     function handleRequestApis(){
@@ -51,8 +52,18 @@ function BOMToolV3(props){
             }
         });
         runBOMLineAlgorithms(row, newTable);
-        //setTable(newTable);
-        //updateTable(newTable);
+    }
+    function changeActiveApisGlobal(apis){
+        const newTable = [...tableBOM].map((line) => {
+            if(!line.lineLock){
+                line.activeApis = line.activeApis.map((actApi) => {
+                    actApi.active = apis[actApi.accessor];
+                    return actApi;
+                });
+            }
+            return line;
+        });
+        runBOMAlgorithms(newTable);
     }
     const functions = {
         mpns: {
@@ -62,7 +73,8 @@ function BOMToolV3(props){
             adjustQuantity: adjustQuantity
         },
         activeApis: {
-            submitNewApis: changeActiveApis
+            submitNewApis: changeActiveApis,
+            submitGlobalApis: changeActiveApisGlobal
         }
     }
     const highlightOptions = [
@@ -72,17 +84,27 @@ function BOMToolV3(props){
     const [highlightMode, setHighlightMode] = useState(highlightOptions[0].id);
     function handleChangeHighlight(hlMode){
         setHighlightMode(hlMode);
+        //const sortedTable = resortOffers(hlMode);
+        //setTable(sortedTable);
     }
-    /*
-    function updateTable(table=null){
-        if(table !== null) setTable(table);
-        setUpdateTableCall(updateTableCall+1);
-    }*/
     function handleTest(){
         runBOMAlgorithms(tableBOM);
-        //console.log(tableBOM);
     }
-
+    function handleLineLock(bool, lineNum){
+        const newTable = update(tableBOM, {
+            [lineNum]: {lineLock: 
+                {$set: bool}
+            }
+        });
+        setTable(newTable);
+    }
+    function handleLineLockAll(bool){
+        const newTable = [...tableBOM].map((line) => {
+            line.lineLock = bool;
+            return line;
+        });
+        setTable(newTable);
+    }
     return(
         <>
         <div className='FlexNormal'>
@@ -90,7 +112,7 @@ function BOMToolV3(props){
             <Button onClick={handleRequestApis}>Call APIs</Button>
             <NumberInput label={'Multi'} value={quantityMultiplier} onBlur={handleMultiBlur} 
             disabled={!apiDataProgress.finished}/>
-            {<BOMExporter data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
+            {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
             apiAttrs={apiAttrs}/>}
             <HighlightOptions onChange={handleChangeHighlight} options={highlightOptions}/>
             <Button onClick={handleTest}>Test</Button>
@@ -98,7 +120,8 @@ function BOMToolV3(props){
         </div>
         <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
         apis={props.apis} apiAttrs={apiAttrs} functions={functions}
-        highlightMode={highlightMode}/>
+        highlightMode={highlightMode} 
+        hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}/>
         </>
     );
 }

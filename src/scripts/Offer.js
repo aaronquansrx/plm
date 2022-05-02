@@ -35,6 +35,57 @@ export function sortOffers(offers, quantity){
     return offerPrices.map((op) => op.offer);
 }
 
+export function sortPrice(offers){
+    offers.sort((a,b)=>a.prices.price-b.prices.price);
+    return offers;
+}
+
+export function sortLeadTime(offers){
+    offers.sort((a,b)=>a.leadtime-b.leadtime);
+    return offers;
+}
+
+export function sortOrderPrice(offers, quantity){
+    const offersToSort = offers.map((offer, i) => {
+        return {offer: offer, i: i};
+    });
+    offersToSort.sort((a,b) => {
+        const aOff = a.offer;
+        const bOff = b.offer;
+        if(quantity >= bOff.moq && quantity < aOff.moq){
+            return 1;
+        }else if(quantity >= aOff.moq && quantity < bOff.moq){
+            return -1;
+        }
+        return aOff.prices.price-bOff.prices.price;
+    });
+    return offersToSort.map((ofs) => ofs.i);
+}
+
+export function sortOrderLeadTime(offers){
+    const offersToSort = offers.map((offer, i) => {
+        return {offer: offer, i: i};
+    });
+    offersToSort.sort((a,b) => {
+        const aOff = a.offer;
+        const bOff = b.offer;
+        if(aOff.leadtime == null && bOff.leadtime == null){
+            return aOff.prices.price-bOff.prices.price;
+        }
+        if(aOff.leadtime == null && bOff.leadtime != null){
+            return 1;
+        }
+        if(aOff.leadtime != null && bOff.leadtime == null){
+            return -1;
+        }
+        if(aOff.leadtime === bOff.leadtime){
+            return aOff.prices.price-bOff.prices.price;
+        }
+        return aOff.leadtime-bOff.leadtime;
+    });
+    return offersToSort.map((ofs) => ofs.i);
+}
+
 export function simpleBestPrice(line, api_list=[]){
     //find the best price of line regardless of quantity
     const quantity = line.quantity ? 

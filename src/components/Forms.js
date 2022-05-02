@@ -41,6 +41,17 @@ export function FormAlign(props){
     );
 }
 
+export function OutsideControlCheckbox(props){
+    function handleChange(e){
+        if(props.onChange){
+            props.onChange(!props.checked);
+        }
+    }
+    return(
+        <Form.Check className={props.className} checked={props.checked} onChange={handleChange}/>
+    ); 
+}
+
 export function SelectSingleRadioButtons(props){
     const init = props.init ? props.init
     : props.options.length > 0 ? props.options[0].id : null;
@@ -69,19 +80,25 @@ export function MultiSelectRadioButtons(props){
     }, {});
     const [selected, setSelected] = useState(init);
     function handleChange(e){
-        const newVal = !selected[e.target.id];
-        const newSelected = update(selected, {
-            [e.target.id]: {$set: newVal}
+        const newSelected = props.control 
+        ? update(props.control, {
+            [e.target.id]: {$set: !props.control[e.target.id]}
+        })
+        : update(selected, {
+            [e.target.id]: {$set: !selected[e.target.id]}
         });
         setSelected(newSelected);
         if(props.onChange) props.onChange(newSelected);
     }
     return(
         <>
-        {props.options.map((opt, i) => 
+        {props.options.map((opt, i) => {
+            const ch = props.control ? props.control[opt.id] : selected[opt.id];
+            return(
             <Form.Check key={i} type='checkbox' {...opt} 
-            checked={selected[opt.id]} onChange={handleChange}/>
-        )}
+            checked={ch} onChange={handleChange}/>
+            );
+        })}
         </>
     );
 }

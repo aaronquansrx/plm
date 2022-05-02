@@ -16,7 +16,6 @@ import {useServerUrl} from './../hooks/Urls';
 import './../css/options.css';
 
 export function StoreCurrencyOptions(props){
-    console.log(props.store);
     const flags = {
         'AU': <Flags.AU className='Flag'/>,
         'MY': <Flags.MY className='Flag'/>
@@ -48,13 +47,12 @@ export function StoreCurrencyOptions(props){
         </div>
     )
     function submitOptions(){
-        console.log(store);
         props.onOptionChange(store, currency);
         setHideCounter(hideCounter+1);
     }
     const footer = (
         <div>
-            <Button disabled={!props.dataProcessLock} onClick={submitOptions}>Submit</Button>
+            <Button disabled={props.dataProcessLock} onClick={submitOptions}>Submit</Button>
         </div>
     )
     return (

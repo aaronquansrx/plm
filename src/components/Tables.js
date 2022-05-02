@@ -12,6 +12,7 @@ import {PageInterface} from './Pagination';
 
 import './../css/table.css';
 import './../css/temp.css';
+import './../css/offer.css';
 import { slice } from 'lodash';
 
 export function BOMAPITable(props){
@@ -199,11 +200,14 @@ export function PricingTable(props){
         </tr>
         </thead>
         <tbody>
-        {props.pricing.map((bracket, i) => 
+        {props.pricing.map((bracket, i) => {
+            const cn = props.highlight == i ? 'PricingCell HighlightedCell' : 'PricingCell'; 
+            return(
             <tr key={i}>
-                <td className='PricingCell'>{bracket.BreakQuantity}</td>
-                <td className='PricingCell'>{bracket.UnitPrice}</td>
+                <td className={cn}>{bracket.BreakQuantity}</td>
+                <td className={cn}>{bracket.UnitPrice}</td>
             </tr>
+            )}
         )}
         </tbody>
     </Table>

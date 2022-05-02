@@ -6,10 +6,11 @@ import axios from 'axios';
 import {useServerUrl} from './../hooks/Urls';
 
 export function useApiData(req, mpnList, apisList, updateApiDataMap, 
-    store, currency, changeLock){
+    store, currency, changeLock, apiData){
     const serverUrl = useServerUrl();
+    const expireTime = 1000000;
     useEffect(() => {
-        console.log(store);
+        //console.log(store);
         const controller = new AbortController();
         if(req > 0){
             const apiDataMap = new Map();
@@ -19,13 +20,20 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
                     apis: apiData,
                     maxOffers: maxOffers
                 };
-
                 apiDataMap.set(mpn, {data:data, date: now});
                 updateApiDataMap(apiDataMap);
             }
             changeLock(true);
+            const dt = Date.now();
             mpnList.forEach(mpn => {
-                callApi(mpn, serverUrl, controller, apisList, apiCallback, store, currency);
+                if(apiData.has(mpn)){
+                    if(dt > apiData.get(mpn).date + expireTime){
+                        console.log('recall');
+                        callApi(mpn, serverUrl, controller, apisList, apiCallback, store, currency);
+                    }
+                }else{
+                    callApi(mpn, serverUrl, controller, apisList, apiCallback, store, currency);
+                }
             });
         }
 
@@ -36,15 +44,6 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
 }
 
 export function useApiDataProgress(mpnList, apiData, store, currency, changeLock){
-    const initProgress = {
-        finished: false,
-        mpnsNotEvaluated: new Set(
-            mpnList.reduce((arr, mpn) => {
-                if(!apiData.has(mpn)) arr.push(mpn);
-                return arr;
-            }, [])
-        )
-    }
     const [progress, setProgress] = useState({
         finished: false,
         mpnsNotEvaluated: new Set(
@@ -71,7 +70,7 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
         });
         setProgress(newProgress);
         if(fin){
-            changeLock(true);
+            changeLock(false);
         }
     }, [apiData]);
     useEffect(() => {
@@ -101,6 +100,9 @@ function callApi(mpn, serverUrl, controller, apis, callback, store, currency){
         params: {part: mpn, store: store, currency: currency},
         signal: controller.signal
     }).then(response => {
+        if(typeof response.data !== 'object'){
+            console.log(mpn); //catch problematic mpns
+        }
         const formattedApiData = formatApiData(response.data.apis);
         callback(mpn, formattedApiData, response.data.maxOffers);
     });

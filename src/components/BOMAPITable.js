@@ -10,7 +10,9 @@ import {SimplePopover, HoverOverlay} from './Tooltips';
 import {PricingTable} from './Tables';
 import {NumberInput} from './Forms';
 import {ModalController} from './Modals';
-import {MultiSelectRadioButtons} from './Forms';
+import {MultiSelectRadioButtons, OutsideControlCheckbox} from './Forms';
+
+import lockIcon from './../lock-128.png';
 
 import './../css/table.css';
 import './../css/offer.css';
@@ -23,6 +25,11 @@ const renderers = {
     'activeApis': (p) => <ActiveApisRenderer {...p}/>
 };
 
+const headerRenderers = {
+    'activeApis': (p) => <ActiveApisHeaderRenderer {...p}/>,
+    'leadtime': (p) => <LeadTimeHeaderRenderer {...p}/>
+};
+
 const defaultRenderer = (p) => <DefaultRenderer/>
 
 export function BOMAPITableV2(props){
@@ -33,9 +40,6 @@ export function BOMAPITableV2(props){
     const apis = props.apis;
     const apiAttrs = props.apiAttrs;
     
-    const apisHeader = apis;
-    const apiAttrsAccessors = apiAttrs.map((attr) => attr.accessor);
-    const apiAttrsHeaders = apiAttrs.map((attr) => attr.Header);
     const normalAttributes = props.bomAttrs.map((attr) => {
         const custom = (attr.accessor in renderers)
         ? renderers[attr.accessor] : null;
@@ -69,23 +73,116 @@ export function BOMAPITableV2(props){
         }
     });
     const attributeOrder = normalAttributes.concat(apiAttributes);
-    function handleMainCheckBox(){
-
-    }
     return (
         <div className='MainTable'>
         <Table>
-            <BOMAPITableHeader checkbox={props.checkbox} bomAttrs={props.bomAttrs} 
-            apis={props.apis} apiAttrs={props.apiAttrs}/>
+            <BOMAPITableHeader hasLineLocks={props.hasLineLocks} bomAttrs={props.bomAttrs} 
+            apis={props.apis} apiAttrs={props.apiAttrs} onLockAll={props.onLineLockAll} functions={props.functions}/>
             <tbody>
                 {data.map((line, i) => 
                     <BOMRow key={i} highlightMode={props.highlightMode} rowNum={i} 
-                    data={line} checkbox={props.checkbox} 
-                    attributeOrder={attributeOrder}/>
+                    data={line} hasLineLocks={props.hasLineLocks} 
+                    attributeOrder={attributeOrder} 
+                    onLineLock={props.onLineLock}/>
                 )}
             </tbody>
         </Table>
         </div>
+    );
+}
+
+
+
+//vertical-align to center header elements for rowspan=2
+function BOMAPITableHeader(props){
+    const numApiAttrs = props.apiAttrs.length;
+    function handleAllLock(){
+        props.onLockAll(true);
+    }
+    function handleRemoveAllLock(){
+        props.onLockAll(false);
+    }
+    const vars = {
+        'activeApis': {apis: props.apis}
+    }
+    function smartAttr(type){
+        return function(attr){
+            const custom = (attr.accessor in headerRenderers)
+            ? headerRenderers[attr.accessor] : null;
+            const functions = (attr.accessor in props.functions)
+            ? props.functions[attr.accessor] : null;
+            const vr = (attr.accessor in vars) ? vars[attr.accessor] : {};
+            return {
+                header: attr.Header,
+                type: type,
+                custom: custom, // custom renderer for cell?
+                vars: vr,
+                functions: functions
+            };
+        }
+    }
+    const normalAttributes = props.bomAttrs.map(smartAttr('normal')
+        /*(attr) => {
+        const custom = (attr.accessor in headerRenderers)
+        ? headerRenderers[attr.accessor] : null;
+        const functions = (attr.accessor in props.functions)
+        ? props.functions[attr.accessor] : null;
+        const vr = (attr.accessor in vars) ? vars[attr.accessor] : {};
+        return {
+            header: attr.Header,
+            type: 'normal',
+            custom: custom, // custom renderer for cell?
+            vars: vr,
+            functions: functions
+        };
+    }*/);
+    const apiAttrAttributes = props.apiAttrs.map(smartAttr('subattr'));
+    const apiAttributes = props.apis.map(smartAttr('api'));
+    const normHeaderProps = {
+        rowSpan: '2',
+        className: 'VerticalAlign'
+    }
+    const apiHeaderProps = {
+        colSpan: numApiAttrs
+    }
+    return(
+    <thead className='TableHeading'>
+        <tr>
+        {props.hasLineLocks && 
+        <th rowSpan='2'>
+            <HoverOverlay tooltip='Lock All Lines' placement='auto'>
+            <LineLock checked={true} onLineLock={handleAllLock}/>
+            </HoverOverlay>
+            /
+            <HoverOverlay tooltip='Unlock All Lines' placement='auto'>
+            <LineLock checked={false} onLineLock={handleRemoveAllLock}/>
+            </HoverOverlay>
+        </th>
+        }
+        {normalAttributes.map((attr,i) =>
+            <HeaderRenderer key={i} {...attr} headerProps={normHeaderProps}/>
+        )}
+        {apiAttributes.map((attr, i) =>
+            <HeaderRenderer key={i} {...attr} headerProps={apiHeaderProps}/>
+        )}
+        {/*props.apis.map((api, i) =>
+            <HeaderRenderer key={i} {...api} headerProps={apiHeaderProps}/>
+            //<th key={i} colSpan={numApiAttrs}>{api.Header}</th>
+        )*/}
+        </tr>
+        <tr>
+        {props.apis.map((api, i) => 
+            apiAttrAttributes.map((attr, i) => 
+                <HeaderRenderer key={i} {...attr}/>
+            )
+        /*
+            props.apiAttrs.map((attr, j) => 
+                <th key={i*numApiAttrs+j}>{attr.Header}</th>
+            )
+        */
+        )}
+        </tr>
+    </thead>
     );
 }
 
@@ -109,25 +206,25 @@ function BOMRow(props){
             return c+attr.subAttributes.length;
         }
         return c+1;
-    }, 0);
-    const highlights = props.data.highlights;
-    /*
-    function getApiHighlightOffer(offerNum){
-        const hls = Object.entries(highlights).reduce((obj, [k,v]) => {
-            const api = offerNum === v.offerNum ? v.api : null;
-            obj[k] = api;
-            return obj;
-        }, {});
-        return hls;
-    }*/
+    }, 0) + (props.hasLineLocks ? 1 : 0);
+    function handleLineLock(){
+        props.onLineLock(!props.data.lineLock, props.rowNum);
+    }
+    const lockTTip = props.data.lineLock ? 'Unlock Line' : 'Lock Line';
+
     return(
         <>
         <tr>
-            {props.checkbox &&
-                <td><Checkbox/></td>
+            {props.hasLineLocks &&
+                <td {...firstRowCellProps}>
+                    <HoverOverlay tooltip={lockTTip} placement='auto'>
+                    <LineLock checked={props.data.lineLock} onLineLock={handleLineLock}/>
+                    </HoverOverlay>
+                </td>
             }
             <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={props.attributeOrder} 
-            data={props.data} cellProps={firstRowCellProps} highlightMode={props.highlightMode}/>
+            data={props.data} cellProps={firstRowCellProps} highlightMode={props.highlightMode} 
+            lock={props.data.lineLock}/>
         </tr>
         {props.data.maxOffers > 1 && showAllOffers &&
         [...Array(props.data.maxOffers-1).keys()].map((i) => {
@@ -172,9 +269,15 @@ function BOMOffer(props){
                 highlightMode: props.highlightMode
             } 
             : {};
+            //console.log(props.highlightMode);
+            const offerNum = attr.type === 'api' && props.data[attr.attribute]
+            ? props.data[attr.attribute].offerOrder[props.highlightMode][props.offerNum] 
+            : props.offerNum;
+            //offerNum is the sorted index order, offerIndex is the index of original data i.e. 0,1,2 etc.
             return (
                 <BOMAttributeRenderer key={i} {...specAttrs} {...attr} cellProps={props.cellProps}
-                value={props.data[attr.attribute]} offerNum={props.offerNum} rowNum={props.rowNum}/> 
+                value={props.data[attr.attribute]} offerNum={offerNum} offerIndex={props.offerNum} rowNum={props.rowNum} 
+                lock={props.lock}/> 
             );
         })}
         </>
@@ -182,15 +285,6 @@ function BOMOffer(props){
 }
 
 function BOMAttributeRenderer(props){
-    //console.log(props.subAttributes);
-    /*
-    const fromType = {
-        api: <APIRenderer {...props}/>,
-        normal: <td>{props.value}</td>
-    }
-    const renderer = props.custom({...props});
-    */
-    //console.log(props);
     return(
         <>
         {props.custom ? props.custom({...props}) : <DefaultRenderer {...props}/>}
@@ -199,8 +293,6 @@ function BOMAttributeRenderer(props){
 }
 
 function APIRenderer(props){
-    //console.log(props);
-    //const hasOffers = props.value && props.value.offers.length > 0;
     const hasHighlight = Object.entries(props.highlight).reduce((obj, [k, v]) => {
         if(v !== null){
             obj[k] = v.offerNum === props.offerNum && v.api === props.api;
@@ -210,9 +302,6 @@ function APIRenderer(props){
     const cn = (props.highlightMode in hasHighlight) 
     ? (hasHighlight[props.highlightMode] ? 'HighlightedCell' : 'NormalCell') 
     : 'NormalCell';
-    //console.log(props.highlight);
-    //console.log(props.rowNum+' '+props.offerNum);
-    //console.log(hasHighlight);
     const cellProps = {
         className: cn
     };
@@ -235,38 +324,23 @@ function APIRenderer(props){
 
 //vertical-align to center header elements for rowspan=2
 
-//checkbox on first col
-function BOMAPITableHeader(props){
-    const numApiAttrs = props.apiAttrs.length;
+function HeaderRenderer(props){
     return(
-    <thead className='TableHeading'>
-        <tr>
-        {props.checkbox && 
-        <th rowSpan='2'>
-            <Checkbox/>
-        </th>
-        }
-        {props.bomAttrs.map((attr,i) => 
-            <th key={i} rowSpan='2'>{attr.Header}</th>
-        )}
-        {props.apis.map((api, i) =>
-            <th key={i} colSpan={numApiAttrs}>{api.Header}</th>
-        )}
-        </tr>
-        <tr>
-        {props.apis.map((api, i) => 
-            props.apiAttrs.map((attr, j) => 
-                <th key={i*numApiAttrs+j}>{attr.Header}</th>
-            )
-        )}
-        </tr>
-    </thead>
+        <>
+        {props.custom ? props.custom({...props}) : <DefaultHeader {...props}/>}
+        </>
+    );
+}
+function DefaultHeader(props){
+    return(
+        <th {...props.headerProps}>{props.header}</th>
     );
 }
 
-function Checkbox(){
+function LineLock(props){
     return(
-    <input className="form-check-input" type="checkbox"/>
+        <input className='form-check-input Lock' type='checkbox' 
+        checked={props.checked} onChange={props.onLineLock}/>
     );
 }
 
@@ -303,7 +377,7 @@ function QuantitiesRenderer(props){
     return (
         <td {...props.cellProps}>
             <SimplePopover popoverBody={quantPop} trigger={['hover', 'focus']} placement='auto'>
-            <div><NumberInput onBlur={handleBlur} value={props.value.single}/></div>
+            <div><NumberInput onBlur={handleBlur} value={props.value.single} disabled={props.lock}/></div>
             </SimplePopover>
         </td>
     );
@@ -342,13 +416,59 @@ function ActiveApisRenderer(props){
         <MultiSelectRadioButtons init={init} options={apis} onChange={onChangeApi}/>
     );
     const footer = (
-        <Button onClick={onSubmit}>Submit</Button>
+        <Button onClick={onSubmit} disabled={props.lock}>Submit</Button>
     );
     return (
         <td {...props.cellProps}>
         <ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' body={apisCheckboxes} footer={footer}/>
         </td>
     )
+}
+
+function ActiveApisHeaderRenderer(props){
+    const apis = props.vars.apis.map((api) => {
+        return {id: api.accessor, label: api.Header};
+    });
+    const init = props.vars.apis.reduce((obj, api) => {
+        obj[api.accessor] = true;
+        return obj;
+    }, {});
+    const [showModal, setShowModal] = useState(0);
+    const [activeApis, setActiveApis] = useState(init);
+    function onChangeApi(newActiveApis){
+        setActiveApis(newActiveApis);
+    }
+    function onSubmit(){
+        props.functions.submitGlobalApis(activeApis);
+        setShowModal(showModal+1);
+    };
+    const apisActivator = (
+        <Button>Apis</Button>
+    );
+    const apisCheckboxes = (
+        <MultiSelectRadioButtons control={activeApis} options={apis} onChange={onChangeApi}/>
+    );
+    const footer = (
+        <>
+        <Button variant='primary' onClick={onSubmit}>Submit</Button>
+        <Button variant='secondary' onClick={() => setShowModal(showModal+1)}>Close</Button>
+        </>
+    );
+    return(
+        <th {...props.headerProps}>
+            <ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' body={apisCheckboxes} footer={footer}/>
+        </th>
+    );
+}
+
+function LeadTimeHeaderRenderer(props){
+    return(
+        <th {...props.headerProps}>
+            <HoverOverlay tooltip='Weeks' placement='auto'>
+                {props.header}
+            </HoverOverlay>
+        </th>
+    );
 }
 
 function DefaultRenderer(props){
