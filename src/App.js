@@ -30,7 +30,6 @@ function App() {
   const [options, setOptions] = useState({store: stores[0].id, currency: currencies[0].id});
   const [dataProcessLock, setDataProcessLock] = useState(false);
   //console.log(username);
-  console.log(dataProcessLock);
   //console.log(setUsername);
   //const [loggedIn, setLoggedIn] = useState(null);
   function handleVariableOptionChange(option, value){
@@ -62,7 +61,7 @@ function App() {
   }
   function path(p){
     const prePath = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
-    return '/'+prePath+p;
+    return prePath+'/'+p;
   }
   return (
     <div className="App">
