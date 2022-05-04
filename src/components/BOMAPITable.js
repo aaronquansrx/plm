@@ -11,6 +11,9 @@ import {PricingTable} from './Tables';
 import {NumberInput} from './Forms';
 import {ModalController} from './Modals';
 import {MultiSelectRadioButtons, OutsideControlCheckbox} from './Forms';
+import {PageInterface} from './Pagination';
+import {usePaging} from './../hooks/Paging';
+import { slice } from 'lodash';
 
 import lockIcon from './../lock-128.png';
 
@@ -73,13 +76,19 @@ export function BOMAPITableV2(props){
         }
     });
     const attributeOrder = normalAttributes.concat(apiAttributes);
+
+    const pageSize = 5;
+    const [pageNumber, numPages, handlePageChange] = usePaging(props.data.length, pageSize);
+    const displayWidth = 3;
+    const pageRows = slice(props.data, pageNumber*pageSize, pageNumber*pageSize+pageSize);
     return (
+        <div>
         <div className='MainTable'>
         <Table>
             <BOMAPITableHeader hasLineLocks={props.hasLineLocks} bomAttrs={props.bomAttrs} 
             apis={props.apis} apiAttrs={props.apiAttrs} onLockAll={props.onLineLockAll} functions={props.functions}/>
             <tbody>
-                {data.map((line, i) => 
+                {pageRows.map((line, i) => 
                     <BOMRow key={i} highlightMode={props.highlightMode} rowNum={i} 
                     data={line} hasLineLocks={props.hasLineLocks} 
                     attributeOrder={attributeOrder} 
@@ -87,6 +96,11 @@ export function BOMAPITableV2(props){
                 )}
             </tbody>
         </Table>
+        </div>
+        <div className='PageInterface'>
+        <PageInterface current={pageNumber} max={numPages} 
+        displayWidth={displayWidth} onPageClick={handlePageChange}/>
+        </div>
         </div>
     );
 }

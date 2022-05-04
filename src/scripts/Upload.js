@@ -175,6 +175,13 @@ export function autoFindAttributesV2(bom, attributes=[]){
             const headers = cols.map((attr) => {
                 return attr.header;
             });
+            if(quantityI === -1){
+                headers.push({Header: 'Quantity', accessor: 'quantities'});
+            }
+            console.log(headers);
+            console.log(quantityI);
+            //headers.push()
+            //if()
             //cols.splice(mpnI, 1);
             //cols.splice(quantityI, 1); // remove quantity (evaluate seperate)
             //cols.shift(); // remove mpn (eval seperate)

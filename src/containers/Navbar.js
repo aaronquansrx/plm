@@ -54,10 +54,6 @@ export function MainNavbar(props){
             >
                 <Nav.Link href={path("bomtool")}>BOM Tool</Nav.Link>
                 <Nav.Link href={path("partsearch")}>Part Search</Nav.Link>
-                {/*<Nav.Link href="#action2">Link</Nav.Link>*/}
-                {/*<Nav.Link href="#" disabled>
-                Link
-                </Nav.Link>*/}
             </Nav>
             {/*
             <Form className="d-flex">
@@ -70,13 +66,13 @@ export function MainNavbar(props){
                 <Button variant="outline-success">Search</Button>
             </Form>
             */}
-            <Nav>
+            <Nav className='nav-link'>
                 <StoreCurrencyOptions store={props.store} currency={props.currency} 
                 onOptionChange={props.onOptionChange} 
                 stores={props.stores} currencies={props.currencies}
                 dataProcessLock={props.dataProcessLock}/>
             </Nav>
-            <Nav><Version className='nav-link' onClick={props.onVersionClick}>V0.0</Version></Nav>
+            <Nav><Version className='nav-link' onClick={props.onVersionClick}>V1.0</Version></Nav>
             <div>
             {!props.username ? <a href={path("login")}>Login</a> : 
                 <div>

@@ -9,11 +9,14 @@ import {
     useQuantityMultiplier, evalLineApis
 } from './../hooks/BOMTable';
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
+import {useBOMEvaluation} from './../hooks/BOMEvaluation';
 import {BOMAPITableV2} from './BOMAPITable';
 import {NumberInput, SelectSingleRadioButtons} from './Forms';
 import { NamedCheckBox } from './Checkbox';
 import BOMExporter from './BOMExporter';
 import BOMExporterV2 from './BOMExporterV2';
+
+import {downloadFile} from './../scripts/General';
 
 import './../css/temp.css';
 
@@ -90,6 +93,9 @@ function BOMToolV3(props){
     function handleTest(){
         runBOMAlgorithms(tableBOM);
     }
+    function exportTableJson(){
+        downloadFile('tablejson', JSON.stringify(tableBOM));
+    }
     function handleLineLock(bool, lineNum){
         const newTable = update(tableBOM, {
             [lineNum]: {lineLock: 
@@ -105,17 +111,24 @@ function BOMToolV3(props){
         });
         setTable(newTable);
     }
+    const [bomEvaluation] = useBOMEvaluation(tableBOM, apiDataProgress.finished);
     return(
         <>
         <div className='FlexNormal'>
             <div className='Hori'>
-            <Button onClick={handleRequestApis}>Call APIs</Button>
             <NumberInput label={'Multi'} value={quantityMultiplier} onBlur={handleMultiBlur} 
             disabled={!apiDataProgress.finished}/>
             {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
             apiAttrs={apiAttrs}/>}
             <HighlightOptions onChange={handleChangeHighlight} options={highlightOptions}/>
+            <BOMEval evaluation={bomEvaluation}/>
+            {
+            <div>
+            <Button onClick={handleRequestApis}>Call APIs</Button>
             <Button onClick={handleTest}>Test</Button>
+            <Button onClick={exportTableJson}>Export JSON</Button>
+            </div>
+            }
             </div>
         </div>
         <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
@@ -123,6 +136,18 @@ function BOMToolV3(props){
         highlightMode={highlightMode} 
         hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}/>
         </>
+    );
+}
+
+function BOMEval(props){
+    return(
+        <div>
+            <div>Quoted: {props.evaluation.quotedPercent.toFixed(2)}%</div>
+            <div>Unquoted: {props.evaluation.unquotedPercent.toFixed(2)}%</div>
+            <div>Number Of Lines: {props.evaluation.numLines}</div>
+            <div>Total Price: {props.evaluation.total_price.toFixed(2)}</div>
+
+        </div>
     );
 }
 

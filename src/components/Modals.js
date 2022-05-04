@@ -5,6 +5,7 @@ import Button from 'react-bootstrap/Button';
 import { Accordion } from 'react-bootstrap';
 
 import { NamedCheckBox } from './Checkbox';
+import { TabPages } from './Tabs';
 
 export function ModalController(props){
     const [show, setShow] = useState(false);
@@ -287,6 +288,16 @@ export function AutoColumnOptionModal(props){
 
 export function VersionModal(props){
     const handleClose = () => props.hideAction();
+    const versions = [
+        {
+            name: '1.0',
+            content: <div>Version 1.0</div>
+        },
+        {
+            name: '0.0',
+            content: 'o'
+        }
+    ]
     return(
         <Modal show={props.show} onHide={handleClose}>
             <Modal.Header closeButton>
@@ -294,6 +305,7 @@ export function VersionModal(props){
             </Modal.Header>
             <Modal.Body>
                 In development
+                <TabPages tabs={versions}/>
             </Modal.Body>
         </Modal>
     );

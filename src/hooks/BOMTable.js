@@ -33,6 +33,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 price: null,
                 lead_time: null
             }
+            //have offer evaluation for best price and lead time
             line.offerEvaluation = {
                 offers: [],
                 quantity_found: 0,
@@ -121,6 +122,25 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         //setTable(newTable);
         return newTable;
     }
+    function lineAlgorithmsModify(line, algoData){
+        //const algos = i===null ? algoData : algoData[]
+        const bestPrice = algoData.bestprice;
+        const priceHL = bestPrice ? 
+        {api: bestPrice.api, offerNum: bestPrice.offerNum} : null;
+        line.highlights = {
+            price: priceHL,
+            lead_time: algoData.leadtime
+        }
+        if(bestPrice){
+            line.offerEvaluation = {
+                offers: [bestPrice],
+                quantity_found: bestPrice.quantity,
+                total_price: bestPrice.total,
+                fully_evaluated: bestPrice.quantity >= line.quantities.multi
+            }
+        }
+        return line;
+    }
     function runBOMAlgorithms(bom){
         if(lineNumsToEvaluate.size === 0){
             axios({
@@ -128,17 +148,18 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 url: serverUrl+'api/algorithms',
                 data: {
                     bom: bom,
-                    algorithms: ['simplebestprice', 'leadtime']
+                    algorithms: ['simplebestprice', 'leadtime', 'bestprice']
                 }
             }).then(response => {
-                console.log(response.data)
+                console.log(response.data);
                 const algos = response.data.data; 
                 const newTableBOM = [...bom].map((line,i) => {
-                    const newLine = {...line};
-                    newLine.highlights = {
+                    const newLine = lineAlgorithmsModify({...line}, algos[i]);
+                    //const newLine = {...line};
+                    /*newLine.highlights = {
                         price: algos[i].simplebestprice,
                         lead_time: algos[i].leadtime
-                    }
+                    }*/
                     return newLine;
                 });
                 setTable(newTableBOM);
@@ -153,15 +174,17 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 url: serverUrl+'api/algorithms',
                 data: {
                     line: bom[row],
-                    algorithms: ['simplebestprice', 'leadtime']
+                    algorithms: ['simplebestprice', 'leadtime', 'bestprice']
                 }
             }).then((response) => {
                 const algos = response.data.data;
-                const newLine = {...tableBOM[row]};
+                //const newLine = {...tableBOM[row]};
+                const newLine = lineAlgorithmsModify({...tableBOM[row]}, algos);
+                /*
                 newLine.highlights = {
                     price: algos.simplebestprice,
                     lead_time: algos.leadtime
-                }
+                }*/
                 setTable(update(tableBOM, {
                     [row]: {$set: newLine}
                 }));
@@ -178,7 +201,8 @@ export function useApiAttributes(){
         {Header: 'Lead Time', accessor: 'leadtime'},
         {Header: 'Price', accessor: 'prices'},
         {Header: 'SPQ', accessor: 'spq'},
-        {Header: 'Currency', accessor: 'currency'}
+        {Header: 'Currency', accessor: 'currency'},
+        {Header: 'Packaging', accessor: 'packaging'}
     ];
     const [apiAttrs, setApiAttrs] = useState(initApiAttrs);
     return apiAttrs;
@@ -229,7 +253,6 @@ export function useQuantityMultiplier(tableBOM, apiData, apisList,
 }
 
 export function evalLineApis(line, apis, apiData, sort='price'){
-    //console.log(mpnData);
     const mpn = line.mpns.current;
     const mpnData = apiData.get(mpn).data;
     const outApiData = apis.map((api) => {

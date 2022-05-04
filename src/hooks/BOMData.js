@@ -12,35 +12,32 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
     useEffect(() => {
         //console.log(store);
         const controller = new AbortController();
-        if(req > 0){
-            const apiDataMap = new Map();
-            function apiCallback(mpn, apiData, maxOffers){
-                const now = Date.now();
-                const data = {
-                    apis: apiData,
-                    maxOffers: maxOffers
-                };
-                apiDataMap.set(mpn, {data:data, date: now});
-                updateApiDataMap(apiDataMap);
-            }
-            changeLock(true);
-            const dt = Date.now();
-            mpnList.forEach(mpn => {
-                if(apiData.has(mpn)){
-                    if(dt > apiData.get(mpn).date + expireTime){
-                        console.log('recall');
-                        callApi(mpn, serverUrl, controller, apisList, apiCallback, store, currency);
-                    }
-                }else{
+        const apiDataMap = new Map();
+        function apiCallback(mpn, apiData, maxOffers){
+            const now = Date.now();
+            const data = {
+                apis: apiData,
+                maxOffers: maxOffers
+            };
+            apiDataMap.set(mpn, {data:data, date: now});
+            updateApiDataMap(apiDataMap);
+        }
+        changeLock(true);
+        const dt = Date.now();
+        mpnList.forEach(mpn => {
+            if(apiData.has(mpn)){
+                if(dt > apiData.get(mpn).date + expireTime){
+                    //console.log('recall');
                     callApi(mpn, serverUrl, controller, apisList, apiCallback, store, currency);
                 }
-            });
-        }
-
+            }else{
+                callApi(mpn, serverUrl, controller, apisList, apiCallback, store, currency);
+            }
+        });
         return () => {
             controller.abort();
         }
-    }, [req, store, currency]);
+    }, [store, currency]);
 }
 
 export function useApiDataProgress(mpnList, apiData, store, currency, changeLock){
@@ -121,7 +118,8 @@ function formatApiData(rawApiData){
                 leadtime: offer.LeadTimeWeeks,
                 leadtimedays: offer.LeadTimeDays,
                 pricing: offer.Pricing,
-                currency: offer.Currency
+                currency: offer.Currency,
+                packaging: offer.Packaging
             }
         }) : [];
         obj[k] = {

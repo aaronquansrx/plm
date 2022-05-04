@@ -1,7 +1,10 @@
 Stock available only
-locking lines/offers
+locking lines/offers !
 algorithm, best price
 lead cutoff
-Sort offers on leadtime or price
-Export single best offer (leadtime, or price) chosen quote
+Sort offers on leadtime or price !
+Export single best offer (leadtime, or price) chosen quote !
 export second sheet with all details (algo used, quoted/unquoted etc.)
+
+in-stock only option, checkbox (if checked only consider with stock) stock > 0
+packaging field in table (maybe multiple packaging)
