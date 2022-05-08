@@ -31,3 +31,21 @@ export function BomApiProgressBar(props){
         </div>
     );
 }
+
+export function BOMApiProgressBarV2(props){
+    const [percentage, setPercentage] = useState(0);
+    useEffect(() => {
+        const ratio = props.numParts >= 0 ? props.numFinished/props.numParts : 1;
+        const per = ratio*100;
+        setPercentage(per);
+        //console.log()
+        if(ratio >= 1){
+            setTimeout(() => props.onHideBar(), 3000);
+        }
+    }, [props.numFinished]);
+    return (
+        <div>
+        {props.show && <SimpleProgressBar now={percentage}/>}
+        </div>
+    );
+}

@@ -35,10 +35,18 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
             }
             //have offer evaluation for best price and lead time
             line.offerEvaluation = {
-                offers: [],
-                quantity_found: 0,
-                total_price: 0,
-                fully_evaluated: 0 >= line.quantities.multi
+                bestprice: {
+                    offers: [],
+                    quantity_found: 0,
+                    total_price: 0,
+                    fully_evaluated: 0 >= line.quantities.multi
+                },
+                leadtime: {
+                    offers: [],
+                    quantity_found: 0,
+                    total_price: 0,
+                    fully_evaluated: 0 >= line.quantities.multi
+                }
             }
             line.lineLock = false;
             return line;
@@ -61,6 +69,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
     }, [tableHeaders]);
     const [initUpdateTable, setInitUpdateTable] = useState(0);
     const [lineNumsToEvaluate, setLineNumsToEvaluate] = useState(new Set([...Array(lenBOM)].keys()));
+    const linesComplete = lenBOM - lineNumsToEvaluate.size;
     useEffect(() => {
         const updateTimeout = lineNumsToEvaluate.size !== 0 
         ? setTimeout(() => setInitUpdateTable(initUpdateTable+1), 1000)
@@ -125,18 +134,29 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
     function lineAlgorithmsModify(line, algoData){
         //const algos = i===null ? algoData : algoData[]
         const bestPrice = algoData.bestprice;
+        const leadTime = algoData.leadtime;
         const priceHL = bestPrice ? 
         {api: bestPrice.api, offerNum: bestPrice.offerNum} : null;
+        const leadtimeHL = leadTime ? 
+        {api: leadTime.api, offerNum: leadTime.offerNum} : null;
         line.highlights = {
             price: priceHL,
-            lead_time: algoData.leadtime
+            lead_time: leadtimeHL
         }
         if(bestPrice){
-            line.offerEvaluation = {
+            line.offerEvaluation.bestprice = {
                 offers: [bestPrice],
                 quantity_found: bestPrice.quantity,
                 total_price: bestPrice.total,
                 fully_evaluated: bestPrice.quantity >= line.quantities.multi
+            }
+        }
+        if(leadTime){
+            line.offerEvaluation.leadtime = {
+                offers: [leadTime],
+                quantity_found: leadTime.quantity,
+                total_price: leadTime.total,
+                fully_evaluated: leadTime.quantity >= line.quantities.multi
             }
         }
         return line;
@@ -191,7 +211,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
             });
         }
     }
-    return [tableBOM, setTable, headers, runBOMAlgorithms, runBOMLineAlgorithms, resortOffers];
+    return [tableBOM, setTable, headers, runBOMAlgorithms, runBOMLineAlgorithms, resortOffers, linesComplete];
 }
 
 export function useApiAttributes(){
