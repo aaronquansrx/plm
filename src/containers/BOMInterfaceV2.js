@@ -91,10 +91,10 @@ function BOMInterface(props){
         }
     }
     return ( 
-        <>
+        <div className='Flow'>
             <Navigation interfaceState={interfaceState} onNavChange={changeState}/>
             {renderInterfaceState()}
-        </>
+        </div>
     );
 }
 

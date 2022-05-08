@@ -42,3 +42,9 @@ td.PricingCell {
 td.NoPadding {
     padding: 0;
 }
+
+.FlexNormal {
+    flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: auto;
+}

@@ -66,7 +66,7 @@ export function SelectSingleRadioButtons(props){
         <>
         {props.options.map((opt, i) => 
             <Form.Check key={i} type='radio' {...opt} 
-            checked={selected===opt.id} onChange={handleChange}/>
+            checked={selected===opt.id} onChange={handleChange} disabled={props.disabled}/>
         )}
         </>
     );

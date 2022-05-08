@@ -15,10 +15,14 @@ import {NumberInput, SelectSingleRadioButtons} from './Forms';
 import { NamedCheckBox } from './Checkbox';
 import BOMExporter from './BOMExporter';
 import BOMExporterV2 from './BOMExporterV2';
+import {BOMApiProgressBarV2} from './Progress';
 
 import {downloadFile} from './../scripts/General';
 
 import './../css/temp.css';
+import './../css/bomtool.css';
+
+const buildtype = process.env.NODE_ENV;
 
 function BOMToolV3(props){
     const apisList = useMemo(() => props.apis.map((api => api.accessor)));
@@ -33,7 +37,8 @@ function BOMToolV3(props){
     const apiDataProgress = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
     const [tableBOM, setTable, tableColumns, 
-        runBOMAlgorithms, runBOMLineAlgorithms, resortOffers] = useTableBOM(requestApis, 
+        runBOMAlgorithms, runBOMLineAlgorithms, resortOffers, 
+        linesComplete] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, apiDataProgress, 
         updateTableCall, props.store, props.currency
@@ -112,6 +117,11 @@ function BOMToolV3(props){
         setTable(newTable);
     }
     const [bomEvaluation] = useBOMEvaluation(tableBOM, apiDataProgress.finished);
+    const [showProgress, setShowProgress] = useState(true);
+    function handleHideBar(){
+        setShowProgress(false);
+    }
+    //console.log(linesComplete);
     return(
         <>
         <div className='FlexNormal'>
@@ -120,9 +130,9 @@ function BOMToolV3(props){
             disabled={!apiDataProgress.finished}/>
             {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
             apiAttrs={apiAttrs}/>}
-            <HighlightOptions onChange={handleChangeHighlight} options={highlightOptions}/>
+            <HighlightOptions disabled={!apiDataProgress.finished} onChange={handleChangeHighlight} options={highlightOptions}/>
             <BOMEval evaluation={bomEvaluation}/>
-            {
+            { buildtype !== 'production' &&
             <div>
             <Button onClick={handleRequestApis}>Call APIs</Button>
             <Button onClick={handleTest}>Test</Button>
@@ -131,6 +141,8 @@ function BOMToolV3(props){
             }
             </div>
         </div>
+        <BOMApiProgressBarV2 show={showProgress} numParts={tableBOM.length}
+        onHideBar={handleHideBar} numFinished={linesComplete}/>
         <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
         apis={props.apis} apiAttrs={apiAttrs} functions={functions}
         highlightMode={highlightMode} 
@@ -142,11 +154,22 @@ function BOMToolV3(props){
 function BOMEval(props){
     return(
         <div>
-            <div>Quoted: {props.evaluation.quotedPercent.toFixed(2)}%</div>
-            <div>Unquoted: {props.evaluation.unquotedPercent.toFixed(2)}%</div>
-            <div>Number Of Lines: {props.evaluation.numLines}</div>
-            <div>Total Price: {props.evaluation.total_price.toFixed(2)}</div>
-
+            <div>BOM Evaluation</div>
+                <div>Number Of Lines: {props.evaluation.numLines}</div>
+                <div className='Hori'>
+                    <div>
+                        <div>Best Price</div>
+                        <div>Quoted: {props.evaluation.bestprice.quotedPercent.toFixed(2)}%</div>
+                        <div>Unquoted: {props.evaluation.bestprice.unquotedPercent.toFixed(2)}%</div>
+                        <div>Total Price: {props.evaluation.bestprice.total_price.toFixed(2)}</div>
+                    </div>
+                    <div>
+                        <div>Lead Time</div>
+                        <div>Quoted: {props.evaluation.leadtime.quotedPercent.toFixed(2)}%</div>
+                        <div>Unquoted: {props.evaluation.leadtime.unquotedPercent.toFixed(2)}%</div>
+                        <div>Total Price: {props.evaluation.leadtime.total_price.toFixed(2)}</div>
+                    </div>
+                </div>
         </div>
     );
 }
@@ -158,7 +181,7 @@ function HighlightOptions(props){
     return(
         <div>
         <SelectSingleRadioButtons options={props.options}
-        onChange={handleChange}/>
+        onChange={handleChange} disabled={props.disabled}/>
         </div>
     )
 }

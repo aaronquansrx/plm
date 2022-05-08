@@ -77,12 +77,16 @@ export function BOMAPITableV2(props){
     });
     const attributeOrder = normalAttributes.concat(apiAttributes);
 
-    const pageSize = 5;
+    const [pageSize, setPageSize] = useState(5);
     const [pageNumber, numPages, handlePageChange] = usePaging(props.data.length, pageSize);
     const displayWidth = 3;
-    const pageRows = slice(props.data, pageNumber*pageSize, pageNumber*pageSize+pageSize);
+    const pageRows = props.data.slice(pageNumber*pageSize, +(pageNumber*pageSize) + +pageSize);
+    function handleChangePageSize(s){
+        setPageSize(s);
+        handlePageChange(0);
+    }
     return (
-        <div>
+        <div className='FlexNormal'>
         <div className='MainTable'>
         <Table>
             <BOMAPITableHeader hasLineLocks={props.hasLineLocks} bomAttrs={props.bomAttrs} 
@@ -99,7 +103,8 @@ export function BOMAPITableV2(props){
         </div>
         <div className='PageInterface'>
         <PageInterface current={pageNumber} max={numPages} 
-        displayWidth={displayWidth} onPageClick={handlePageChange}/>
+        displayWidth={displayWidth} onPageClick={handlePageChange} 
+        pageSize={pageSize} onChangePageSize={handleChangePageSize}/>
         </div>
         </div>
     );
@@ -202,9 +207,9 @@ function BOMAPITableHeader(props){
 
 const HoverToggleSolidColour = styled.div`
     height: 15px;
-    background: ${props => props.toggle ? 'blue' : 'green'};
+    background: ${props => props.toggle ? 'rgb(152, 210, 217)' : 'rgb(202, 205, 207)'};
     &:hover {
-        background: red;
+        background: rgb(122, 155, 167);
     }
 `;
 

@@ -3,6 +3,13 @@
     flex-direction: column;
 }
 
+.Flow {
+    text-align: center;
+    display: flex;
+    flex-flow: column;
+    height: 100vh;
+}
+
 .Hori{
     display: flex;
     flex-direction: row;
