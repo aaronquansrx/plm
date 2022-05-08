@@ -22,6 +22,8 @@ import {downloadFile} from './../scripts/General';
 import './../css/temp.css';
 import './../css/bomtool.css';
 
+const buildtype = process.env.NODE_ENV;
+
 function BOMToolV3(props){
     const apisList = useMemo(() => props.apis.map((api => api.accessor)));
     const mpnList = useMemo(() => props.bom.reduce((arr, line) => {
@@ -130,7 +132,7 @@ function BOMToolV3(props){
             apiAttrs={apiAttrs}/>}
             <HighlightOptions disabled={!apiDataProgress.finished} onChange={handleChangeHighlight} options={highlightOptions}/>
             <BOMEval evaluation={bomEvaluation}/>
-            {
+            { buildtype !== 'production' &&
             <div>
             <Button onClick={handleRequestApis}>Call APIs</Button>
             <Button onClick={handleTest}>Test</Button>
