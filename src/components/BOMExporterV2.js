@@ -30,7 +30,7 @@ function BOMExporterV2(props){
     function defaultFormat(){
         const ignore = props.apis.map((api) => api.accessor);
         ignore.push('maxOffers', '_unnamed', 'activeApis', 
-        'mpn', 'mpnOptions', 'highlights',
+        'mpn', 'mpnOptions', 'highlights', 'lineLock', 'offerEvaluation', 
         'quantity'); 
         const formatted = props.data.map((line) => {
             const outline = Object.entries(line).reduce((obj, [k,v]) => {
@@ -49,7 +49,11 @@ function BOMExporterV2(props){
                 if(api.accessor in line && line[api.accessor].offers.length > 0){
                     const offers = line[api.accessor].offers;
                     props.apiAttrs.forEach((heading) => {
-                        outline[api.Header+'_'+heading.accessor] = offers[0][heading.accessor];
+                        let out = offers[0][heading.accessor];
+                        if(heading.accessor === 'prices'){
+                            out = offers[0][heading.accessor].price;
+                        }
+                        outline[api.Header+'_'+heading.accessor] = out;
                     });
                 }
             });
