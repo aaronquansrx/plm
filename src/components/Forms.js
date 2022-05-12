@@ -52,6 +52,19 @@ export function OutsideControlCheckbox(props){
     ); 
 }
 
+export function LabeledCheckbox(props){
+    //const [checked, setChecked] = useState(false);
+    function handleChange(e){
+        if(props.onChange){
+            props.onChange(!props.checked);
+        }
+    }
+    return(
+        <Form.Check className={props.className} 
+        checked={props.checked} onChange={handleChange} label={props.label}/>
+    );
+}
+
 export function SelectSingleRadioButtons(props){
     const init = props.init ? props.init
     : props.options.length > 0 ? props.options[0].id : null;

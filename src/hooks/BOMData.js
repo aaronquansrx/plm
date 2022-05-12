@@ -13,13 +13,13 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
         //console.log(store);
         const controller = new AbortController();
         const apiDataMap = new Map();
-        function apiCallback(mpn, apiData, maxOffers){
+        function apiCallback(mpn, data, maxOffers){
             const now = Date.now();
-            const data = {
-                apis: apiData,
+            const da = {
+                apis: data,
                 maxOffers: maxOffers
             };
-            apiDataMap.set(mpn, {data:data, date: now});
+            apiDataMap.set(mpn, {data:da, date: now});
             updateApiDataMap(apiDataMap);
         }
         changeLock(true);
@@ -38,6 +38,28 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
             controller.abort();
         }
     }, [store, currency]);
+    function callApiRetry(cmpn, api, onComplete){
+        const controller = new AbortController();
+        function apiCallbackSingle(mpn, data, maxOffers){
+            const now = Date.now();
+            if(apiData.has(mpn)){
+                const mpnDt = apiData.get(mpn);
+                const newDa = update(mpnDt.data, {
+                    apis: {
+                        [api]: {$set: data[api]}
+                    },
+                    maxOffers: {$set: Math.max(mpnDt.data.maxOffers, maxOffers)}
+                });
+                const nm = new Map();
+                nm.set(mpn, {data:newDa, date: mpnDt.date});
+                updateApiDataMap(nm);
+                onComplete(data[api]);
+            }
+
+        }
+        callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, store, currency);
+    }
+    return [callApiRetry];
 }
 
 export function useApiDataProgress(mpnList, apiData, store, currency, changeLock){
@@ -91,17 +113,19 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
 }
 
 function callApi(mpn, serverUrl, controller, apis, callback, store, currency){
+    const apiStr = apis.join(',');
     axios({
         method: 'GET',
         url: serverUrl+'api/part',
-        params: {part: mpn, store: store, currency: currency},
+        params: {part: mpn, api:apiStr, store: store, currency: currency},
         signal: controller.signal
     }).then(response => {
         if(typeof response.data !== 'object'){
             console.log(mpn); //catch problematic mpns
+        }else{
+            const formattedApiData = formatApiData(response.data.apis);
+            callback(mpn, formattedApiData, response.data.maxOffers);
         }
-        const formattedApiData = formatApiData(response.data.apis);
-        callback(mpn, formattedApiData, response.data.maxOffers);
     });
 }
 
@@ -124,9 +148,9 @@ function formatApiData(rawApiData){
         }) : [];
         obj[k] = {
             offers: offers,
-            message: v.message
+            message: v.message,
+            retry: v.retry
         };
-        //console.log(obj[k]);
         return obj;
     }, {});
     return formattedData;

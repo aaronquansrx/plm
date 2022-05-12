@@ -59,7 +59,7 @@ function BOMExporterV2(props){
             });
             return outline;
         });
-        console.log(formatted);
+        //console.log(formatted);
         return formatted;
     }
     return (

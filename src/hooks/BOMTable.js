@@ -6,6 +6,7 @@ import update from 'immutability-helper';
 import { findPriceBracket, sortPrice, sortLeadTime, 
     sortOrderPrice, sortOrderLeadTime } from '../scripts/Offer';
 import {useServerUrl} from '../hooks/Urls';
+import { BOMAPITable } from '../components/Tables';
 
 export function useTableBOM(req, bom, tableHeaders, apis, apiData, 
     apiDataProgress, testCall, store, currency){
@@ -87,7 +88,8 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                         newLine[ad.api] = {
                             offers: ad.offers,
                             offerOrder: ad.offerOrder, 
-                            message: ad.message
+                            message: ad.message,
+                            retry: apiData.get(mpn).data.apis[ad.api].retry
                         };
                     });
                     newLine.maxOffers = apiData.get(mpn).data.maxOffers;
@@ -117,6 +119,35 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
     function setTable(table){
         setTableBOM(table);
     }
+    function retryForApi(row, api, newRowData){
+        console.log(newRowData);
+        const newLine = {...tableBOM[row]};
+        const newEvalData = newEvalApi(newLine, api, newRowData);
+        console.log(newEvalData);
+        newLine[api] = {
+            offers: newEvalData.offers,
+            offerOrder: newEvalData.offerOrder,
+            message: newRowData.message,
+            retry: newRowData.retry
+        }
+        newLine.maxOffers = Math.max(newLine.maxOffers, newRowData.offers.length);
+        //try something else here
+        /*
+        const lineApiData = evalLineApis(newLine, apisList, newRowData);
+        lineApiData.forEach((ad) => {
+            newLine[ad.api] = {
+                offers: ad.offers,
+                offerOrder: ad.offerOrder, 
+                message: ad.message
+            };
+        });
+        newLine.maxOffers = apiData.get(newLine.mpns.current).data.maxOffers;
+        */
+        const newBOM = update(tableBOM, {
+            [row]: {$set: newLine}
+        });
+        runBOMLineAlgorithms(row, newBOM);
+    }
     function resortOffers(sort){
         const newTable = [...tableBOM].map((line) => {
             apisList.forEach((api) => {
@@ -127,8 +158,6 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
             });
             return line;
         });
-        //console.log(newTable);
-        //setTable(newTable);
         return newTable;
     }
     function lineAlgorithmsModify(line, algoData){
@@ -199,19 +228,31 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
             }).then((response) => {
                 const algos = response.data.data;
                 //const newLine = {...tableBOM[row]};
-                const newLine = lineAlgorithmsModify({...tableBOM[row]}, algos);
+                const newLine = lineAlgorithmsModify({...bom[row]}, algos);
                 /*
                 newLine.highlights = {
                     price: algos.simplebestprice,
                     lead_time: algos.leadtime
                 }*/
-                setTable(update(tableBOM, {
+                setTable(update(bom, {
                     [row]: {$set: newLine}
                 }));
             });
         }
     }
-    return [tableBOM, setTable, headers, runBOMAlgorithms, runBOMLineAlgorithms, resortOffers, linesComplete];
+    function waitingRowApi(row, api){
+        const newLine = {...tableBOM[row]};
+        newLine[api].retry = false;
+        newLine[api].message = 'Waiting...';
+        const newBOM = update(tableBOM, {
+            [row]: {$set: newLine}
+        });
+        setTable(newBOM);
+    }
+    return [tableBOM, setTable, headers, runBOMAlgorithms, 
+        runBOMLineAlgorithms, resortOffers, linesComplete, retryForApi,
+        waitingRowApi
+    ];
 }
 
 export function useApiAttributes(){
@@ -296,10 +337,36 @@ export function evalLineApis(line, apis, apiData, sort='price'){
                 price: priceOrder,
                 lead_time: leadTimeOrder
             },
-            message: mpnData.apis[api].message
+            message: mpnData.apis[api].message,
+            retry: mpnData.apis[api].retry
         };
     });
     return outApiData;
+}
+
+function newEvalApi(line, api, singleApiData){
+    const newOffers = singleApiData.offers.map((offer) => {
+        const {price, index} = findPriceBracket(offer.pricing, 
+            line.quantities.multi, offer.moq);
+        offer.price = price;
+        offer.prices = {
+            price: price,
+            pricing: offer.pricing,
+            pricingIndex: index
+        }
+        return offer;
+    });
+    const priceOrder = sortOrderPrice(newOffers);
+    const leadTimeOrder = sortOrderLeadTime(newOffers);
+    return {
+        offers: newOffers, //sortedOffers,
+        offerOrder: {
+            price: priceOrder,
+            lead_time: leadTimeOrder
+        },
+        //message: mpnData.apis[api].message,
+        //retry: mpnData.apis[api].retry
+    };
 }
 
 //unused overtaken by offerorder

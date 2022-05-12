@@ -13,6 +13,9 @@ import background from './../bg_srx_pattern_grey.gif';
 import logo from './../logo_srx_global.png';
 
 import {StoreCurrencyOptions} from './../components/Options';
+
+import './../css/main.css';
+
 const SRXBackgroundNavbar = styled(Navbar)`
     background-image: url(${background});
 `;
@@ -33,6 +36,7 @@ export function MainNavbar(props){
         //return server+prePath+p;
     }
     return(
+        <div className='FlexNormal'>
         <SRXBackgroundNavbar bg="dark" variant='dark' expand="lg">
         <Container fluid>
             <Navbar.Brand href={path("")}>
@@ -85,5 +89,6 @@ export function MainNavbar(props){
             </Navbar.Collapse>
         </Container>
         </SRXBackgroundNavbar>
+        </div>
     );
 }

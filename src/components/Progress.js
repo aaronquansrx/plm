@@ -44,8 +44,12 @@ export function BOMApiProgressBarV2(props){
         }
     }, [props.numFinished]);
     return (
-        <div>
-        {props.show && <SimpleProgressBar now={percentage}/>}
+        <>
+        {props.show && 
+        <div className='FlexNormal'>
+        <SimpleProgressBar now={percentage}/>
         </div>
+        }
+        </>
     );
 }

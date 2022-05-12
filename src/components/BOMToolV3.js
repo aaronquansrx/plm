@@ -11,7 +11,9 @@ import {
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
 import {useBOMEvaluation} from './../hooks/BOMEvaluation';
 import {BOMAPITableV2} from './BOMAPITable';
-import {NumberInput, SelectSingleRadioButtons} from './Forms';
+import {NumberInput, OutsideControlCheckbox, 
+    LabeledCheckbox,
+    SelectSingleRadioButtons} from './Forms';
 import { NamedCheckBox } from './Checkbox';
 import BOMExporter from './BOMExporter';
 import BOMExporterV2 from './BOMExporterV2';
@@ -32,13 +34,13 @@ function BOMToolV3(props){
     }, []), [props.bom]);
     const [requestApis, setRequestApis] = useState(0);
     const [updateTableCall, setUpdateTableCall] = useState(0);
-    useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
+    const [callApiRetry] = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
         props.store, props.currency, props.changeLock, props.apiData);
     const apiDataProgress = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
     const [tableBOM, setTable, tableColumns, 
         runBOMAlgorithms, runBOMLineAlgorithms, resortOffers, 
-        linesComplete] = useTableBOM(requestApis, 
+        linesComplete, retryLine, waitingRowApi] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, apiDataProgress, 
         updateTableCall, props.store, props.currency
@@ -73,6 +75,13 @@ function BOMToolV3(props){
         });
         runBOMAlgorithms(newTable);
     }
+    function retryApi(mpn, api, rowNum){
+        function onComplete(newData){
+            retryLine(rowNum, api, newData);
+        }
+        waitingRowApi(rowNum, api);
+        callApiRetry(mpn, api, onComplete);
+    }
     const functions = {
         mpns: {
             click: () => console.log('click')
@@ -83,6 +92,9 @@ function BOMToolV3(props){
         activeApis: {
             submitNewApis: changeActiveApis,
             submitGlobalApis: changeActiveApisGlobal
+        },
+        api: {
+            retry: retryApi
         }
     }
     const highlightOptions = [
@@ -175,11 +187,17 @@ function BOMEval(props){
 }
 
 function HighlightOptions(props){
+    const [stockOnly, setStockOnly] = useState(false);
     function handleChange(newOption){
         props.onChange(newOption);
     }
+    function handleChangeStockOnly(so){
+        setStockOnly(so);
+    }
     return(
         <div>
+        <LabeledCheckbox label={'In Stock Only'} 
+        checked={stockOnly} onChange={handleChangeStockOnly}/>
         <SelectSingleRadioButtons options={props.options}
         onChange={handleChange} disabled={props.disabled}/>
         </div>

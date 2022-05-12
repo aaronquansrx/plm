@@ -72,7 +72,8 @@ export function BOMAPITableV2(props){
             attribute: api.accessor,
             subAttributes: sa,
             type: 'api',
-            custom: (p) => <APIRenderer {...p}/>
+            custom: (p) => <APIRenderer {...p}/>,
+            functions: props.functions.api
         }
     });
     const attributeOrder = normalAttributes.concat(apiAttributes);
@@ -86,7 +87,7 @@ export function BOMAPITableV2(props){
         handlePageChange(0);
     }
     return (
-        <div className='FlexNormal'>
+        <>
         <div className='MainTable'>
         <Table>
             <BOMAPITableHeader hasLineLocks={props.hasLineLocks} bomAttrs={props.bomAttrs} 
@@ -106,7 +107,7 @@ export function BOMAPITableV2(props){
         displayWidth={displayWidth} onPageClick={handlePageChange} 
         pageSize={pageSize} onChangePageSize={handleChangePageSize}/>
         </div>
-        </div>
+        </>
     );
 }
 
@@ -285,7 +286,8 @@ function BOMOffer(props){
             ? {
                 highlight: props.data.highlights,
                 api: attr.attribute,
-                highlightMode: props.highlightMode
+                highlightMode: props.highlightMode,
+                mpns: props.data.mpns
             } 
             : {};
             //console.log(props.highlightMode);
@@ -324,6 +326,9 @@ function APIRenderer(props){
     const cellProps = {
         className: cn
     };
+    function handleRetry(){
+        props.functions.retry(props.mpns.current, props.api, props.rowNum);
+    }
     return(
         <>
         {props.value 
@@ -334,7 +339,15 @@ function APIRenderer(props){
                  custom={attr.custom} type='normal' rowNum={props.rowNum} cellProps={cellProps}/>
             )
         })
-        : <td colSpan={props.subAttributes.length}>{props.value.message}</td>)
+        : <td colSpan={props.subAttributes.length}>
+            {props.offerIndex === 0 &&
+            <div>
+            {props.value.message} {' '}
+            {props.value.retry && <Button onClick={handleRetry}>Retry</Button>}
+            </div>
+            }
+        </td>
+        )
         :  <td colSpan={props.subAttributes.length}>Waiting...</td>
         }
         </>
