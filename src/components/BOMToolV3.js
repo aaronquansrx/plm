@@ -98,8 +98,8 @@ function BOMToolV3(props){
         }
     }
     const highlightOptions = [
-        {label: 'Lowest Price', id: 'price'}, 
-        {label: 'Lead Time', id: 'lead_time'}
+        {label: 'Best Price', id: 'price'}, 
+        {label: 'Best Lead Time', id: 'lead_time'}
     ];
     const [highlightMode, setHighlightMode] = useState(highlightOptions[0].id);
     function handleChangeHighlight(hlMode){
