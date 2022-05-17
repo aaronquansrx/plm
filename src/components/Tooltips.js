@@ -4,6 +4,7 @@ import Button from 'react-bootstrap/Button';
 import Overlay from 'react-bootstrap/Overlay';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
+import Popover from 'react-bootstrap/Popover'
 
 import './../css/temp.css';
 
@@ -27,13 +28,33 @@ export function HoverOverlay(props){
     );
 }
 
+export function HoverOverlayTableCell(props){
+    const showTime = props.show ? props.show : 150;
+    const hideTime = props.hide ? props.hide : 300;
+    const target = useRef(null);
+    const placement = props.placement ? props.placement : 'right';
+    const tooltip = (p) => (
+        <Tooltip id="button-tooltip" {...p}>
+            {props.tooltip}
+        </Tooltip>
+    );
+    return(
+        <OverlayTrigger placement={placement} 
+        delay={{ show: showTime, hide: hideTime }} overlay={tooltip}>
+            <td ref={target} {...props.cellProps}>
+            {props.children}
+            </td>
+        </OverlayTrigger>
+    );
+}
+
 export function WarningToolTipButtonFade(props){
     const [show, setShow] = useState(false);
-    
+    const fadeTime = props.fadeTime ? props.fadeTime : 2000
     const target = useRef(null);
     const placement = props.placement ? props.placement : 'right';
     useEffect(() => {
-        const timer = show ? setTimeout(() => setShow(false), 2000) : null;
+        const timer = show ? setTimeout(() => setShow(false), fadeTime) : null;
         return () => {
             clearTimeout(timer);
         }
@@ -87,5 +108,23 @@ export function WarningToolTipButton(props){
     )}
     </Overlay>
     </>
+    );
+}
+
+export function SimplePopover(props){
+    const popover = (
+        <Popover id="popover-basic">
+            { props.header &&
+            <Popover.Header as="h3">{props.header}</Popover.Header>
+            }
+            <Popover.Body>
+                {props.body}
+            </Popover.Body>
+        </Popover>
+    )
+    return(
+        <OverlayTrigger trigger={props.trigger} placement={props.placement} overlay={popover}>
+            {props.children}
+        </OverlayTrigger>
     );
 }

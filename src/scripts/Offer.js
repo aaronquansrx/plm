@@ -12,7 +12,7 @@ function getPrice(pricing, quantity, ignore=false){
 export function sortOffers(offers, quantity){
     let allNull = true;
     let offerPrices = offers.map((offer) => {
-        const q = quantity ? quantity : offers.moq;
+        const q = quantity ? quantity : offer.moq;
         const p = getPrice(offer.pricing, q);
         if(p) allNull = false;
         return {
@@ -22,7 +22,7 @@ export function sortOffers(offers, quantity){
     });
     if(allNull){
         offerPrices = offers.map((offer) => {
-            const q = quantity ? quantity : offers.moq;
+            const q = quantity ? quantity : offer.moq;
             const p = getPrice(offer.pricing, q, true);
             return {offer: offer, price: p};
         });
@@ -59,13 +59,14 @@ export function simpleBestPrice(line, api_list=[]){
     
 }
 
-export function bestPriceDisplay(line, moq, pricing, overQuantity=null){
-    const quantity = overQuantity ? overQuantity : 'quantity' in line ? line.quantity : moq;
+export function bestPriceDisplay(q, moq, pricing, /*overQuantity=null*/){
+    const quantity = q ? q : moq;
     let n = 0; //quantity bracket index
     while(n+1 < pricing.length && quantity >= pricing[n+1].BreakQuantity){
         n+=1;
     }
-    return quantity < pricing[n].BreakQuantity ? pricing[0].UnitPrice : pricing[n].UnitPrice;
+    const retPrice = quantity < pricing[n].BreakQuantity ? pricing[0].UnitPrice : pricing[n].UnitPrice;
+    return {price: retPrice, index: n};
 }
 
 export function findPartialComplete(best){

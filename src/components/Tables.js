@@ -188,7 +188,6 @@ export function BestPriceTable(props){
 }
 
 export function PricingTable(props){
-    //console.log(props.pricing);
     return(
     <>
     {props.pricing &&
@@ -200,7 +199,7 @@ export function PricingTable(props){
         </thead>
         <tbody>
         {props.pricing.map((bracket, i) => 
-            <tr key={i}>
+            <tr key={i} className={i == props.highlightIndex ? 'PricingHighlight' : ''}>
                 <td className='PricingCell'>{bracket.BreakQuantity}</td>
                 <td className='PricingCell'>{bracket.UnitPrice}</td>
             </tr>

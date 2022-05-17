@@ -11,18 +11,46 @@ export function bomEditParse(table, columnAttrs, rowChecked, tableHeaders){
     }, []);
     const editedBom = editedRowBom.reduce((arr, line) => {
         const bomLine = {_unnamed: []};
-        let mpns = [];
+        //let mpns = [];
         line.forEach((cell, i) => {
             const attr = columnAttrs[i];
             if(attr !== tableHeaders[0].Header){
+                switch(headerToAccessor[attr]){
+                    case 'mpn':
+                        const mpns = cell.split(', ');
+                        bomLine.mpn = mpns[0];
+                        bomLine.mpnOptions = mpns;
+                        break;
+                    case 'quantity':
+                        const quant = parseInt(cell);
+                        bomLine.quantity = quant;
+                        bomLine.display_quantity = quant;
+                        bomLine.quantities = {
+                            single: quant,
+                            multi: quant,
+                        }
+                        break;
+                    default:
+                        bomLine[headerToAccessor[attr]] = cell;
+                        break;
+                }
+                /*
                 if(headerToAccessor[attr] === 'mpn'){
-                    mpns = cell.split(', ');
+                    const mpns = cell.split(', ');
+                    if(mpns.length > 1){
+
+                    }
                 }else if(headerToAccessor[attr] === 'quantity'){
                     bomLine.quantity = cell;
                     bomLine.display_quantity = cell;
+                    bomLine.quantities = {
+                        single: 1,
+                        multi: 1,
+                    }
                 }else{
                     bomLine[headerToAccessor[attr]] = cell;
                 }
+                */
             }else{
                 bomLine["_unnamed"].push(cell);
             }
@@ -30,13 +58,19 @@ export function bomEditParse(table, columnAttrs, rowChecked, tableHeaders){
         if(!('quantity' in bomLine)){
             bomLine.quantity = 1;
             bomLine.display_quantity = '1';
+            bomLine.quantities = {
+                single: 1,
+                multi: 1,
+            }
         }
+        /*
         mpns.forEach((mpn, i) => {
             const bl = {...bomLine}; 
             bl.mpn = mpn;
             if(i !== 0) bl.display_quantity = '';
             arr.push(bl);
         });
+        */
         return arr;
     }, []);
 
@@ -46,7 +80,7 @@ export function bomEditParse(table, columnAttrs, rowChecked, tableHeaders){
         }
         return arr;
     }, []);
-    bomAttrs.push({Header: 'Quantity', accessor: 'display_quantity'});
+    //bomAttrs.push({Header: 'Quantity', accessor: 'display_quantity'});
     //console.log(bomAttrs);
     return {editedBom: editedBom, columnAttributes: bomAttrs};
 }
@@ -84,22 +118,36 @@ export function autoFindAttributes(bom, attributes=[]){
             const bomData = bom.reduce((arr, line) => {
                 const bomLine = {};
                 const mpns = line[mpnI].split(', '); // mpn
+                bomLine.mpn = mpns[0];
+                bomLine.mpnOptions = mpns;
                 if(quantityI !== -1){
+                    const quant = parseInt(line[quantityI]);
                     bomLine.quantity = parseInt(line[quantityI]);
                     bomLine.display_quantity = line[quantityI].toString();
+                    bomLine.quantities = {
+                        single: quant,
+                        multi: quant
+                    }
                 }else{
                     bomLine.quantity = 1;
                     bomLine.display_quantity = '1';
+                    bomLine.quantities = {
+                        single: 1,
+                        multi: 1
+                    }
                 }
                 cols.forEach((col) => {
                     bomLine[col.header.accessor] = line[col.index];
-                })
+                });
+                arr.push(bomLine);
+                /*
                 mpns.forEach((mpn, i) => {
                     const bl = {...bomLine}; 
                     bl.mpn = mpn;
                     if(i !== 0) bl.display_quantity = '';
                     arr.push(bl);
                 });
+                */
                 return arr;
             }, []);
             return {found: true, bom: bomData, headers: headers};

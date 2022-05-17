@@ -1,8 +1,11 @@
 import React, {useEffect, useState} from 'react';
 
+import update from 'immutability-helper';
+
 import BOMFileUploadInterface from '../components/BOMFileUploadInterface';
 import BOMEditInterface from '../components/BOMEditInterface';
 import BOMTool from '../components/BOMTool';
+import BOMToolV2 from '../components/BOMToolV2';
 
 import {HoverOverlay} from '../components/Tooltips';
 
@@ -43,6 +46,34 @@ const tableHeaders = [
     {Header: 'Description', accessor: 'description'}, {Header: 'Reference Designator', accessor: 'reference'},
     {Header:'Custom', accessor: 'custom'}
 ];
+
+const apiAttrs = [
+    {
+        Header: 'Stock',
+        accessor: 'available'
+    },
+    {
+        Header: 'MOQ',
+        accessor: 'moq'
+    },
+    {
+        Header: 'Lead Time',
+        accessor: 'leadtime'
+    },
+    {
+        Header: 'Price',
+        accessor: 'prices'
+    },
+    {
+        Header: 'SPQ',
+        accessor: 'spq'
+    },
+    {
+        Header: 'Currency',
+        accessor: 'currency'
+    }
+];
+
 const uploadHeaders = tableHeaders.reduce((arr, header, i) => {
     if(i !== 0){
         arr.push(header);
@@ -54,12 +85,14 @@ const quantityHeader = {Header:'Quantity', accessor: 'quantity'};
 
 function BOMInterface(props){
     const [uploadedBOM, setUploadedBOM] = useState([]); // bom uploaded from file upload interface
-    const [BOMData, setBOMData] = useState({bom: [], bomAttrs: [], apis: []});
+    const [BOMData, setBOMData] = useState({bom: [], attrs: [], apis: []});
     //const [BOMColumnFields, setBOMColumnFields] = useState(); 
     const [interfaceState, setInterfaceState] = useState(0) // 0: upload, 1: main
     //const [initialUploadState, setInitialUploadState] = useState(0);
     const [initialBOMEdit, setInitialBOMEdit] = useState([]); //BOM initial input when editing BOM
     //const [image, setImage] = useState(null);
+
+    const [apiData, setApiData] = useState(new Map());
 
     /*
     useEffect(()=>{
@@ -79,7 +112,7 @@ function BOMInterface(props){
         setUploadedBOM(bom);
         if(autoFind.found){
             //console.log(apis);
-            setBOMData({bom: autoFind.bom, bomAttrs: autoFind.headers, apis: apis});
+            setBOMData({bom: autoFind.bom, attrs: autoFind.headers, apis: apis});
             setInterfaceState(2);
         }else{
             setInterfaceState(1);
@@ -87,13 +120,17 @@ function BOMInterface(props){
     };
     function handleEditBOM(bom, headers){
         const hs = headers;
-        setBOMData({bom: bom, bomAttrs: hs, apis: apis});
+        setBOMData({bom: bom, attrs: hs, apis: apis});
         setInterfaceState(2);
     }
     function changeState(state, bom=[]){
         //setInitialUploadState(1);
         setInterfaceState(state);
         setInitialBOMEdit(bom);
+    }
+
+    function updateApiData(dataMap){
+        setApiData(new Map([...apiData, ...dataMap]));
     }
     //renders the body of interface depending on state
     function renderInterfaceState(){
@@ -103,7 +140,10 @@ function BOMInterface(props){
             case 1:
                 return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 2:
-                return <BOMTool BOMData={BOMData} changeState={changeState}/>;
+                //return <BOMTool BOMData={BOMData} changeState={changeState}/>;
+                return <BOMToolV2 bomLines={BOMData.bom} apis={BOMData.apis} 
+                bomAttributes={BOMData.attrs} apiAttrs={apiAttrs} changeState={changeState} updateApiData={updateApiData} 
+                apiData={apiData}/>;
             default:
                 return "Unknown interface state";
         }

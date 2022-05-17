@@ -38,3 +38,30 @@ td.PricingCell {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
 }
+
+tr.PricingHighlight {
+    background:rgb(160, 236, 163)
+}
+
+td.ButtonCell {
+    height: 15px;
+    background: blue;
+    clip-path: polygon(100% 0, 50% 100%, 0 0);
+}
+
+td.NoPadding {
+    padding:0;
+}
+
+td.NormalOffer {
+    background: rgb(229, 231, 198);
+}
+
+td.BestPriceOffer {
+    background: rgb(101, 255, 87);
+}
+
+.QuantitiesBox {
+    width:75px;
+    height:38px;
+}

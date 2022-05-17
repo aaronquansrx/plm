@@ -101,11 +101,43 @@ const apiAttrs = [
         accessor: 'currency'
     }
 ];
+
+const apiAttrs2 = [
+    {
+        Header: 'Stock',
+        accessor: 'available'
+    },
+    {
+        Header: 'MOQ',
+        accessor: 'moq'
+    },
+    {
+        Header: 'Lead Time',
+        accessor: 'leadtime'
+    },
+    {
+        Header: 'Price',
+        accessor: 'prices'
+    },
+    {
+        Header: 'SPQ',
+        accessor: 'spq'
+    },
+    {
+        Header: 'Currency',
+        accessor: 'currency'
+    }
+];
 const numHeader = [
+{
+    Header: 'Quantities',
+    accessor: 'quantities',
+},  
+/*
 {
     Header: 'N',
     accessor: 'n'
-},
+},*/
 /*
 {
     Header: 'CBox',
@@ -134,9 +166,17 @@ function BOMTool(props){
     const apis = props.BOMData.apis;
     //console.log(apis);
     const numParts = props.BOMData.bom.length;
-    const initBomAttrs = props.BOMData.bomAttrs.concat(numHeader);
+    const initBomAttrs = props.BOMData.attrs;
+    const v2BomAttrs = props.BOMData.attrs.concat(numHeader);
     const initBom = props.BOMData.bom;
-    
+    initBom.forEach((line) => {
+        line.quantities = {
+            display: line.display_quantity,
+            single: line.quantity,
+            multi: line.quantity
+        }
+    });
+    /*
     if(build_type !== 'production'){
         function reqOcto(mpn){
             return function(){
@@ -160,6 +200,7 @@ function BOMTool(props){
         line.initialQuantity = line.quantity;
     });
     console.log(initBom);
+    */
     
     
     //const [partLookupData, setPartLookupData] = useState(Array(props.BOMData.bom.length).fill(null));
@@ -194,6 +235,8 @@ function BOMTool(props){
     const [bestOfferTable, setBestOfferTable] = useState(Array(numParts).fill(null));
     
     const [octopartMonthlyCalls, setOctopartMonthlyCalls] = useState(null);
+
+    const [showOldTable, setShowOldTable] = useState(false);
 
     useEffect(() => {
         axios({
@@ -380,10 +423,12 @@ function BOMTool(props){
                     //console.log(response);
                     const hasError = [];
                     console.log(response.data);
+                    const apis = response.data.apis
                     props.BOMData.apis.forEach((api_header) => {
                         const api = api_header.accessor;
-                        if(api in response.data){
-                            const apiresponse = response.data[api];
+                        if(api in apis){
+                            const apiresponse = apis[api];
+                            console.log(apiresponse);
                             let offerOutput = {offers: [], success: false};
                             if(apiresponse.status === "success"){
                                 /*
@@ -391,9 +436,11 @@ function BOMTool(props){
                                     [i]: {[api]: {$set: true}}
                                 }));*/
                                 const offers = apiresponse.offers;
+                                //console.log(offers);
                                 if(offers.length > 0){
                                     const trimmedOffers = [];
                                     for(const offer of offers){
+                                        const {price: displayPrice, index: tableIndex} = bestPriceDisplay(line.quantity, offer.Quantity.MinimumOrder, offer.Pricing);
                                         trimmedOffers.push({
                                             available: offer.Quantity.Available,
                                             moq: offer.Quantity.MinimumOrder,
@@ -401,7 +448,12 @@ function BOMTool(props){
                                             leadtime: offer.LeadTime,
                                             leadtimedays: offer.LeadTimeDays,
                                             pricing: offer.Pricing,
-                                            price: bestPriceDisplay(line, offer.Quantity.MinimumOrder, offer.Pricing),
+                                            price: displayPrice,
+                                            prices: {//displayPrice,
+                                                table: offer.Pricing,
+                                                price: displayPrice,
+                                                tableIndex: tableIndex
+                                            },
                                             currency: offer.Currency
                                         });
                                     }
@@ -687,8 +739,10 @@ function BOMTool(props){
                 {<BestPriceTable data={bestOfferTable} headers={bestPriceHeaders}/>}
                 </>
                 break;
-            default:
+            case 'lead':
                 v = <>Lead Time algorithm not available in this version</>;
+            default:
+                v = <>This table view is unavailable</>;
                 break;
         }
         return v;
@@ -698,7 +752,8 @@ function BOMTool(props){
         apis.forEach((api) => {
             if(api.accessor in newRow){
                 const offers = newRow[api.accessor].offers.map(offer => {
-                    offer.price = bestPriceDisplay(newRow, offer.moq, offer.pricing, newQ);
+                    const bpd = bestPriceDisplay(newQ, offer.moq, offer.pricing);
+                    offer.price = bpd.price;
                     return offer;
                 });
                 newRow[api.accessor].offers = sortOffers(offers, newQ);
@@ -856,6 +911,7 @@ function BOMTool(props){
             console.log(response.data);
         });
         */
+       /*
         const mpnList = bomdata.map(line => line.mpn);
         axios({
             method: 'post',
@@ -872,6 +928,8 @@ function BOMTool(props){
         }).then(response => {
             console.log(response.data);
         });
+        */
+       setShowOldTable(!showOldTable);
     }
     function handleShowApiModal(){
         setShowApiLineModal(true);
@@ -929,7 +987,7 @@ function BOMTool(props){
             <BOMToolInterfaceOptions data={bomdata} apiHeaders={apiHeaders} apiSubHeadings={apiAttrs} 
             status={bomApiFinished} onPriceOptionsChange={handlePriceOptions}
             onApiModal={handleShowApiModal} onHighlight={handleHighlightOptions} highlightView={highlightView}
-            lowestOffers={lowestPriceOffers} lowestLeadTime={lowestLeadTime} bomAttrs={props.BOMData.bomAttrs}
+            lowestOffers={lowestPriceOffers} lowestLeadTime={lowestLeadTime} bomAttrs={props.BOMData.attrs}
             onSubmit={handleControlPanelSubmit}
             />
             {/*<CheckBoxModal show={showApiLineModal} boxes={apiCheckBoxes[checkBoxLineIndex]} 
@@ -942,11 +1000,12 @@ function BOMTool(props){
             {/*<BOMAPITable data={bomdata} bomAttrs={bomAttrs}
              apis={props.BOMData.apis} apiHeaders={apiHeaders} apiAttrs={apiAttrs}/>
             {/*partLookupData.length > 0 && partLookupData[0]*/}
-            {/*<button onClick={test}> tb</button>*/}
+            {<button onClick={test}>test button</button>}
             {/*<div className='MainTable'>*/}
             {/*build_type !== 'production' && <div>{octopartMonthlyCalls}</div>*/}
-            {displayTableView()}
-            {<BOMAPITableV2 checkbox data={bomdata} bomAttrs={bomAttrs} apis={apiHeaders} apiAttrs={apiAttrs}/>}
+            {showOldTable && displayTableView()}
+            {<BOMAPITableV2 checkbox data={bomdata} bomAttrs={v2BomAttrs} apis={apiHeaders} apiAttrs={apiAttrs2} 
+            lowestPriceOffers={lowestPriceOffers}/>}
             {/*</div>*/}
         </>
     );
@@ -977,7 +1036,7 @@ function BOMToolInterfaceOptions(props){
             <BOMControlPanel onApiModal={props.onApiModal} onSubmit={props.onSubmit}/>
             {/*<div><Button variant='secondary' onClick={props.onApiModal}>MPN APIs</Button></div>*/}
             <BOMExporter data={props.data} apis={props.apiHeaders} apiSubHeadings={props.apiSubHeadings} 
-            lowestOffers={props.lowestOffers} lowestLeadTime={props.lowestLeadTime} bomAttrs={props.bomAttrs}/>
+            lowestOffers={props.lowestOffers} lowestLeadTime={props.lowestLeadTime} bomAttrs={props.attrs}/>
             <HighlightBest onChange={props.onHighlight} selected={props.highlightView} status={props.status}/>
             {<PriceHighlightOptions onChange={handlePriceOptionChange} status={props.status}/>}
         </div>
@@ -1000,7 +1059,7 @@ function BOMControlPanel(props){
         <div className='IconNav'>
             <div className='Ver'>
             <FormAlign>
-                <NumberInput label='Quantity Multiply' onChange={(q) => setQuantity(q)} value={quantity}/>
+                <NumberInput label='Quantity Multiply' onChange={(q) => setQuantity(q)} value={1}/>
                 <NumberInput label='Lead Time Cutoff (days) (display only)' onChange={(q) => setLeadTimeCutoff(q)} value={leadTimeCutoff}/>
             </FormAlign>
             </div>
@@ -1013,7 +1072,7 @@ function BOMControlPanel(props){
 
 function HighlightBest(props){
     const options = [{display: 'None', value: 'normal'}, 
-    {display: 'Lowest Price', value: 'lowest'}, {display: 'Lead Time', value: 'lead'}];
+    {display: 'Lowest Price', value: 'lowest'}, {display: 'Lead Time', value: 'leadtime'}];
     //const [selectedOption, setSelectedOption] = useState('normal');
     function handleOptionChange(event){
         //setSelectedOption(event.target.value);
