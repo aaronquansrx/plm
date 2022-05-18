@@ -33,6 +33,22 @@ export function NumberInput(props){
     );
 }
 
+export function SelectorForm(props){
+    function handleBlur(e){
+        if(props.onBlur) props.onBlur(e);
+    }
+    function handleChange(e){
+        if(props.onSelect) props.onSelect(e);
+    }
+    return (
+        <Form.Select autoFocus={true} onBlur={handleBlur} onChange={handleChange}>
+            {props.options.map((option,i) => 
+            <option key={i}>{option}</option>
+            )}
+        </Form.Select>
+    );
+}
+
 export function FormAlign(props){
     return(
         <Form>

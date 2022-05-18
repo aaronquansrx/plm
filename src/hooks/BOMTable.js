@@ -30,9 +30,20 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                     active: true
                 }
             });
+            /*
             line.highlights = {
                 price: null,
                 lead_time: null
+            }*/
+            line.highlights = {
+                stock: {
+                    price: null,
+                    leadTime: null
+                },
+                noStock: {
+                    price: null,
+                    leadTime: null
+                }
             }
             //have offer evaluation for best price and lead time
             line.offerEvaluation = {
@@ -148,6 +159,24 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         });
         runBOMLineAlgorithms(row, newBOM);
     }
+    function changeMPNLine(row, mpn){
+        const newLine = {...tableBOM[row]};
+        newLine.mpns.current = mpn;
+        const lineApiData = evalLineApis(newLine, apisList, apiData);
+        lineApiData.forEach((ad) => {
+            newLine[ad.api] = {
+                offers: ad.offers,
+                offerOrder: ad.offerOrder, 
+                message: ad.message,
+                retry: apiData.get(mpn).data.apis[ad.api].retry
+            };
+        });
+        newLine.maxOffers = apiData.get(mpn).data.maxOffers;
+        const newBOM = update(tableBOM, {
+            [row]: {$set: newLine}
+        });
+        runBOMLineAlgorithms(row, newBOM);
+    }
     function resortOffers(sort){
         const newTable = [...tableBOM].map((line) => {
             apisList.forEach((api) => {
@@ -160,55 +189,98 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         });
         return newTable;
     }
-    function lineAlgorithmsModify(line, algoData){
+    function lineAlgorithmsModify(line, algoData, hasInStock=false){
         //const algos = i===null ? algoData : algoData[]
-        const bestPrice = algoData.bestprice;
-        const leadTime = algoData.leadtime;
-        const priceHL = bestPrice ? 
-        {api: bestPrice.api, offerNum: bestPrice.offerNum} : null;
-        const leadtimeHL = leadTime ? 
-        {api: leadTime.api, offerNum: leadTime.offerNum} : null;
-        line.highlights = {
-            price: priceHL,
-            lead_time: leadtimeHL
-        }
-        if(bestPrice){
-            line.offerEvaluation.bestprice = {
-                offers: [bestPrice],
-                quantity_found: bestPrice.quantity,
-                total_price: bestPrice.total,
-                fully_evaluated: bestPrice.quantity >= line.quantities.multi
+        if(!hasInStock){
+            const bestPrice = algoData.bestprice;
+            const leadTime = algoData.leadtime;
+            const priceHL = bestPrice ? 
+            {api: bestPrice.api, offerNum: bestPrice.offerNum} : null;
+            const leadtimeHL = leadTime ? 
+            {api: leadTime.api, offerNum: leadTime.offerNum} : null;
+            line.highlights = {
+                price: priceHL,
+                lead_time: leadtimeHL
             }
-        }
-        if(leadTime){
-            line.offerEvaluation.leadtime = {
-                offers: [leadTime],
-                quantity_found: leadTime.quantity,
-                total_price: leadTime.total,
-                fully_evaluated: leadTime.quantity >= line.quantities.multi
+            if(bestPrice){
+                line.offerEvaluation.bestprice = {
+                    offers: [bestPrice],
+                    quantity_found: bestPrice.quantity,
+                    total_price: bestPrice.total,
+                    fully_evaluated: bestPrice.quantity >= line.quantities.multi
+                }
+            }
+            if(leadTime){
+                line.offerEvaluation.leadtime = {
+                    offers: [leadTime],
+                    quantity_found: leadTime.quantity,
+                    total_price: leadTime.total,
+                    fully_evaluated: leadTime.quantity >= line.quantities.multi
+                }
+            }
+        }else{
+            const stockOnly = algoData.in_stock_only;
+            const notStockOnly = algoData.not_stock_only;
+            const bestPrice = stockOnly.bestprice;
+            const bestPriceNoStock = notStockOnly.bestprice;
+            const leadTime = stockOnly.leadtime;
+            const leadTimeNoStock = stockOnly.leadtime;
+            console.log(algoData);
+            const priceHL = bestPrice ? 
+            {api: bestPrice.api, offerNum: bestPrice.offerNum} : null;
+            const leadtimeHL = leadTime ? 
+            {api: leadTime.api, offerNum: leadTime.offerNum} : null;
+            const priceNoStockHL = bestPriceNoStock ? 
+            {api: bestPriceNoStock.api, offerNum: bestPriceNoStock.offerNum} : null;
+            const leadtimeNoStockHL = leadTimeNoStock ? 
+            {api: leadTimeNoStock.api, offerNum: leadTimeNoStock.offerNum} : null;
+            line.highlights = {
+                stock: {
+                    price: priceHL,
+                    leadTime: leadtimeHL
+                },
+                noStock: {
+                    price: priceNoStockHL,
+                    leadTime: leadtimeNoStockHL
+                }
+            }
+            if(bestPrice){
+                line.offerEvaluation.bestprice = {
+                    offers: [bestPrice],
+                    quantity_found: bestPrice.quantity,
+                    total_price: bestPrice.total,
+                    fully_evaluated: bestPrice.quantity >= line.quantities.multi
+                }
+            }
+            if(leadTime){
+                line.offerEvaluation.leadtime = {
+                    offers: [leadTime],
+                    quantity_found: leadTime.quantity,
+                    total_price: leadTime.total,
+                    fully_evaluated: leadTime.quantity >= line.quantities.multi
+                }
             }
         }
         return line;
     }
     function runBOMAlgorithms(bom){
         if(lineNumsToEvaluate.size === 0){
+            const hasInStock = true;
             axios({
                 method: 'POST',
                 url: serverUrl+'api/algorithms',
                 data: {
                     bom: bom,
-                    algorithms: ['simplebestprice', 'leadtime', 'bestprice']
+                    algorithms: ['leadtime', 'bestprice'],
+                    in_stock: hasInStock
                 }
             }).then(response => {
                 console.log(response.data);
                 const algos = response.data.data; 
                 const newTableBOM = [...bom].map((line,i) => {
-                    const newLine = lineAlgorithmsModify({...line}, algos[i]);
-                    //const newLine = {...line};
-                    /*newLine.highlights = {
-                        price: algos[i].simplebestprice,
-                        lead_time: algos[i].leadtime
-                    }*/
+                    const newLine = lineAlgorithmsModify({...line}, algos[i], hasInStock);
+                    //newLine.
+                    //configure sorting here
                     return newLine;
                 });
                 setTable(newTableBOM);
@@ -223,7 +295,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 url: serverUrl+'api/algorithms',
                 data: {
                     line: bom[row],
-                    algorithms: ['simplebestprice', 'leadtime', 'bestprice']
+                    algorithms: ['leadtime', 'bestprice']
                 }
             }).then((response) => {
                 const algos = response.data.data;
@@ -251,7 +323,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
     }
     return [tableBOM, setTable, headers, runBOMAlgorithms, 
         runBOMLineAlgorithms, resortOffers, linesComplete, retryForApi,
-        waitingRowApi
+        waitingRowApi, changeMPNLine
     ];
 }
 

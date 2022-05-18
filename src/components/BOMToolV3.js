@@ -40,7 +40,8 @@ function BOMToolV3(props){
         props.store, props.currency, props.changeLock);
     const [tableBOM, setTable, tableColumns, 
         runBOMAlgorithms, runBOMLineAlgorithms, resortOffers, 
-        linesComplete, retryLine, waitingRowApi] = useTableBOM(requestApis, 
+        linesComplete, retryLine, waitingRowApi,
+        changeMPNLine] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, apiDataProgress, 
         updateTableCall, props.store, props.currency
@@ -82,9 +83,14 @@ function BOMToolV3(props){
         waitingRowApi(rowNum, api);
         callApiRetry(mpn, api, onComplete);
     }
+    function changeMPNOption(row, newMPN){
+        console.log(row+' '+newMPN);
+        changeMPNLine(row, newMPN);
+
+    }
     const functions = {
         mpns: {
-            click: () => console.log('click')
+            changeOption: changeMPNOption
         },
         quantities: {
             adjustQuantity: adjustQuantity

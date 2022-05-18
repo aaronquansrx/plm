@@ -8,7 +8,7 @@ import {useClientUrl} from './../hooks/Urls';
 
 import {SimplePopover, HoverOverlay} from './Tooltips';
 import {PricingTable} from './Tables';
-import {NumberInput} from './Forms';
+import {NumberInput, SelectorForm} from './Forms';
 import {ModalController} from './Modals';
 import {MultiSelectRadioButtons, OutsideControlCheckbox} from './Forms';
 import {PageInterface} from './Pagination';
@@ -388,11 +388,34 @@ function MPNRenderer(props){
 }
 
 function MPNsRenderer(props){
-    function handleClick(){
-        props.functions.click();
+    //const [showSelector, setShowSelector] = useState(false);
+    const clientUrl = useClientUrl();
+    const mpn = props.value.current;
+    function handleMPNClick(e){
+        if(e.ctrlKey){
+            window.open(clientUrl+'/partdetails/'+mpn, '_blank');
+        }
     }
-    return (
-        <td {...props.cellProps} onClick={handleClick}>{props.value.current}</td>
+    function handleSelectMpn(e){
+
+    }
+    function handleBlurMpn(e){
+        //setShowSelector(false);
+        props.functions.changeOption(props.rowNum, e.target.value);
+    }
+    const showSelector = props.value.options.length > 1;
+    const tooltipText = showSelector ? 'Select MPN options' : 'Open Options(click) Open part details (shift+click)'
+    return(
+    <td {...props.cellProps}>
+        <HoverOverlay tooltip={tooltipText}>
+        <div className='Select' onClick={handleMPNClick}>
+            {showSelector
+            ? <SelectorForm onBlur={handleBlurMpn} options={props.value.options}/> 
+            : mpn
+            }
+        </div>
+        </HoverOverlay>
+    </td> 
     );
 }
 
