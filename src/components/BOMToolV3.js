@@ -77,6 +77,7 @@ function BOMToolV3(props){
         runBOMAlgorithms(newTable);
     }
     function retryApi(mpn, api, rowNum){
+        console.log(rowNum);
         function onComplete(newData){
             retryLine(rowNum, api, newData);
         }
@@ -88,9 +89,41 @@ function BOMToolV3(props){
         changeMPNLine(row, newMPN);
 
     }
+    function addMPNOption(row){
+        console.log(tableBOM);
+        const newLine = {...tableBOM[row]};
+        newLine.mpns.current = '';
+        newLine.mpns.options.push('');
+        apisList.forEach((api) => {
+            newLine[api] = {
+                offers: [],
+                offerOrder: {
+                    stock: {price: [], leadTime: []},
+                    noStock: {price: [], leadTime: []}
+                },
+                message: 'Waiting...',
+                retry: false
+            }
+        });
+        const newTable = update(tableBOM, {
+            [row]: {
+                $set: newLine
+            }
+        });
+        console.log(newTable);
+        //changeMPNOption()
+        setTable(newTable);
+    }
+    function editMPNOption(row, oldMPN, newMPN){
+        const newLine = {...tableBOM[row]};
+        console.log(newLine.mpns.options.indexOf(oldMPN));
+
+    }
     const functions = {
         mpns: {
-            changeOption: changeMPNOption
+            changeOption: changeMPNOption,
+            addOption: addMPNOption,
+            editOption: editMPNOption,
         },
         quantities: {
             adjustQuantity: adjustQuantity
@@ -105,13 +138,20 @@ function BOMToolV3(props){
     }
     const highlightOptions = [
         {label: 'Best Price', id: 'price'}, 
-        {label: 'Best Lead Time', id: 'lead_time'}
+        {label: 'Best Lead Time', id: 'leadTime'}
     ];
-    const [highlightMode, setHighlightMode] = useState(highlightOptions[0].id);
+    const [highlightMode, setHighlightMode] = useState({best: highlightOptions[0].id, stock: false});
     function handleChangeHighlight(hlMode){
-        setHighlightMode(hlMode);
+        setHighlightMode(update(highlightMode, {
+            best: {$set: hlMode}
+        }));
         //const sortedTable = resortOffers(hlMode);
         //setTable(sortedTable);
+    }
+    function handleChangeStock(inStock){
+        setHighlightMode(update(highlightMode, {
+            stock: {$set: inStock}
+        }))
     }
     function handleTest(){
         runBOMAlgorithms(tableBOM);
@@ -148,7 +188,9 @@ function BOMToolV3(props){
             disabled={!apiDataProgress.finished}/>
             {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
             apiAttrs={apiAttrs}/>}
-            <HighlightOptions disabled={!apiDataProgress.finished} onChange={handleChangeHighlight} options={highlightOptions}/>
+            <HighlightOptions disabled={!apiDataProgress.finished} onChangeHighlight={handleChangeHighlight}
+            onChangeStock={handleChangeStock}
+            options={highlightOptions}/>
             <BOMEval evaluation={bomEvaluation}/>
             { buildtype !== 'production' &&
             <div>
@@ -195,10 +237,11 @@ function BOMEval(props){
 function HighlightOptions(props){
     const [stockOnly, setStockOnly] = useState(false);
     function handleChange(newOption){
-        props.onChange(newOption);
+        props.onChangeHighlight(newOption);
     }
     function handleChangeStockOnly(so){
         setStockOnly(so);
+        props.onChangeStock(so);
     }
     return(
         <div>

@@ -59,7 +59,10 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
         }
         callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, store, currency);
     }
-    return [callApiRetry];
+    function callMpn(cmpn){
+        //todo
+    }
+    return [callApiRetry, callMpn];
 }
 
 export function useApiDataProgress(mpnList, apiData, store, currency, changeLock){

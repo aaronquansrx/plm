@@ -33,6 +33,28 @@ export function NumberInput(props){
     );
 }
 
+export function TextInput(props){
+    const [text, setText] = useState(props.value ? props.value : '');
+    function handleChange(e){
+        setText(e.target.value);
+        if(props.onChange) props.onChange(e.target.value);
+    }
+    function handleBlur(e){
+        if(props.onBlur) props.onBlur(e.target.value);
+    }
+    const disabled = props.disabled ? props.disabled : false;
+    return (
+        <div>
+        {props.label && 
+            <Form.Label>{props.label}</Form.Label>
+        }
+        <Form.Control type="text" autoFocus={props.focus}
+        onChange={handleChange} onBlur={handleBlur} value={text}
+        disabled={disabled}/>
+        </div>
+    );
+}
+
 export function SelectorForm(props){
     function handleBlur(e){
         if(props.onBlur) props.onBlur(e);
@@ -47,6 +69,34 @@ export function SelectorForm(props){
             )}
         </Form.Select>
     );
+}
+
+export function AddRemoveEditSelectorForm(props){
+    const [chosenEdit, setChosenEdit] = useState(null);
+    const [selectValue, setSelectValue] = useState('');
+    function handleBlur(e){
+        if(props.onBlur) props.onBlur(e);
+    }
+    function handleChange(e){
+        if(props.onSelect) props.onSelect(e);
+        setSelectValue(e.target.value);
+    }
+    function handleEdit(e){
+        if(props.onEdit) props.onEdit(e);
+        setSelectValue('');
+    }
+    return (
+        <div>
+        {props.edit ? <TextInput focus onBlur={handleEdit} value={props.selected}/> :
+        <Form.Select value={selectValue} autoFocus={true} onBlur={handleBlur} onChange={handleChange}>
+            {props.options.map((option,i) => 
+            <option key={i} value={option}>{option}</option>
+            )}
+            <option value='addNew'>Add New</option>
+        </Form.Select>
+        }
+        </div>
+    )
 }
 
 export function FormAlign(props){

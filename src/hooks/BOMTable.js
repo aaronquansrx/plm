@@ -80,7 +80,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         });
     }, [tableHeaders]);
     const [initUpdateTable, setInitUpdateTable] = useState(0);
-    const [lineNumsToEvaluate, setLineNumsToEvaluate] = useState(new Set([...Array(lenBOM)].keys()));
+    const [lineNumsToEvaluate, setLineNumsToEvaluate] = useState(new Set([...Array(lenBOM).keys()]));
     const linesComplete = lenBOM - lineNumsToEvaluate.size;
     useEffect(() => {
         const updateTimeout = lineNumsToEvaluate.size !== 0 
@@ -263,9 +263,71 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         }
         return line;
     }
+    function lineAlgorithmsModifyFull(line, algoData){
+        const stockOnly = algoData.in_stock_only;
+        const notStockOnly = algoData.not_stock_only;
+
+        //best price
+        const bestPrice = stockOnly.bestpricefull;
+        const bestPriceNoStock = notStockOnly.bestpricefull;
+        const priceHL = bestPrice.best ? {api: bestPrice.best.api, offerNum: bestPrice.best.offerNum} : null;
+        const priceNoStockHL = bestPriceNoStock.best ? 
+        {api: bestPriceNoStock.best.api, offerNum: bestPriceNoStock.best.offerNum} : null;
+
+        //lead time
+        const leadTime = stockOnly.bestleadtimefull;
+        const leadTimeNoStock = stockOnly.bestleadtimefull;
+        const leadtimeHL = leadTime.best ? 
+            {api: leadTime.best.api, offerNum: leadTime.best.offerNum} : null;
+        const leadtimeNoStockHL = leadTimeNoStock.best ? 
+            {api: leadTimeNoStock.best.api, offerNum: leadTimeNoStock.best.offerNum} : null;
+
+        line.highlights.stock.price = priceHL;
+        line.highlights.noStock.price = priceNoStockHL;
+        line.highlights.stock.leadTime = leadtimeHL;
+        line.highlights.noStock.leadTime = leadtimeNoStockHL;
+        if(bestPrice.best){
+            line.offerEvaluation.bestprice = {
+                offers: [bestPrice.best],
+                quantity_found: bestPrice.best.quantity,
+                total_price: bestPrice.best.total,
+                fully_evaluated: bestPrice.best.quantity >= line.quantities.multi
+            }
+        }
+        if(leadTime.best){
+            line.offerEvaluation.leadtime = {
+                offers: [leadTime.best],
+                quantity_found: leadTime.best.quantity,
+                total_price: leadTime.best.total,
+                fully_evaluated: leadTime.best.quantity >= line.quantities.multi
+            }
+        }
+        apisList.forEach((api) => {
+            line[api].offerOrder.stock.price = bestPrice.sort[api];
+            line[api].offerOrder.noStock.price = bestPriceNoStock.sort[api];
+            line[api].offerOrder.stock.leadTime = leadTime.sort[api];
+            line[api].offerOrder.noStock.leadTime = leadTimeNoStock.sort[api];
+            line[api].offers.forEach((off, i) => {
+                //console.log(bestPrice.quantity[api]);
+                off.adjustedQuantity = {
+                    stock: {
+                        price: bestPrice.quantity[api][i],
+                        leadTime: leadTime.quantity[api][i]
+                    },
+                    noStock: {
+                        price: bestPriceNoStock.quantity[api][i],
+                        leadTime: leadTimeNoStock.quantity[api][i]
+                    }
+                }
+            });
+        });
+
+        return line;
+    }
     function runBOMAlgorithms(bom){
         if(lineNumsToEvaluate.size === 0){
             const hasInStock = true;
+            /*
             axios({
                 method: 'POST',
                 url: serverUrl+'api/algorithms',
@@ -285,11 +347,29 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 });
                 setTable(newTableBOM);
             });
+            */
+            axios({
+                method: 'POST',
+                url: serverUrl+'api/algorithms',
+                data: {
+                    bom: bom,
+                    algorithms: ['bestpricefull', 'bestleadtimefull'],
+                    in_stock: hasInStock
+                }
+            }).then(response => {
+                console.log(response.data);
+                const algos = response.data.data;
+                const newTableBOM = [...bom].map((line,i) => {
+                    const newLine = lineAlgorithmsModifyFull({...line}, algos[i]);
+                    return newLine;
+                });
+            });
         }
     }
     function runBOMLineAlgorithms(row, b=null){
         const bom = b === null ? tableBOM : b;
         if(lineNumsToEvaluate.size === 0){
+            /*
             axios({
                 method: 'POST',
                 url: serverUrl+'api/algorithms',
@@ -301,11 +381,24 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 const algos = response.data.data;
                 //const newLine = {...tableBOM[row]};
                 const newLine = lineAlgorithmsModify({...bom[row]}, algos);
-                /*
-                newLine.highlights = {
-                    price: algos.simplebestprice,
-                    lead_time: algos.leadtime
-                }*/
+                setTable(update(bom, {
+                    [row]: {$set: newLine}
+                }));
+            });
+            */
+            const hasInStock = true;
+            axios({
+                method: 'POST',
+                url: serverUrl+'api/algorithms',
+                data: {
+                    line: bom[row],
+                    algorithms: ['bestpricefull', 'bestleadtimefull'],
+                    in_stock: hasInStock
+                }
+            }).then(response => {
+                console.log(response.data);
+                const algos = response.data.data;
+                const newLine = lineAlgorithmsModifyFull({...bom[row]}, algos);
                 setTable(update(bom, {
                     [row]: {$set: newLine}
                 }));
@@ -334,7 +427,7 @@ export function useApiAttributes(){
         {Header: 'Lead Time', accessor: 'leadtime'},
         {Header: 'Price', accessor: 'prices'},
         {Header: 'SPQ', accessor: 'spq'},
-        {Header: 'Currency', accessor: 'currency'},
+        {Header: 'Adj. Q', accessor: 'adjustedQuantity'},
         {Header: 'Packaging', accessor: 'packaging'}
     ];
     const [apiAttrs, setApiAttrs] = useState(initApiAttrs);
@@ -398,16 +491,26 @@ export function evalLineApis(line, apis, apiData, sort='price'){
                 pricing: offer.pricing,
                 pricingIndex: index
             }
+            offer.adjustedQuantity = null;
             return offer;
         });
         const priceOrder = sortOrderPrice(newOffers);
         const leadTimeOrder = sortOrderLeadTime(newOffers);
+        const order = [...Array(mpnData.apis[api].offers.length).keys()];
+        //console.log(order);
         return {
             api: api,
             offers: newOffers, //sortedOffers,
             offerOrder: {
-                price: priceOrder,
-                lead_time: leadTimeOrder
+                stock: {
+                    price: order,
+                    leadTime: order
+                },
+                noStock: {
+                    price: order,
+                    leadTime: order
+                }
+                //lead_time: order
             },
             message: mpnData.apis[api].message,
             retry: mpnData.apis[api].retry
@@ -426,6 +529,7 @@ function newEvalApi(line, api, singleApiData){
             pricing: offer.pricing,
             pricingIndex: index
         }
+        offer.adjustedQuantity = null;
         return offer;
     });
     const priceOrder = sortOrderPrice(newOffers);
@@ -433,8 +537,14 @@ function newEvalApi(line, api, singleApiData){
     return {
         offers: newOffers, //sortedOffers,
         offerOrder: {
-            price: priceOrder,
-            lead_time: leadTimeOrder
+            stock: {
+                price: priceOrder,
+                leadTime: leadTimeOrder
+            },
+            noStock: {
+                price: priceOrder,
+                leadTime: leadTimeOrder
+            }
         },
         //message: mpnData.apis[api].message,
         //retry: mpnData.apis[api].retry

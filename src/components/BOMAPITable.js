@@ -8,9 +8,10 @@ import {useClientUrl} from './../hooks/Urls';
 
 import {SimplePopover, HoverOverlay} from './Tooltips';
 import {PricingTable} from './Tables';
-import {NumberInput, SelectorForm} from './Forms';
 import {ModalController} from './Modals';
-import {MultiSelectRadioButtons, OutsideControlCheckbox} from './Forms';
+import {MultiSelectRadioButtons, OutsideControlCheckbox, 
+    AddRemoveEditSelectorForm,
+    NumberInput, SelectorForm} from './Forms';
 import {PageInterface} from './Pagination';
 import {usePaging} from './../hooks/Paging';
 import { slice } from 'lodash';
@@ -25,12 +26,14 @@ const renderers = {
     'mpns': (p) => <MPNsRenderer {...p}/>,
     'quantities': (p) => <QuantitiesRenderer {...p}/>,
     'prices': (p) => <PricesRenderer {...p}/>,
-    'activeApis': (p) => <ActiveApisRenderer {...p}/>
+    'activeApis': (p) => <ActiveApisRenderer {...p}/>,
+    'adjustedQuantity': (p) => <AdjustedQuantityRenderer {...p}/>
 };
 
 const headerRenderers = {
     'activeApis': (p) => <ActiveApisHeaderRenderer {...p}/>,
-    'leadtime': (p) => <LeadTimeHeaderRenderer {...p}/>
+    'leadtime': (p) => <LeadTimeHeaderRenderer {...p}/>,
+    'adjustedQuantity': (p) => <AdjustedQuantityHeaderRenderer {...p}/>
 };
 
 const defaultRenderer = (p) => <DefaultRenderer/>
@@ -94,7 +97,7 @@ export function BOMAPITableV2(props){
             apis={props.apis} apiAttrs={props.apiAttrs} onLockAll={props.onLineLockAll} functions={props.functions}/>
             <tbody>
                 {pageRows.map((line, i) => 
-                    <BOMRow key={i} highlightMode={props.highlightMode} rowNum={i} 
+                    <BOMRow key={i} highlightMode={props.highlightMode} rowNum={pageNumber*pageSize+i} 
                     data={line} hasLineLocks={props.hasLineLocks} 
                     attributeOrder={attributeOrder} 
                     onLineLock={props.onLineLock}/>
@@ -282,23 +285,24 @@ function BOMOffer(props){
     return (
         <>
         {attrOrder.map((attr, i) => {
+            const stockMode = props.highlightMode.stock ? 'stock' : 'noStock';
             const specAttrs = attr.type === 'api' 
             ? {
-                highlight: props.data.highlights,
+                highlight: props.data.highlights[stockMode],
                 api: attr.attribute,
-                highlightMode: props.highlightMode,
+                highlightMode: props.highlightMode.best,
                 mpns: props.data.mpns
             } 
             : {};
-            //console.log(props.highlightMode);
+            //console.log(props.data.highlights[stockMode]);
             const offerNum = attr.type === 'api' && props.data[attr.attribute]
-            ? props.data[attr.attribute].offerOrder[props.highlightMode][props.offerNum] 
+            ? props.data[attr.attribute].offerOrder[stockMode][props.highlightMode.best][props.offerNum] 
             : props.offerNum;
             //offerNum is the sorted index order, offerIndex is the index of original data i.e. 0,1,2 etc.
             return (
                 <BOMAttributeRenderer key={i} {...specAttrs} {...attr} cellProps={props.cellProps}
                 value={props.data[attr.attribute]} offerNum={offerNum} offerIndex={props.offerNum} rowNum={props.rowNum} 
-                lock={props.lock}/> 
+                lock={props.lock} stockMode={stockMode}/> 
             );
         })}
         </>
@@ -336,7 +340,8 @@ function APIRenderer(props){
         ? props.subAttributes.map((attr, i) => {
             return (
                 <BOMAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]}
-                 custom={attr.custom} type='normal' rowNum={props.rowNum} cellProps={cellProps}/>
+                custom={attr.custom} type='normal' rowNum={props.rowNum} cellProps={cellProps}
+                stockMode={props.stockMode} highlightMode={props.highlightMode}/>
             )
         })
         : <td colSpan={props.subAttributes.length}>
@@ -389,19 +394,35 @@ function MPNRenderer(props){
 
 function MPNsRenderer(props){
     //const [showSelector, setShowSelector] = useState(false);
+    const [editSelector, setEditSelector] = useState(false);
     const clientUrl = useClientUrl();
     const mpn = props.value.current;
     function handleMPNClick(e){
         if(e.ctrlKey){
             window.open(clientUrl+'/partdetails/'+mpn, '_blank');
         }
+        else if(e.shiftKey){
+            setEditSelector(true);
+        }
     }
     function handleSelectMpn(e){
 
     }
+    function handleEditMpn(newMpn){
+        setEditSelector(false);
+        console.log(mpn+' : '+newMpn);
+        props.functions.editOption(props.rowNum, mpn, newMpn);
+    }
     function handleBlurMpn(e){
-        //setShowSelector(false);
-        props.functions.changeOption(props.rowNum, e.target.value);
+        //console.log(e.target.value);
+        if(e.target.value === 'addNew'){
+            //props.functions
+            props.functions.addOption(props.rowNum);
+            setEditSelector(true);
+            //props.functions.changeOption(props.rowNum, '');
+        }else{
+            props.functions.changeOption(props.rowNum, e.target.value);
+        }
     }
     const showSelector = props.value.options.length > 1;
     const tooltipText = showSelector ? 'Select MPN options' : 'Open Options(click) Open part details (shift+click)'
@@ -409,10 +430,12 @@ function MPNsRenderer(props){
     <td {...props.cellProps}>
         <HoverOverlay tooltip={tooltipText}>
         <div className='Select' onClick={handleMPNClick}>
-            {showSelector
-            ? <SelectorForm onBlur={handleBlurMpn} options={props.value.options}/> 
+            {/*showSelector
+            ? <AddRemoveEditSelectorForm onSelect={handleBlurMpn} options={props.value.options}/> 
             : mpn
-            }
+            */}
+            <AddRemoveEditSelectorForm edit={editSelector} onSelect={handleBlurMpn} 
+            options={props.value.options} selected={mpn} onEdit={handleEditMpn}/> 
         </div>
         </HoverOverlay>
     </td> 
@@ -447,6 +470,14 @@ function PricesRenderer(props){
     );
 }
 
+function AdjustedQuantityRenderer(props){
+    //console.log(props);
+    const display = props.value ? props.value[props.stockMode][props.highlightMode] : '-';
+    return (
+        <td {...props.cellProps}>{display}</td>
+    );
+}
+
 function ActiveApisRenderer(props){
     const apisActivator = (
         <Button>Select</Button>
@@ -478,6 +509,14 @@ function ActiveApisRenderer(props){
         <ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' body={apisCheckboxes} footer={footer}/>
         </td>
     )
+}
+
+function AdjustedQuantityHeaderRenderer(props){
+    return (
+        <th {...props.headerProps}>
+            <HoverOverlay tooltip='Adjusted Quantity' placement='auto'>{props.header}</HoverOverlay>
+        </th>
+    );
 }
 
 function ActiveApisHeaderRenderer(props){
@@ -519,7 +558,7 @@ function ActiveApisHeaderRenderer(props){
 function LeadTimeHeaderRenderer(props){
     return(
         <th {...props.headerProps}>
-            <HoverOverlay tooltip='Weeks' placement='auto'>
+            <HoverOverlay tooltip='In weeks' placement='auto'>
                 {props.header}
             </HoverOverlay>
         </th>
