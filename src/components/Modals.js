@@ -90,9 +90,9 @@ export function ExportModal(props){
     <Modal.Body>
         File Name: <input type='text' value={fn} onChange={handleChange}/>
         <NamedCheckBox value='lowestPrice' label='Lowest Price' 
-        onChange={handleOptionChange('lowestPrice')} checked={options.lowestPrice}/>
+        onChange={handleOptionChange('lowestPrice')} checked={options.lowestPrice} disabled/>
         <NamedCheckBox value='lowestLead' label='Lowest Lead' 
-        onChange={handleOptionChange('lowestLead')} checked={options.lowestLead}/>
+        onChange={handleOptionChange('lowestLead')} checked={options.lowestLead} disabled/>
     </Modal.Body>
 
     <Modal.Footer>
