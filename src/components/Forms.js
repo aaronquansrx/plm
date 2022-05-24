@@ -83,7 +83,7 @@ export function AddRemoveEditSelectorForm(props){
     }
     function handleEdit(e){
         if(props.onEdit) props.onEdit(e);
-        setSelectValue('');
+        setSelectValue(e);
     }
     return (
         <div>

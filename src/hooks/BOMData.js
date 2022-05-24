@@ -59,8 +59,22 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
         }
         callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, store, currency);
     }
-    function callMpn(cmpn){
-        //todo
+    function callMpn(cmpn, onComplete){
+        const controller = new AbortController();
+        function apiCallbackSingle(mpn, data, maxOffers){
+            const now = Date.now();
+            const apiDataMap = new Map();
+            const da = {
+                apis: data,
+                maxOffers: maxOffers
+            };
+            apiDataMap.set(mpn, {data:da, date: now});
+            updateApiDataMap(apiDataMap);
+            onComplete(da);
+        }
+        if(!apiData.has(cmpn)){
+            callApi(cmpn, serverUrl, controller, apisList, apiCallbackSingle, store, currency);
+        }
     }
     return [callApiRetry, callMpn];
 }

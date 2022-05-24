@@ -133,7 +133,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
     function retryForApi(row, api, newRowData){
         console.log(newRowData);
         const newLine = {...tableBOM[row]};
-        const newEvalData = newEvalApi(newLine, api, newRowData);
+        const newEvalData = newEvalApi(newLine, newRowData);
         console.log(newEvalData);
         newLine[api] = {
             offers: newEvalData.offers,
@@ -176,6 +176,9 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
             [row]: {$set: newLine}
         });
         runBOMLineAlgorithms(row, newBOM);
+    }
+    function evalMpn(newLine, newData){
+        return newEvalApis(newLine, newData);
     }
     function resortOffers(sort){
         const newTable = [...tableBOM].map((line) => {
@@ -416,7 +419,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
     }
     return [tableBOM, setTable, headers, runBOMAlgorithms, 
         runBOMLineAlgorithms, resortOffers, linesComplete, retryForApi,
-        waitingRowApi, changeMPNLine
+        waitingRowApi, changeMPNLine, evalMpn
     ];
 }
 
@@ -519,7 +522,7 @@ export function evalLineApis(line, apis, apiData, sort='price'){
     return outApiData;
 }
 
-function newEvalApi(line, api, singleApiData){
+function newEvalApi(line, singleApiData){
     const newOffers = singleApiData.offers.map((offer) => {
         const {price, index} = findPriceBracket(offer.pricing, 
             line.quantities.multi, offer.moq);
@@ -549,6 +552,18 @@ function newEvalApi(line, api, singleApiData){
         //message: mpnData.apis[api].message,
         //retry: mpnData.apis[api].retry
     };
+}
+
+function newEvalApis(line, multiApiData){
+    const c = Object.entries(multiApiData.apis).map(([k,v]) => {
+        console.log(v);
+        return {
+            api: k,
+            ...newEvalApi(line, v)
+        }
+    });
+    //console.log(c);
+    return c;
 }
 
 //unused overtaken by offerorder

@@ -223,7 +223,7 @@ function BOMRow(props){
     function changeShowOffers(){
         setShowAllOffers(!showAllOffers);
     }
-    const firstRowCellProps = showAllOffers ? {rowSpan: props.data.maxOffers} : {};
+    const firstRowCellProps = showAllOffers && props.data.maxOffers > 0 ? {rowSpan: props.data.maxOffers} : {rowSpan: 1};
     const numTableCols = props.attributeOrder.reduce((c, attr) => {
         if(attr.type == 'api'){
             return c+attr.subAttributes.length;
@@ -410,7 +410,7 @@ function MPNsRenderer(props){
     }
     function handleEditMpn(newMpn){
         setEditSelector(false);
-        console.log(mpn+' : '+newMpn);
+        //console.log(mpn+' : '+newMpn);
         props.functions.editOption(props.rowNum, mpn, newMpn);
     }
     function handleBlurMpn(e){

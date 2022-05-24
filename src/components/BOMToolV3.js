@@ -34,14 +34,14 @@ function BOMToolV3(props){
     }, []), [props.bom]);
     const [requestApis, setRequestApis] = useState(0);
     const [updateTableCall, setUpdateTableCall] = useState(0);
-    const [callApiRetry] = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
+    const [callApiRetry, callMpn] = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
         props.store, props.currency, props.changeLock, props.apiData);
     const apiDataProgress = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
     const [tableBOM, setTable, tableColumns, 
         runBOMAlgorithms, runBOMLineAlgorithms, resortOffers, 
         linesComplete, retryLine, waitingRowApi,
-        changeMPNLine] = useTableBOM(requestApis, 
+        changeMPNLine, evalMpn] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, apiDataProgress, 
         updateTableCall, props.store, props.currency
@@ -105,6 +105,7 @@ function BOMToolV3(props){
                 retry: false
             }
         });
+        newLine.maxOffers = 1;
         const newTable = update(tableBOM, {
             [row]: {
                 $set: newLine
@@ -114,10 +115,33 @@ function BOMToolV3(props){
         //changeMPNOption()
         setTable(newTable);
     }
-    function editMPNOption(row, oldMPN, newMPN){
+    function editMPNOption(row, oldMpn, newMpn){
         const newLine = {...tableBOM[row]};
-        console.log(newLine.mpns.options.indexOf(oldMPN));
-
+        const i = newLine.mpns.options.indexOf(oldMpn);
+        newLine.mpns.options[i] = newMpn;
+        newLine.mpns.current = newMpn;
+        function onComp(data){
+            console.log(data);
+            const lineApiData = evalMpn(newLine, data);
+            lineApiData.forEach((ad) => {
+                newLine[ad.api] = {
+                    offers: ad.offers,
+                    offerOrder: ad.offerOrder, 
+                    message: data.apis[ad.api].message,
+                    retry: data.apis[ad.api].retry
+                };
+            });
+            newLine.maxOffers = data.maxOffers;
+            const newBOM = update(tableBOM, {
+                [row]: {$set: newLine}
+            });
+            runBOMLineAlgorithms(row, newBOM);
+        }
+        if(props.apiData.has(newMpn)){
+            onComp(props.apiData.get(newMpn).data);
+        }else{
+            callMpn(newMpn, onComp);
+        }
     }
     const functions = {
         mpns: {
