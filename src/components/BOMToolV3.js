@@ -27,6 +27,15 @@ import './../css/bomtool.css';
 const buildtype = process.env.NODE_ENV;
 
 function BOMToolV3(props){
+    const waitingOffer = {
+        offers: [],
+        offerOrder: {
+            stock: {price: [], leadTime: []},
+            noStock: {price: [], leadTime: []}
+        },
+        message: 'Waiting...',
+        retry: false
+    };
     const apisList = useMemo(() => props.apis.map((api => api.accessor)));
     const mpnList = useMemo(() => props.bom.reduce((arr, line) => {
         line.mpnOptions.forEach(mpn => arr.push(mpn));
@@ -95,15 +104,7 @@ function BOMToolV3(props){
         newLine.mpns.current = '';
         newLine.mpns.options.push('');
         apisList.forEach((api) => {
-            newLine[api] = {
-                offers: [],
-                offerOrder: {
-                    stock: {price: [], leadTime: []},
-                    noStock: {price: [], leadTime: []}
-                },
-                message: 'Waiting...',
-                retry: false
-            }
+            newLine[api] = waitingOffer;
         });
         newLine.maxOffers = 1;
         const newTable = update(tableBOM, {
@@ -121,7 +122,10 @@ function BOMToolV3(props){
         newLine.mpns.options[i] = newMpn;
         newLine.mpns.current = newMpn;
         function onComp(data){
-            console.log(data);
+            const ea = evalMpn(newLine, data);
+            console.log(ea);
+            Object.assign(newLine, ea);
+            /*
             const lineApiData = evalMpn(newLine, data);
             lineApiData.forEach((ad) => {
                 newLine[ad.api] = {
@@ -131,6 +135,7 @@ function BOMToolV3(props){
                     retry: data.apis[ad.api].retry
                 };
             });
+            */
             newLine.maxOffers = data.maxOffers;
             const newBOM = update(tableBOM, {
                 [row]: {$set: newLine}
@@ -140,6 +145,13 @@ function BOMToolV3(props){
         if(props.apiData.has(newMpn)){
             onComp(props.apiData.get(newMpn).data);
         }else{
+            apisList.forEach((api) => {
+                newLine[api] = waitingOffer;
+            });
+            const newBOM = update(tableBOM, {
+                [row]: {$set: newLine}
+            });
+            setTable(newBOM);
             callMpn(newMpn, onComp);
         }
     }
@@ -241,13 +253,13 @@ function BOMEval(props){
             <div>BOM Evaluation</div>
                 <div>Number Of Lines: {props.evaluation.numLines}</div>
                 <div className='Hori'>
-                    <div>
+                    <div className='SmallPadding'>
                         <div>Best Price</div>
                         <div>Quoted: {props.evaluation.bestprice.quotedPercent.toFixed(2)}%</div>
                         <div>Unquoted: {props.evaluation.bestprice.unquotedPercent.toFixed(2)}%</div>
                         <div>Total Price: {props.evaluation.bestprice.total_price.toFixed(2)}</div>
                     </div>
-                    <div>
+                    <div className='SmallPadding'>
                         <div>Lead Time</div>
                         <div>Quoted: {props.evaluation.leadtime.quotedPercent.toFixed(2)}%</div>
                         <div>Unquoted: {props.evaluation.leadtime.unquotedPercent.toFixed(2)}%</div>

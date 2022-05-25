@@ -44,16 +44,17 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
             const now = Date.now();
             if(apiData.has(mpn)){
                 const mpnDt = apiData.get(mpn);
+                const mo = Math.max(mpnDt.data.maxOffers, maxOffers);
                 const newDa = update(mpnDt.data, {
                     apis: {
                         [api]: {$set: data[api]}
                     },
-                    maxOffers: {$set: Math.max(mpnDt.data.maxOffers, maxOffers)}
+                    maxOffers: {$set: mo}
                 });
                 const nm = new Map();
                 nm.set(mpn, {data:newDa, date: mpnDt.date});
                 updateApiDataMap(nm);
-                onComplete(data[api]);
+                onComplete({apis: {[api]: data[api]}, maxOffers: mo});
             }
 
         }

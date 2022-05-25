@@ -35,16 +35,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 price: null,
                 lead_time: null
             }*/
-            line.highlights = {
-                stock: {
-                    price: null,
-                    leadTime: null
-                },
-                noStock: {
-                    price: null,
-                    leadTime: null
-                }
-            }
+            line.highlights = algorithmsInitialStructure();
             //have offer evaluation for best price and lead time
             line.offerEvaluation = {
                 bestprice: {
@@ -94,7 +85,11 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
             if(lineNumsToEvaluate.has(i)){
                 if(apiData.has(mpn)){
                     newMpns.push(i);
+                    const ea = evalApis(newLine.quantities.multi, apiData.get(mpn).data, apisList);
+                    Object.assign(newLine, ea);
+                    /*
                     const lineApiData = evalLineApis(newLine, apisList, apiData);
+                    
                     lineApiData.forEach((ad) => {
                         newLine[ad.api] = {
                             offers: ad.offers,
@@ -103,6 +98,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                             retry: apiData.get(mpn).data.apis[ad.api].retry
                         };
                     });
+                    */
                     newLine.maxOffers = apiData.get(mpn).data.maxOffers;
                 }
             }
@@ -131,17 +127,22 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         setTableBOM(table);
     }
     function retryForApi(row, api, newRowData){
-        console.log(newRowData);
+        //console.log(newRowData);
         const newLine = {...tableBOM[row]};
+        const ea = evalApis(newLine.quantities.multi, newRowData, [api]);
+        Object.assign(newLine, ea);
+        //console.log(ea);
+        /*
         const newEvalData = newEvalApi(newLine, newRowData);
-        console.log(newEvalData);
+        //console.log(newEvalData);
         newLine[api] = {
             offers: newEvalData.offers,
             offerOrder: newEvalData.offerOrder,
             message: newRowData.message,
             retry: newRowData.retry
         }
-        newLine.maxOffers = Math.max(newLine.maxOffers, newRowData.offers.length);
+        */
+        newLine.maxOffers = Math.max(newLine.maxOffers, newRowData.apis[api].offers.length);
         //try something else here
         /*
         const lineApiData = evalLineApis(newLine, apisList, newRowData);
@@ -162,6 +163,9 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
     function changeMPNLine(row, mpn){
         const newLine = {...tableBOM[row]};
         newLine.mpns.current = mpn;
+        const ea = evalApis(newLine.quantities.multi, apiData.get(mpn).data, apisList);
+        Object.assign(newLine, ea);
+        /*
         const lineApiData = evalLineApis(newLine, apisList, apiData);
         lineApiData.forEach((ad) => {
             newLine[ad.api] = {
@@ -171,6 +175,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 retry: apiData.get(mpn).data.apis[ad.api].retry
             };
         });
+        */
         newLine.maxOffers = apiData.get(mpn).data.maxOffers;
         const newBOM = update(tableBOM, {
             [row]: {$set: newLine}
@@ -178,7 +183,8 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         runBOMLineAlgorithms(row, newBOM);
     }
     function evalMpn(newLine, newData){
-        return newEvalApis(newLine, newData);
+        return evalApis(newLine.quantities.multi, newData, apisList);
+        //return newEvalApis(newLine, newData);
     }
     function resortOffers(sort){
         const newTable = [...tableBOM].map((line) => {
@@ -321,7 +327,10 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                         price: bestPriceNoStock.quantity[api][i],
                         leadTime: leadTimeNoStock.quantity[api][i]
                     }
-                }
+                };
+                //have this on different algo
+                off.prices.price = bestPrice.offer_info[api][i].price_per;
+                off.prices.pricingIndex = bestPrice.offer_info[api][i].index;
             });
         });
 
@@ -366,6 +375,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                     const newLine = lineAlgorithmsModifyFull({...line}, algos[i]);
                     return newLine;
                 });
+                setTable(newTableBOM);
             });
         }
     }
@@ -446,11 +456,16 @@ export function useQuantityMultiplier(tableBOM, apiData, apisList,
         newLine.quantities.single = single
         newLine.quantities.multi = multi;
         //const mpnApiData = apiData.get(newLine.mpns.current).data;
+        const mpn = newLine.mpns.current;
+        const ea = evalApis(newLine.quantities.multi, apiData.get(mpn).data, apisList);
+        Object.assign(newLine, ea);
+        /*
         const lineApiData = evalLineApis(newLine, apisList, apiData);
         lineApiData.forEach((lad) => {
             newLine[lad.api].offers = lad.offers;
             newLine[lad.api].offerOrder = lad.offerOrder;
         });
+        */
         return newLine;
     }
     function adjustQuantity(newQuantity, row){
@@ -497,31 +512,54 @@ export function evalLineApis(line, apis, apiData, sort='price'){
             offer.adjustedQuantity = null;
             return offer;
         });
-        const priceOrder = sortOrderPrice(newOffers);
-        const leadTimeOrder = sortOrderLeadTime(newOffers);
+        //const priceOrder = sortOrderPrice(newOffers);
+        //const leadTimeOrder = sortOrderLeadTime(newOffers);
         const order = [...Array(mpnData.apis[api].offers.length).keys()];
         //console.log(order);
         return {
             api: api,
             offers: newOffers, //sortedOffers,
-            offerOrder: {
-                stock: {
-                    price: order,
-                    leadTime: order
-                },
-                noStock: {
-                    price: order,
-                    leadTime: order
-                }
-                //lead_time: order
-            },
+            offerOrder: algorithmsInitialStructure(order),
             message: mpnData.apis[api].message,
             retry: mpnData.apis[api].retry
         };
     });
     return outApiData;
 }
-
+function evalApi(quantity, singleApiData){
+    const newOffers = singleApiData.offers.map((offer) => {
+        const {price, index} = findPriceBracket(offer.pricing, 
+            quantity, offer.moq);
+        offer.price = price;
+        offer.prices = {
+            price: price,
+            pricing: offer.pricing,
+            pricingIndex: index
+        }
+        offer.adjustedQuantity = null;
+        return offer;
+    }); 
+    return newOffers;
+}
+function evalApis(quantity, multiApiData, apisList){
+    console.log(multiApiData);
+    const data = multiApiData.apis
+    const evaledApis = apisList.reduce((obj, api) => {
+        const order = [...Array(data[api].offers.length).keys()];
+        obj[api] = {
+            offers: evalApi(quantity, data[api]),
+            offerOrder: algorithmsInitialStructure(order),
+            message: data[api].message,
+            retry: data[api].retry
+        }
+        /*
+        obj[api].offers = evalApi(quantity, multiApiData.apis[api]);
+        obj[api].message = multiApiData[api].message;
+        obj[api].retry = multiApiData[api].retry;*/
+        return obj;
+    }, {});
+    return evaledApis;
+}
 function newEvalApi(line, singleApiData){
     const newOffers = singleApiData.offers.map((offer) => {
         const {price, index} = findPriceBracket(offer.pricing, 
@@ -554,7 +592,7 @@ function newEvalApi(line, singleApiData){
     };
 }
 
-function newEvalApis(line, multiApiData){
+function newEvalApis(line, multiApiData, apiList){
     const c = Object.entries(multiApiData.apis).map(([k,v]) => {
         console.log(v);
         return {
@@ -564,6 +602,19 @@ function newEvalApis(line, multiApiData){
     });
     //console.log(c);
     return c;
+}
+
+function algorithmsInitialStructure(value=null){
+    return {
+        stock: {
+            price: value,
+            leadTime: value
+        },
+        noStock: {
+            price: value,
+            leadTime: value
+        }
+    }
 }
 
 //unused overtaken by offerorder
