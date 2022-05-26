@@ -285,7 +285,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
 
         //lead time
         const leadTime = stockOnly.bestleadtimefull;
-        const leadTimeNoStock = stockOnly.bestleadtimefull;
+        const leadTimeNoStock = notStockOnly.bestleadtimefull;
         const leadtimeHL = leadTime.best ? 
             {api: leadTime.best.api, offerNum: leadTime.best.offerNum} : null;
         const leadtimeNoStockHL = leadTimeNoStock.best ? 
