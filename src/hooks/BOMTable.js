@@ -328,7 +328,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                         leadTime: leadTimeNoStock.quantity[api][i]
                     }
                 };
-                //have this on different algo
+                //have this on different algo (for stock, no stock)
                 off.prices.price = bestPrice.offer_info[api][i].price_per;
                 off.prices.pricingIndex = bestPrice.offer_info[api][i].index;
             });
