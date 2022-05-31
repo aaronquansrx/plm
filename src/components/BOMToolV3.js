@@ -255,9 +255,9 @@ function BOMEval(props){
                 <div className='Hori'>
                     <div className='SmallPadding'>
                         <div>Best Price</div>
-                        <div>Quoted: {props.evaluation.bestprice.quotedPercent.toFixed(2)}%</div>
-                        <div>Unquoted: {props.evaluation.bestprice.unquotedPercent.toFixed(2)}%</div>
-                        <div>Total Price: {props.evaluation.bestprice.total_price.toFixed(2)}</div>
+                        <div>Quoted: {props.evaluation.price.quotedPercent.toFixed(2)}%</div>
+                        <div>Unquoted: {props.evaluation.price.unquotedPercent.toFixed(2)}%</div>
+                        <div>Total Price: {props.evaluation.price.total_price.toFixed(2)}</div>
                     </div>
                     <div className='SmallPadding'>
                         <div>Lead Time</div>

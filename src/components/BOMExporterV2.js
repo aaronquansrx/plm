@@ -1,17 +1,28 @@
 import {useState} from 'react';
 import { ExportExcelIcon } from './Icons';
 import {ExportModal} from './Modals';
+
+import {stockString} from './../scripts/AlgorithmVariable';
+
 import XLSX from 'xlsx';
+
+const restrictedBomAttrs = ['activeApis'];
 
 function BOMExporterV2(props){
     const accessorToHeaders = props.bomAttrs.reduce((obj,attr)=>{
         obj[attr.accessor] = attr.Header;
         return obj;
     }, {});
-    const apiAccessorToHeader = props.apis.map((obj, api) => {
+    const apiAccessorToHeader = props.apis.reduce((obj, api) => {
         obj[api.accessor] = api.Header;
         return obj;
     }, {});
+    const trimmedBomAttrs = props.bomAttrs.reduce((arr, attr)=>{
+        if(!restrictedBomAttrs.includes(attr.accessor)){
+            arr.push(attr);
+        }
+        return arr;
+    }, []);
     const [showModal, setShowModal] = useState(false);
     function handleShowExport(){
         setShowModal(true);
@@ -19,10 +30,25 @@ function BOMExporterV2(props){
     function handleHideExport(){
         setShowModal(false);
     }
+    function optionStructure(options){
+        
+    }
     function handleExport(fn, options={}){
         const headers = [];
-        const formatted = defaultFormat();
+        console.log(options);
+        //const formatted = defaultFormat();
         const eva = evaluationFormat();
+        console.log(eva);
+        const base = baseTableFormat(trimmedBomAttrs);
+        //console.log(trimmedBomAttrs);
+        console.log(base);
+        const allApis = apisData(props.apis);
+        console.log(allApis);
+
+        //todo
+        const bestOffer = singleOfferData();
+        console.log(bestOffer);
+        /*
         if(formatted){
             const sheet = XLSX.utils.json_to_sheet(formatted, {header: headers});
             const wb = XLSX.utils.book_new();
@@ -31,6 +57,7 @@ function BOMExporterV2(props){
             XLSX.utils.book_append_sheet(wb, s2, 'Evaluation')
             XLSX.writeFile(wb, fn+'.xlsx');
         }
+        */
         
     }
     function defaultFormat(){
@@ -68,22 +95,40 @@ function BOMExporterV2(props){
         });
         return formatted;
     }
+    function apiAttrDecode(offer, acc, stockStr, best){
+        switch(acc){
+            case 'prices':
+                return offer[acc].price;
+            case 'adjustedQuantity':
+                return offer[acc][stockStr][best];
+            default:
+                return offer[acc];
+        }
+    }
     function apisData(apisList){
+        const stockStr = stockString(props.algorithm.stock);
+        console.log(stockStr);
         const formatted = props.data.map((line) => {
             const apis = apisList.reduce((obj, api) => {
                 if(api.accessor in line && line[api.accessor].offers.length > 0){
                     const apiData = line[api.accessor];
-                    const offer = apiData.offers[apiData.offerOrder];
+                    const offer = apiData.offers[apiData.offerOrder[stockStr][props.algorithm.best][0]];
                     props.apiAttrs.forEach((heading) => {
                         const key = api.Header+'_'+heading.accessor;
+                        /*
                         switch(heading.accessor){
                             case 'prices':
                                 obj[key] = offer[heading.accessor].price;
+                                break;
+                            case 'adjustedQuantity':
+                                obj[key] = offer[heading.accessor][stockStr][props.algorithm.best];
                                 break;
                             default:
                                 obj[key] = offer[heading.accessor];
                                 break;
                         }
+                        */
+                       obj[key] = apiAttrDecode(offer, heading.accessor, stockStr, props.algorithm.best);
                     });
                 }
                 return obj;
@@ -92,13 +137,16 @@ function BOMExporterV2(props){
         });
         return formatted;
     }
-    function singleOfferData(bestList){
+    function singleOfferData(){
+        const stockStr = stockString(props.algorithm.stock);
         const formatted = props.data.map((line, i) => {
-            const bl = bestList[i];
-            const best = line[bl.api].offers[bl.offerNum];
-            const apiHeader = apiAccessorToHeader[bl.api]
+            const hl = line.highlights[stockStr][props.algorithm.best];
+            //const bl = bestList[i];
+            const best = line[hl.api].offers[hl.offerNum];
+            const apiHeader = apiAccessorToHeader[hl.api]
             const offerData = props.apiAttrs.reduce((obj, attr) => {
                 const key = apiHeader+'_'+attr.accessor;
+                /*
                 switch(attr){
                     case 'prices':
                         obj[key] = best[attr.accessor].price;
@@ -107,6 +155,8 @@ function BOMExporterV2(props){
                         obj[key] = best[attr.accessor];
                         break;
                 }
+                */
+                obj[key] = apiAttrDecode(best, attr.accessor, stockStr, props.algorithm.best)
                 return obj;
             }, {});
             return offerData;
@@ -116,15 +166,16 @@ function BOMExporterV2(props){
     function baseTableFormat(cols){
         const formatted = props.data.map((line) => {
             const base = cols.reduce((obj, col) => {
-                switch(col){
+                const acc = col.accessor;
+                switch(acc){
                     case 'mpns':
-                        obj[col] = line[col].current;
+                        obj[acc] = line[acc].current;
                         break;
                     case 'quantities':
-                        obj[col] = line[col].quantities;
+                        obj[acc] = line[acc].multi;
                         break;
                     default:
-                        obj[col] = line[col];
+                        obj[acc] = line[acc];
                         break;
                 }
                 return obj;
@@ -135,6 +186,8 @@ function BOMExporterV2(props){
     }
     function evaluationFormat(){
         const formatted = [];
+        console.log(props.algorithm);
+        console.log(props.evaluation);
         formatted.push(['Algorithm', props.algorithm.stock+' : '+props.algorithm.best]);
         formatted.push(['Price Total', props.evaluation[props.algorithm.best].total_price]);
         return formatted;

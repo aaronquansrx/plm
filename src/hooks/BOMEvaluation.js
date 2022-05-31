@@ -5,7 +5,7 @@ export function useBOMEvaluation(bomTable, apiDataFinished){
     const [bomEvaluation, setBomEvaluation] = useState({
         
         numLines: bomTable.length,
-        bestprice: {
+        price: {
             numQuoted: 0,
             quotedPercent: 0,
             unquotedPercent: 100,
@@ -43,6 +43,7 @@ export function useBOMEvaluation(bomTable, apiDataFinished){
     }
     useEffect(() => {
         if(apiDataFinished){
+            console.log('change eval');
             /*
             const nquoted = bomTable.reduce((n, line) => {
                 if(line.offerEvaluation.fully_evaluated) return n+1;
@@ -54,11 +55,11 @@ export function useBOMEvaluation(bomTable, apiDataFinished){
                 return n+line.offerEvaluation.total_price;
             }, 0);
             */
-            const bp = evalAlgorithm('bestprice');
+            const bp = evalAlgorithm('price');
             const lt = evalAlgorithm('leadtime');
             setBomEvaluation({
                 numLines: bomTable.length,
-                bestprice: bp,
+                price: bp,
                 leadtime: lt
             });
         }

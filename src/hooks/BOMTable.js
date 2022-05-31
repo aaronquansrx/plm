@@ -38,7 +38,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
             line.highlights = algorithmsInitialStructure();
             //have offer evaluation for best price and lead time
             line.offerEvaluation = {
-                bestprice: {
+                price: {
                     offers: [],
                     quantity_found: 0,
                     total_price: 0,
@@ -254,7 +254,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 }
             }
             if(bestPrice){
-                line.offerEvaluation.bestprice = {
+                line.offerEvaluation.price = {
                     offers: [bestPrice],
                     quantity_found: bestPrice.quantity,
                     total_price: bestPrice.total,
@@ -296,7 +296,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         line.highlights.stock.leadTime = leadtimeHL;
         line.highlights.noStock.leadTime = leadtimeNoStockHL;
         if(bestPrice.best){
-            line.offerEvaluation.bestprice = {
+            line.offerEvaluation.price = {
                 offers: [bestPrice.best],
                 quantity_found: bestPrice.best.quantity,
                 total_price: bestPrice.best.total,
