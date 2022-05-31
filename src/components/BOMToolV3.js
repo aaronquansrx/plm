@@ -223,7 +223,7 @@ function BOMToolV3(props){
             <NumberInput label={'Multi'} value={quantityMultiplier} onBlur={handleMultiBlur} 
             disabled={!apiDataProgress.finished}/>
             {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
-            apiAttrs={apiAttrs}/>}
+            apiAttrs={apiAttrs} evaluation={bomEvaluation} algorithm={highlightMode}/>}
             <HighlightOptions disabled={!apiDataProgress.finished} onChangeHighlight={handleChangeHighlight}
             onChangeStock={handleChangeStock}
             options={highlightOptions}/>

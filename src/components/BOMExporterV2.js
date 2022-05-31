@@ -8,6 +8,10 @@ function BOMExporterV2(props){
         obj[attr.accessor] = attr.Header;
         return obj;
     }, {});
+    const apiAccessorToHeader = props.apis.map((obj, api) => {
+        obj[api.accessor] = api.Header;
+        return obj;
+    }, {});
     const [showModal, setShowModal] = useState(false);
     function handleShowExport(){
         setShowModal(true);
@@ -18,11 +22,13 @@ function BOMExporterV2(props){
     function handleExport(fn, options={}){
         const headers = [];
         const formatted = defaultFormat();
-        
+        const eva = evaluationFormat();
         if(formatted){
             const sheet = XLSX.utils.json_to_sheet(formatted, {header: headers});
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, sheet, 'Sheet1');
+            XLSX.utils.book_append_sheet(wb, sheet, 'BOMData');
+            const s2 = XLSX.utils.json_to_sheet(eva);
+            XLSX.utils.book_append_sheet(wb, s2, 'Evaluation')
             XLSX.writeFile(wb, fn+'.xlsx');
         }
         
@@ -47,11 +53,12 @@ function BOMExporterV2(props){
             }, {});
             props.apis.forEach((api) => {
                 if(api.accessor in line && line[api.accessor].offers.length > 0){
-                    const offers = line[api.accessor].offers;
+                    const apiData = line[api.accessor];
+                    const offer = apiData.offers[apiData.offerOrder];
                     props.apiAttrs.forEach((heading) => {
-                        let out = offers[0][heading.accessor];
+                        let out = offer[heading.accessor];
                         if(heading.accessor === 'prices'){
-                            out = offers[0][heading.accessor].price;
+                            out = offer[heading.accessor].price;
                         }
                         outline[api.Header+'_'+heading.accessor] = out;
                     });
@@ -59,7 +66,77 @@ function BOMExporterV2(props){
             });
             return outline;
         });
-        //console.log(formatted);
+        return formatted;
+    }
+    function apisData(apisList){
+        const formatted = props.data.map((line) => {
+            const apis = apisList.reduce((obj, api) => {
+                if(api.accessor in line && line[api.accessor].offers.length > 0){
+                    const apiData = line[api.accessor];
+                    const offer = apiData.offers[apiData.offerOrder];
+                    props.apiAttrs.forEach((heading) => {
+                        const key = api.Header+'_'+heading.accessor;
+                        switch(heading.accessor){
+                            case 'prices':
+                                obj[key] = offer[heading.accessor].price;
+                                break;
+                            default:
+                                obj[key] = offer[heading.accessor];
+                                break;
+                        }
+                    });
+                }
+                return obj;
+            }, {});
+            return apis;
+        });
+        return formatted;
+    }
+    function singleOfferData(bestList){
+        const formatted = props.data.map((line, i) => {
+            const bl = bestList[i];
+            const best = line[bl.api].offers[bl.offerNum];
+            const apiHeader = apiAccessorToHeader[bl.api]
+            const offerData = props.apiAttrs.reduce((obj, attr) => {
+                const key = apiHeader+'_'+attr.accessor;
+                switch(attr){
+                    case 'prices':
+                        obj[key] = best[attr.accessor].price;
+                        break;
+                    default:
+                        obj[key] = best[attr.accessor];
+                        break;
+                }
+                return obj;
+            }, {});
+            return offerData;
+        });
+        return formatted;
+    }
+    function baseTableFormat(cols){
+        const formatted = props.data.map((line) => {
+            const base = cols.reduce((obj, col) => {
+                switch(col){
+                    case 'mpns':
+                        obj[col] = line[col].current;
+                        break;
+                    case 'quantities':
+                        obj[col] = line[col].quantities;
+                        break;
+                    default:
+                        obj[col] = line[col];
+                        break;
+                }
+                return obj;
+            }, {});
+            return base;
+        });
+        return formatted;
+    }
+    function evaluationFormat(){
+        const formatted = [];
+        formatted.push(['Algorithm', props.algorithm.stock+' : '+props.algorithm.best]);
+        formatted.push(['Price Total', props.evaluation[props.algorithm.best].total_price]);
         return formatted;
     }
     return (

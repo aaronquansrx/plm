@@ -13,6 +13,7 @@ import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
 import useUsername from './hooks/useUsername';
 import './css/App.css';
+import CircularBufferTest from './pages/CircularBufferTest';
 
 const stores = [
   {id: 'AU', label: 'AU'},
@@ -23,6 +24,8 @@ const currencies = [
   {id: 'AUD', label: 'AUD'},
   {id: 'MYR', label: 'MYR'}
 ];
+
+const inProduction = process.env.NODE_ENV === 'production';
 
 function App() {
   const {username, setUsername} = useUsername();
@@ -57,7 +60,7 @@ function App() {
     setShowVersionModal(false);
   }
   function path(p){
-    const prePath = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
+    const prePath = inProduction ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
     return prePath+'/'+p;
   }
   return (
@@ -75,6 +78,7 @@ function App() {
         <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
         <Route path={path('partsearch')} element={<PartSearch/>}/>
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
+        {!inProduction && <Route path={path('circular')} element={<CircularBufferTest/>}/>}
       </Routes>
     </div>
   );
