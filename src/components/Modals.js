@@ -56,7 +56,10 @@ export function TemplateModal(props){
 
 export function ExportModal(props){
     const [fn, setFn] = useState('');
-    const [options, setOptions] = useState({lowestPrice: false, lowestLead: false});
+    const [options, setOptions] = useState({
+        bestprice: false, bestleadtime: false, 
+        evaluation: false, bestoffer:false
+    });
     const handleClose = () => props.hideAction();
     const handleExport = () => {
         props.exportAction(fn, options);
@@ -81,6 +84,13 @@ export function ExportModal(props){
             setOptions(newOptions);
         }
     }
+    function changeOption(e){
+        const opt = e.target.value;
+        const opp = !options[opt];
+        setOptions(update(options, {
+            [opt]: {$set: opp}
+        }));
+    }
     return(
     <Modal show={props.show} onHide={handleClose}>
     <Modal.Header closeButton>
@@ -89,10 +99,16 @@ export function ExportModal(props){
 
     <Modal.Body>
         File Name: <input type='text' value={fn} onChange={handleChange}/>
-        <NamedCheckBox value='lowestPrice' label='Lowest Price' 
-        onChange={handleOptionChange('lowestPrice')} checked={options.lowestPrice}/>
-        <NamedCheckBox value='lowestLead' label='Lowest Lead' 
-        onChange={handleOptionChange('lowestLead')} checked={options.lowestLead}/>
+        {/*
+        <NamedCheckBox value='bestprice' label='Best Price' 
+        onChange={handleOptionChange('bestprice')} checked={options.bestprice}/>
+        <NamedCheckBox value='bestleadtime' label='Best Leadtime' 
+        onChange={handleOptionChange('bestleadtime')} checked={options.bestleadtime}/>
+        */}
+        <NamedCheckBox value='bestoffer' label='Best Offer Only'
+        onChange={changeOption} checked={options.bestoffer}/>
+        <NamedCheckBox value='evaluation' label='Evaluation Sheet' 
+        onChange={changeOption} checked={options.evaluation}/>
     </Modal.Body>
 
     <Modal.Footer>

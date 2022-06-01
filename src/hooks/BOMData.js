@@ -7,6 +7,7 @@ import {useServerUrl} from './../hooks/Urls';
 
 export function useApiData(req, mpnList, apisList, updateApiDataMap, 
     store, currency, changeLock, apiData){
+    const [dataProcessing, setDataProcessing] = useState(false);
     const serverUrl = useServerUrl();
     const expireTime = 1000000;
     useEffect(() => {
@@ -24,6 +25,7 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
         }
         changeLock(true);
         const dt = Date.now();
+        setDataProcessing(true);
         mpnList.forEach(mpn => {
             if(apiData.has(mpn)){
                 if(dt > apiData.get(mpn).date + expireTime){
@@ -77,7 +79,7 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
             callApi(cmpn, serverUrl, controller, apisList, apiCallbackSingle, store, currency);
         }
     }
-    return [callApiRetry, callMpn];
+    return [callApiRetry, callMpn, dataProcessing];
 }
 
 export function useApiDataProgress(mpnList, apiData, store, currency, changeLock){

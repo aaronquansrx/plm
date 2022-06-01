@@ -88,7 +88,7 @@ export function AddRemoveEditSelectorForm(props){
     return (
         <div>
         {props.edit ? <TextInput focus onBlur={handleEdit} value={props.selected}/> :
-        <Form.Select value={selectValue} autoFocus={true} onBlur={handleBlur} onChange={handleChange}>
+        <Form.Select disabled={props.disabled} value={selectValue} autoFocus={true} onBlur={handleBlur} onChange={handleChange}>
             {props.options.map((option,i) => 
             <option key={i} value={option}>{option}</option>
             )}

@@ -43,7 +43,7 @@ export function useBOMEvaluation(bomTable, apiDataFinished){
     }
     useEffect(() => {
         if(apiDataFinished){
-            console.log('change eval');
+            //console.log('change eval');
             /*
             const nquoted = bomTable.reduce((n, line) => {
                 if(line.offerEvaluation.fully_evaluated) return n+1;

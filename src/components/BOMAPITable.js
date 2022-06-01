@@ -398,11 +398,17 @@ function MPNsRenderer(props){
     const clientUrl = useClientUrl();
     const mpn = props.value.current;
     function handleMPNClick(e){
-        if(e.ctrlKey){
-            window.open(clientUrl+'/partdetails/'+mpn, '_blank');
-        }
-        else if(e.shiftKey){
-            setEditSelector(true);
+        if(!props.lock){
+            if(e.ctrlKey){
+                window.open(clientUrl+'/partdetails/'+mpn, '_blank');
+            }
+            else if(e.shiftKey){
+                setEditSelector(true);
+            }else if(e.altKey){
+                if(props.value.options.length > 1){
+                    console.log('delete');
+                }
+            }
         }
     }
     function handleSelectMpn(e){
@@ -425,7 +431,7 @@ function MPNsRenderer(props){
         }
     }
     const showSelector = props.value.options.length > 1;
-    const tooltipText = showSelector ? 'Select MPN options' : 'Open Options(click) Open part details (shift+click)'
+    const tooltipText = 'Select MPN options | shift-click to edit | ctrl-click for details';
     return(
     <td {...props.cellProps}>
         <HoverOverlay tooltip={tooltipText}>
@@ -435,7 +441,7 @@ function MPNsRenderer(props){
             : mpn
             */}
             <AddRemoveEditSelectorForm edit={editSelector} onSelect={handleBlurMpn} 
-            options={props.value.options} selected={mpn} onEdit={handleEditMpn}/> 
+            options={props.value.options} selected={mpn} onEdit={handleEditMpn} disabled={props.lock}/> 
         </div>
         </HoverOverlay>
     </td> 
@@ -448,8 +454,7 @@ function QuantitiesRenderer(props){
     }
     const quantPop = (
         <div>
-            Single: {props.value.single}
-            Multi: {props.value.multi}
+            Single: {props.value.single}{' '}Multi: {props.value.multi}
         </div>
     );
     return (

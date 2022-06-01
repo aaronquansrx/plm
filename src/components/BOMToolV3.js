@@ -43,7 +43,7 @@ function BOMToolV3(props){
     }, []), [props.bom]);
     const [requestApis, setRequestApis] = useState(0);
     const [updateTableCall, setUpdateTableCall] = useState(0);
-    const [callApiRetry, callMpn] = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
+    const [callApiRetry, callMpn, dataProcessing] = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
         props.store, props.currency, props.changeLock, props.apiData);
     const apiDataProgress = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
@@ -94,9 +94,9 @@ function BOMToolV3(props){
         callApiRetry(mpn, api, onComplete);
     }
     function changeMPNOption(row, newMPN){
-        console.log(row+' '+newMPN);
-        changeMPNLine(row, newMPN);
-
+        //console.log(row+' '+newMPN);
+        const newLine = {...tableBOM[row]};
+        changeMPNLine(row, newLine, newMPN);
     }
     function addMPNOption(row){
         console.log(tableBOM);
@@ -155,11 +155,19 @@ function BOMToolV3(props){
             callMpn(newMpn, onComp);
         }
     }
+    function deleteMPNOption(row, delMpn){
+        const newLine = {...tableBOM[row]};
+        const i = newLine.mpns.options.indexOf(delMpn);
+        const newMpn = i === 0 ? newLine.mpns.options[1] : newLine.mpns.options[i-1];
+        newLine.mpns.options.splice(i, 1)
+        changeMPNLine(row, newLine, newMpn);
+    }
     const functions = {
         mpns: {
             changeOption: changeMPNOption,
             addOption: addMPNOption,
             editOption: editMPNOption,
+            deleteOption: deleteMPNOption
         },
         quantities: {
             adjustQuantity: adjustQuantity
@@ -282,7 +290,7 @@ function HighlightOptions(props){
     return(
         <div>
         <LabeledCheckbox label={'In Stock Only'} 
-        checked={stockOnly} onChange={handleChangeStockOnly}/>
+        checked={stockOnly} onChange={handleChangeStockOnly} disabled={props.disabled}/>
         <SelectSingleRadioButtons options={props.options}
         onChange={handleChange} disabled={props.disabled}/>
         </div>

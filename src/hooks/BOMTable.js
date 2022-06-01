@@ -160,8 +160,8 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         });
         runBOMLineAlgorithms(row, newBOM);
     }
-    function changeMPNLine(row, mpn){
-        const newLine = {...tableBOM[row]};
+    function changeMPNLine(row, newLine, mpn){
+        //const newLine = {...tableBOM[row]};
         newLine.mpns.current = mpn;
         const ea = evalApis(newLine.quantities.multi, apiData.get(mpn).data, apisList);
         Object.assign(newLine, ea);
