@@ -9,7 +9,7 @@ import {useServerUrl} from '../hooks/Urls';
 import { BOMAPITable } from '../components/Tables';
 
 export function useTableBOM(req, bom, tableHeaders, apis, apiData, 
-    apiDataProgress, testCall, store, currency){
+    apiDataProgress, testCall, ltco, store, currency){
     const serverUrl = useServerUrl();
     const lenBOM = bom.length;
     const initTableBOM = useMemo(() => {
@@ -336,7 +336,9 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
 
         return line;
     }
-    function runBOMAlgorithms(bom){
+    function runBOMAlgorithms(bom, lt=null){
+        //const bom = b === null ? tableBOM : b;
+        const newLeadtimeCutOff = lt == null ? ltco : lt;
         if(lineNumsToEvaluate.size === 0){
             const hasInStock = true;
             /*
@@ -366,7 +368,8 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 data: {
                     bom: bom,
                     algorithms: ['bestpricefull', 'bestleadtimefull'],
-                    in_stock: hasInStock
+                    in_stock: hasInStock,
+                    lead_time_cut_off: newLeadtimeCutOff
                 }
             }).then(response => {
                 console.log(response.data);
@@ -406,7 +409,8 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 data: {
                     line: bom[row],
                     algorithms: ['bestpricefull', 'bestleadtimefull'],
-                    in_stock: hasInStock
+                    in_stock: hasInStock,
+                    lead_time_cut_off: ltco
                 }
             }).then(response => {
                 console.log(response.data);

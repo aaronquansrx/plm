@@ -44,16 +44,25 @@ function BOMToolV3(props){
     const [requestApis, setRequestApis] = useState(0);
     const [updateTableCall, setUpdateTableCall] = useState(0);
     const [callApiRetry, callMpn, dataProcessing] = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
-        props.store, props.currency, props.changeLock, props.apiData);
+         props.store, props.currency, props.changeLock, props.apiData);
     const apiDataProgress = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
+    const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
+    function handleLeadtimeCutOff(newLTC){
+        if(newLTC === ''){
+            setLeadtimeCutOff('');
+        }else{
+            setLeadtimeCutOff(newLTC);
+        }
+        runBOMAlgorithms(tableBOM, newLTC);
+    }
     const [tableBOM, setTable, tableColumns, 
         runBOMAlgorithms, runBOMLineAlgorithms, resortOffers, 
         linesComplete, retryLine, waitingRowApi,
         changeMPNLine, evalMpn] = useTableBOM(requestApis, 
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, apiDataProgress, 
-        updateTableCall, props.store, props.currency
+        updateTableCall, leadtimeCutOff, props.store, props.currency
     );
     const apiAttrs = useApiAttributes();
     function handleRequestApis(){
@@ -86,7 +95,6 @@ function BOMToolV3(props){
         runBOMAlgorithms(newTable);
     }
     function retryApi(mpn, api, rowNum){
-        console.log(rowNum);
         function onComplete(newData){
             retryLine(rowNum, api, newData);
         }
@@ -99,7 +107,6 @@ function BOMToolV3(props){
         changeMPNLine(row, newLine, newMPN);
     }
     function addMPNOption(row){
-        console.log(tableBOM);
         const newLine = {...tableBOM[row]};
         newLine.mpns.current = '';
         newLine.mpns.options.push('');
@@ -112,8 +119,6 @@ function BOMToolV3(props){
                 $set: newLine
             }
         });
-        console.log(newTable);
-        //changeMPNOption()
         setTable(newTable);
     }
     function editMPNOption(row, oldMpn, newMpn){
@@ -228,8 +233,12 @@ function BOMToolV3(props){
         <>
         <div className='FlexNormal'>
             <div className='Hori'>
+            <div>
             <NumberInput label={'Multi'} value={quantityMultiplier} onBlur={handleMultiBlur} 
             disabled={!apiDataProgress.finished}/>
+            <NumberInput label={'Leadtime Cut Off'} value={leadtimeCutOff} onBlur={handleLeadtimeCutOff} 
+            disabled={!apiDataProgress.finished}/>
+            </div>
             {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
             apiAttrs={apiAttrs} evaluation={bomEvaluation} algorithm={highlightMode}/>}
             <HighlightOptions disabled={!apiDataProgress.finished} onChangeHighlight={handleChangeHighlight}
@@ -249,7 +258,7 @@ function BOMToolV3(props){
         onHideBar={handleHideBar} numFinished={linesComplete}/>
         <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
         apis={props.apis} apiAttrs={apiAttrs} functions={functions}
-        highlightMode={highlightMode} 
+        highlightMode={highlightMode}  functionLock={!apiDataProgress.finished}
         hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}/>
         </>
     );

@@ -99,7 +99,7 @@ export function BOMAPITableV2(props){
                 {pageRows.map((line, i) => 
                     <BOMRow key={i} highlightMode={props.highlightMode} rowNum={pageNumber*pageSize+i} 
                     data={line} hasLineLocks={props.hasLineLocks} 
-                    attributeOrder={attributeOrder} 
+                    attributeOrder={attributeOrder} functionLock={props.functionLock}
                     onLineLock={props.onLineLock}/>
                 )}
             </tbody>
@@ -218,7 +218,6 @@ const HoverToggleSolidColour = styled.div`
 `;
 
 function BOMRow(props){
-    //console.log(props.data);
     const [showAllOffers, setShowAllOffers] = useState(false);
     function changeShowOffers(){
         setShowAllOffers(!showAllOffers);
@@ -247,7 +246,7 @@ function BOMRow(props){
             }
             <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={props.attributeOrder} 
             data={props.data} cellProps={firstRowCellProps} highlightMode={props.highlightMode} 
-            lock={props.data.lineLock}/>
+            lock={props.data.lineLock} functionLock={props.functionLock}/>
         </tr>
         {props.data.maxOffers > 1 && showAllOffers &&
         [...Array(props.data.maxOffers-1).keys()].map((i) => {
@@ -302,7 +301,7 @@ function BOMOffer(props){
             return (
                 <BOMAttributeRenderer key={i} {...specAttrs} {...attr} cellProps={props.cellProps}
                 value={props.data[attr.attribute]} offerNum={offerNum} offerIndex={props.offerNum} rowNum={props.rowNum} 
-                lock={props.lock} stockMode={stockMode}/> 
+                lock={props.lock} stockMode={stockMode} functionLock={props.functionLock}/> 
             );
         })}
         </>
@@ -398,7 +397,7 @@ function MPNsRenderer(props){
     const clientUrl = useClientUrl();
     const mpn = props.value.current;
     function handleMPNClick(e){
-        if(!props.lock){
+        if(!props.lock && !props.functionLock){
             if(e.ctrlKey){
                 window.open(clientUrl+'/partdetails/'+mpn, '_blank');
             }
@@ -420,15 +419,17 @@ function MPNsRenderer(props){
         props.functions.editOption(props.rowNum, mpn, newMpn);
     }
     function handleBlurMpn(e){
-        //console.log(e.target.value);
-        if(e.target.value === 'addNew'){
-            //props.functions
-            props.functions.addOption(props.rowNum);
-            setEditSelector(true);
-            //props.functions.changeOption(props.rowNum, '');
-        }else{
-            props.functions.changeOption(props.rowNum, e.target.value);
-        }
+        console.log(props.functionLock);
+        if(!props.lock && !props.functionLock){
+            if(e.target.value === 'addNew'){
+                //props.functions
+                props.functions.addOption(props.rowNum);
+                setEditSelector(true);
+                //props.functions.changeOption(props.rowNum, '');
+            }else{
+                props.functions.changeOption(props.rowNum, e.target.value);
+            }
+    }
     }
     const showSelector = props.value.options.length > 1;
     const tooltipText = 'Select MPN options | shift-click to edit | ctrl-click for details';
@@ -441,7 +442,7 @@ function MPNsRenderer(props){
             : mpn
             */}
             <AddRemoveEditSelectorForm edit={editSelector} onSelect={handleBlurMpn} 
-            options={props.value.options} selected={mpn} onEdit={handleEditMpn} disabled={props.lock}/> 
+            options={props.value.options} selected={mpn} onEdit={handleEditMpn} disabled={props.lock || props.functionLock}/> 
         </div>
         </HoverOverlay>
     </td> 
