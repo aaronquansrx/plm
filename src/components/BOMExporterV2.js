@@ -34,6 +34,7 @@ function BOMExporterV2(props){
         const best = {price: options.bestprice, leadtime: options.bestleadtime};
         const api = best.price ? 'price' : best.leadtime ? 'leadtime' : 'all'; //api: api (unused)
         const eva = options.evaluation;
+        console.log(options);
         return { api: api, evaluation: eva, best: options.bestoffer };
     }
     function handleExport(fn, options={}){
@@ -41,6 +42,7 @@ function BOMExporterV2(props){
         const headers = [];
         const opt = optionStructure(options);
         const base = baseTableFormat(trimmedBomAttrs);
+        console.log(opt);
         const apiFormat = opt.best ? bestOfferData() : allApisOfferData();
         const combine = base.map((b, i) => {
             Object.assign(b, apiFormat[i]);
@@ -56,10 +58,6 @@ function BOMExporterV2(props){
             XLSX.utils.book_append_sheet(wb, s2, 'Evaluation')
         }
         XLSX.writeFile(wb, fileName+'.xlsx');
-        
-
-        
-        
     }
     function apiAttrDecode(offer, acc, stockStr, best){
         switch(acc){
@@ -93,7 +91,7 @@ function BOMExporterV2(props){
                                 break;
                         }
                         */
-                       obj[heading.Header] = apiAttrDecode(offer, heading.accessor, stockStr, props.algorithm.best);
+                       obj[key] = apiAttrDecode(offer, heading.accessor, stockStr, props.algorithm.best);
                     });
                 }
                 return obj;

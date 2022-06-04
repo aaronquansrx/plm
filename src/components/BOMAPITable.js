@@ -471,7 +471,7 @@ function PricesRenderer(props){
     const pt = <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex}/>;
     return (
         <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
-            <td {...props.cellProps}>{props.value.price.toFixed(2)}</td>
+            <td {...props.cellProps}>{props.value.price.toFixed(4)}</td>
         </SimplePopover>
     );
 }
