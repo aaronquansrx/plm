@@ -198,6 +198,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         });
         return newTable;
     }
+    /*
     function lineAlgorithmsModify(line, algoData, hasInStock=false){
         //const algos = i===null ? algoData : algoData[]
         if(!hasInStock){
@@ -272,6 +273,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         }
         return line;
     }
+    */
     function lineAlgorithmsModifyFull(line, algoData){
         const stockOnly = algoData.in_stock_only;
         const notStockOnly = algoData.not_stock_only;
@@ -302,6 +304,13 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 total_price: bestPrice.best.total,
                 fully_evaluated: bestPrice.best.quantity >= line.quantities.multi
             }
+        }else{
+            line.offerEvaluation.price = {
+                offers: [],
+                quantity_found: 0,
+                total_price: 0,
+                fully_evaluated: false
+            }
         }
         if(leadTime.best){
             line.offerEvaluation.leadtime = {
@@ -309,6 +318,13 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 quantity_found: leadTime.best.quantity,
                 total_price: leadTime.best.total,
                 fully_evaluated: leadTime.best.quantity >= line.quantities.multi
+            }
+        }else{
+            line.offerEvaluation.leadtime = {
+                offers: [],
+                quantity_found: 0,
+                total_price: 0,
+                fully_evaluated: false
             }
         }
         apisList.forEach((api) => {
@@ -367,7 +383,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 url: serverUrl+'api/algorithms',
                 data: {
                     bom: bom,
-                    algorithms: ['bestpricefull', 'bestleadtimefull'],
+                    algorithms: ['bestpricefull', 'bestleadtimefull', 'offerinfoquantityprices'],
                     in_stock: hasInStock,
                     lead_time_cut_off: newLeadtimeCutOff
                 }
@@ -484,9 +500,11 @@ export function useQuantityMultiplier(tableBOM, apiData, apisList,
             }
         }
     }
-    function handleNewMulti(newMulti){
+    function handleNewMulti(newM){
+        const newMulti = newM === '0' ? 1 : parseInt(newM); 
         if(apiDataProgress.finished){
             if(multiplier !== newMulti){
+                console.log(newMulti);
                 const newTable = [...tableBOM].map((line) => {
                     const newLine = newLineChangeQuantity(line, line.quantities.initial,
                         line.quantities.initial*newMulti);
@@ -496,6 +514,7 @@ export function useQuantityMultiplier(tableBOM, apiData, apisList,
                 setMultiplier(newMulti);
             }
         }
+        return newMulti;
     }
     return [multiplier, adjustQuantity, handleNewMulti];
 }

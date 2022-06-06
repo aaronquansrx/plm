@@ -13,7 +13,7 @@ import {useBOMEvaluation} from './../hooks/BOMEvaluation';
 import {BOMAPITableV2} from './BOMAPITable';
 import {NumberInput, OutsideControlCheckbox, 
     LabeledCheckbox,
-    SelectSingleRadioButtons} from './Forms';
+    SelectSingleRadioButtons, ToggleSwitch} from './Forms';
 import { NamedCheckBox } from './Checkbox';
 import BOMExporter from './BOMExporter';
 import BOMExporterV2 from './BOMExporterV2';
@@ -228,6 +228,11 @@ function BOMToolV3(props){
     function handleHideBar(){
         setShowProgress(false);
     }
+    const [tableState, setTableState] = useState('APIs');
+    function handleTableSwitch(state){
+        const tbs = state ? 'APIs' : 'Best';
+        setTableState(tbs);
+    }
     //console.log(linesComplete);
     return(
         <>
@@ -247,6 +252,8 @@ function BOMToolV3(props){
             <BOMEval evaluation={bomEvaluation}/>
             { buildtype !== 'production' &&
             <div>
+            <ToggleSwitch onLabel={'APIs'} offLabel={'Best'} 
+            offStyle='primary' onChange={handleTableSwitch} disabled={!apiDataProgress.finished}/>
             <Button onClick={handleRequestApis}>Call APIs</Button>
             <Button onClick={handleTest}>Test</Button>
             <Button onClick={exportTableJson}>Export JSON</Button>
@@ -259,7 +266,8 @@ function BOMToolV3(props){
         <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
         apis={props.apis} apiAttrs={apiAttrs} functions={functions}
         highlightMode={highlightMode}  functionLock={!apiDataProgress.finished}
-        hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}/>
+        hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}
+        tableState={tableState}/>
         </>
     );
 }

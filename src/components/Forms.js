@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react';
 import update from 'immutability-helper';
 import Form from 'react-bootstrap/Form';
+import BootstrapSwitchButton from 'bootstrap-switch-button-react';
 
 import './../css/temp.css';
 
@@ -15,12 +16,18 @@ export function NumberInput(props){
         }
     }
     function handleBlur(e){
-        if(props.onBlur) props.onBlur(e.target.value);
+        if(props.onBlur){
+            const blur = props.onBlur(e.target.value);
+            if(!isNaN(blur)){
+                setNumber(blur);
+            }
+        }
     }
     useEffect(() => {
         setNumber(props.value);
     }, [props.value]);
     const disabled = props.disabled ? props.disabled : false;
+    //const n = props.value !== null ? props.value : number;
     return(
         <div className='Hori'>
         {props.label && 
@@ -127,7 +134,7 @@ export function LabeledCheckbox(props){
     }
     return(
         <Form.Check className={props.className} 
-        checked={props.checked} onChange={handleChange} label={props.label}/>
+        checked={props.checked} onChange={handleChange} label={props.label} disabled={props.disabled}/>
     );
 }
 
@@ -181,3 +188,17 @@ export function MultiSelectRadioButtons(props){
         </>
     );
 }
+
+export function ToggleSwitch(props){
+    const [toggleState, setToggleState] = useState(false);
+    //console.log(props.onLabel);
+    function handleChange(b){
+        //setToggleState(b);
+        if(props.onChange) props.onChange(b);
+    }
+    return(
+        <BootstrapSwitchButton onChange={handleChange} checked={true} 
+        onlabel={props.onLabel} offlabel={props.offLabel}
+        onstyle={props.onStyle} offstyle={props.offStyle} disabled={props.disabled}/>
+    )
+}   

@@ -5,6 +5,7 @@ import {ExportModal} from './Modals';
 import {stockString} from './../scripts/AlgorithmVariable';
 
 import XLSX from 'xlsx';
+import { forEach } from 'lodash';
 
 const restrictedBomAttrs = ['activeApis'];
 
@@ -34,7 +35,6 @@ function BOMExporterV2(props){
         const best = {price: options.bestprice, leadtime: options.bestleadtime};
         const api = best.price ? 'price' : best.leadtime ? 'leadtime' : 'all'; //api: api (unused)
         const eva = options.evaluation;
-        console.log(options);
         return { api: api, evaluation: eva, best: options.bestoffer };
     }
     function handleExport(fn, options={}){
@@ -42,14 +42,18 @@ function BOMExporterV2(props){
         const headers = [];
         const opt = optionStructure(options);
         const base = baseTableFormat(trimmedBomAttrs);
-        console.log(opt);
-        const apiFormat = opt.best ? bestOfferData() : allApisOfferData();
-        const combine = base.map((b, i) => {
-            Object.assign(b, apiFormat[i]);
-            return b;
+        const bod = bestOfferData();
+        base.forEach((b, i) =>{
+            Object.assign(b, bod[i]);
         });
+        if(!opt.best){
+            const aaod = allApisOfferData();
+            base.forEach((b, i) => {
+                Object.assign(b, aaod[i]);
+            });
+        }
         
-        const sheet = XLSX.utils.json_to_sheet(combine, {header: headers});
+        const sheet = XLSX.utils.json_to_sheet(base, {header: headers});
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, sheet, 'BOMData');
         if(opt.evaluation){
@@ -93,6 +97,7 @@ function BOMExporterV2(props){
                         */
                        obj[key] = apiAttrDecode(offer, heading.accessor, stockStr, props.algorithm.best);
                     });
+                    obj['Total Price'] = offer.prices.price * offer.adjustedQuanity[stockStr][props.algorithm.best];
                 }
                 return obj;
             }, {});
@@ -122,6 +127,7 @@ function BOMExporterV2(props){
                 obj[attr.Header] = apiAttrDecode(best, attr.accessor, stockStr, props.algorithm.best)
                 return obj;
             }, {});
+            offerData['Total Price'] = best.prices.price * best.adjustedQuantity[stockStr][props.algorithm.best];
             offerData.Distributer = apiHeader;
             return offerData;
         });

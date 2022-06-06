@@ -38,6 +38,23 @@ const headerRenderers = {
 
 const defaultRenderer = (p) => <DefaultRenderer/>
 
+function smartAttr(type, functions, vars){
+    return function(attr){
+        const custom = (attr.accessor in headerRenderers)
+        ? headerRenderers[attr.accessor] : null;
+        const functions = (attr.accessor in functions)
+        ? functions[attr.accessor] : null;
+        const vr = (attr.accessor in vars) ? vars[attr.accessor] : {};
+        return {
+            header: attr.Header,
+            type: type,
+            custom: custom, // custom renderer for cell?
+            vars: vr,
+            functions: functions
+        };
+    }
+}
+
 export function BOMAPITableV2(props){
     const data = props.data;
     //const numRecords = props.data.length;
@@ -79,7 +96,9 @@ export function BOMAPITableV2(props){
             functions: props.functions.api
         }
     });
-    const attributeOrder = normalAttributes.concat(apiAttributes);
+    const tbs = props.tableState === 'APIs';
+    const attributeOrder = tbs ? normalAttributes.concat(apiAttributes) : normalAttributes;
+    const headerOrder = [];
 
     const [pageSize, setPageSize] = useState(5);
     const [pageNumber, numPages, handlePageChange] = usePaging(props.data.length, pageSize);
@@ -461,7 +480,7 @@ function QuantitiesRenderer(props){
     return (
         <td {...props.cellProps}>
             <SimplePopover popoverBody={quantPop} trigger={['hover', 'focus']} placement='auto'>
-            <div><NumberInput onBlur={handleBlur} value={props.value.single} disabled={props.lock}/></div>
+            <div><NumberInput onBlur={handleBlur} value={props.value.single} disabled={props.lock || props.functionLock}/></div>
             </SimplePopover>
         </td>
     );
