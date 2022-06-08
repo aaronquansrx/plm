@@ -14,6 +14,9 @@ import {MultiSelectRadioButtons, OutsideControlCheckbox,
     NumberInput, SelectorForm} from './Forms';
 import {PageInterface} from './Pagination';
 import {usePaging} from './../hooks/Paging';
+
+import {stockString} from './../scripts/AlgorithmVariable';
+
 import { slice } from 'lodash';
 
 import lockIcon from './../lock-128.png';
@@ -27,7 +30,8 @@ const renderers = {
     'quantities': (p) => <QuantitiesRenderer {...p}/>,
     'prices': (p) => <PricesRenderer {...p}/>,
     'activeApis': (p) => <ActiveApisRenderer {...p}/>,
-    'adjustedQuantity': (p) => <AdjustedQuantityRenderer {...p}/>
+    'adjustedQuantity': (p) => <AdjustedQuantityRenderer {...p}/>,
+    'totalPrice': (p) => <TotalPriceRenderer {...p}/>
 };
 
 const headerRenderers = {
@@ -38,14 +42,15 @@ const headerRenderers = {
 
 const defaultRenderer = (p) => <DefaultRenderer/>
 
-function smartAttr(type, functions, vars){
+function smartAttr(type, funs, vars, rendererList){
     return function(attr){
-        const custom = (attr.accessor in headerRenderers)
-        ? headerRenderers[attr.accessor] : null;
-        const functions = (attr.accessor in functions)
-        ? functions[attr.accessor] : null;
+        const custom = (attr.accessor in rendererList)
+        ? rendererList[attr.accessor] : null;
+        const functions = (attr.accessor in funs)
+        ? funs[attr.accessor] : null;
         const vr = (attr.accessor in vars) ? vars[attr.accessor] : {};
         return {
+            attribute: attr.accessor,
             header: attr.Header,
             type: type,
             custom: custom, // custom renderer for cell?
@@ -56,14 +61,16 @@ function smartAttr(type, functions, vars){
 }
 
 export function BOMAPITableV2(props){
-    const data = props.data;
-    //const numRecords = props.data.length;
-
     const bomAttrs = props.bomAttrs;
     const apis = props.apis;
     const apiAttrs = props.apiAttrs;
+    const apisToHeader = props.apis.reduce((obj, api) => {
+        obj[api.accessor] = api.Header;
+        return obj;
+    }, {});
+    const normalAttributes = bomAttrs.map(smartAttr('normal', props.functions, {}, renderers));
     
-    const normalAttributes = props.bomAttrs.map((attr) => {
+    /*const normalAttributes = props.bomAttrs.map((attr) => {
         const custom = (attr.accessor in renderers)
         ? renderers[attr.accessor] : null;
         const functions = (attr.accessor in props.functions)
@@ -74,7 +81,18 @@ export function BOMAPITableV2(props){
             custom: custom, // custom renderer for cell?
             functions: functions
         };
+    });*/
+    const apiAttributes = apis.map((api) => {
+        const sa = apiAttrs.map(smartAttr('subattr', props.functions, {}, renderers));
+        return {
+            attribute: api.accessor,
+            subAttributes: sa,
+            type: 'api',
+            custom: (p) => <APIRenderer {...p}/>,
+            functions: props.functions.api
+        }
     });
+    /*
     const apiAttributes = apis.map((api) => {
         const sa = apiAttrs.map((attr) => {
             const custom = (attr.accessor in renderers)
@@ -95,10 +113,27 @@ export function BOMAPITableV2(props){
             custom: (p) => <APIRenderer {...p}/>,
             functions: props.functions.api
         }
-    });
+    });*/
     const tbs = props.tableState === 'APIs';
     const attributeOrder = tbs ? normalAttributes.concat(apiAttributes) : normalAttributes;
-    const headerOrder = [];
+
+    const apiHeaderAttributes = apis.map((api) => {
+        const sa = apiAttrs.map(smartAttr('subattr', props.functions, {}, renderers));
+        return {
+            header: api.accessor,
+            subAttributes: sa,
+            type: 'api',
+            custom: (p) => <APIRenderer {...p}/>,
+            functions: props.functions.api
+        }
+    });
+    const extendedApiAttrs = apiAttrs.concat([
+        {Header: 'Distributor', accessor: 'distributor'}, 
+        {Header: 'Total Price', accessor: 'totalPrice'}
+    ]);
+    const extApiAttrs = extendedApiAttrs.map(smartAttr('best', props.functions, {}, renderers));
+    const bestAttributeOrder = normalAttributes.concat(extApiAttrs);
+    //const headerOrder = [];
 
     const [pageSize, setPageSize] = useState(5);
     const [pageNumber, numPages, handlePageChange] = usePaging(props.data.length, pageSize);
@@ -112,14 +147,18 @@ export function BOMAPITableV2(props){
         <>
         <div className='MainTable'>
         <Table>
-            <BOMAPITableHeader hasLineLocks={props.hasLineLocks} bomAttrs={props.bomAttrs} 
-            apis={props.apis} apiAttrs={props.apiAttrs} onLockAll={props.onLineLockAll} functions={props.functions}/>
+            {
+            <BOMAPITableHeader hasLineLocks={props.hasLineLocks} bomAttrs={bomAttrs} 
+            apis={apis} apiAttrs={apiAttrs} onLockAll={props.onLineLockAll} 
+            functions={props.functions} tableState={props.tableState} extendedApiAttrs={extendedApiAttrs}/>
+            }
             <tbody>
                 {pageRows.map((line, i) => 
                     <BOMRow key={i} highlightMode={props.highlightMode} rowNum={pageNumber*pageSize+i} 
                     data={line} hasLineLocks={props.hasLineLocks} 
                     attributeOrder={attributeOrder} functionLock={props.functionLock}
-                    onLineLock={props.onLineLock}/>
+                    onLineLock={props.onLineLock} bestAttributeOrder={bestAttributeOrder}
+                    tableState={tbs} apisToHeader={apisToHeader}/>
                 )}
             </tbody>
         </Table>
@@ -133,10 +172,17 @@ export function BOMAPITableV2(props){
     );
 }
 
+function BOMAPITableHeader2(props){
+    return(
+        <thead>
 
+        </thead>
+    )
+}
 
 //vertical-align to center header elements for rowspan=2
 function BOMAPITableHeader(props){
+    const tbs = props.tableState === 'APIs';
     const numApiAttrs = props.apiAttrs.length;
     function handleAllLock(){
         props.onLockAll(true);
@@ -147,6 +193,7 @@ function BOMAPITableHeader(props){
     const vars = {
         'activeApis': {apis: props.apis}
     }
+    /*
     function smartAttr(type){
         return function(attr){
             const custom = (attr.accessor in headerRenderers)
@@ -162,30 +209,21 @@ function BOMAPITableHeader(props){
                 functions: functions
             };
         }
-    }
-    const normalAttributes = props.bomAttrs.map(smartAttr('normal')
-        /*(attr) => {
-        const custom = (attr.accessor in headerRenderers)
-        ? headerRenderers[attr.accessor] : null;
-        const functions = (attr.accessor in props.functions)
-        ? props.functions[attr.accessor] : null;
-        const vr = (attr.accessor in vars) ? vars[attr.accessor] : {};
-        return {
-            header: attr.Header,
-            type: 'normal',
-            custom: custom, // custom renderer for cell?
-            vars: vr,
-            functions: functions
-        };
-    }*/);
-    const apiAttrAttributes = props.apiAttrs.map(smartAttr('subattr'));
-    const apiAttributes = props.apis.map(smartAttr('api'));
+    }*/
+    const normalAttributes = props.bomAttrs.map(smartAttr('normal', props.functions, vars, headerRenderers));
+    const apiAttrAttributes = props.apiAttrs.map(smartAttr('subattr', props.functions, vars, headerRenderers));
+    const apiAttributes = props.apis.map(smartAttr('api', props.functions, vars, headerRenderers));
+    const extendedApiAttrs = props.apiAttrs.concat([
+        {Header: 'Distributor', accessor: 'distributor'}, 
+        {Header: 'Total Price', accessor: 'total_price'}
+    ]);
+    const bestAttrs = extendedApiAttrs.map(smartAttr('subattr', props.functions, vars, headerRenderers));
     const normHeaderProps = {
         rowSpan: '2',
         className: 'VerticalAlign'
     }
     const apiHeaderProps = {
-        colSpan: numApiAttrs
+        colSpan: numApiAttrs,
     }
     return(
     <thead className='TableHeading'>
@@ -204,24 +242,18 @@ function BOMAPITableHeader(props){
         {normalAttributes.map((attr,i) =>
             <HeaderRenderer key={i} {...attr} headerProps={normHeaderProps}/>
         )}
-        {apiAttributes.map((attr, i) =>
+        {tbs && apiAttributes.map((attr, i) =>
             <HeaderRenderer key={i} {...attr} headerProps={apiHeaderProps}/>
         )}
-        {/*props.apis.map((api, i) =>
-            <HeaderRenderer key={i} {...api} headerProps={apiHeaderProps}/>
-            //<th key={i} colSpan={numApiAttrs}>{api.Header}</th>
-        )*/}
         </tr>
         <tr>
-        {props.apis.map((api, i) => 
+        {tbs && props.apis.map((api, i) => 
             apiAttrAttributes.map((attr, i) => 
                 <HeaderRenderer key={i} {...attr}/>
             )
-        /*
-            props.apiAttrs.map((attr, j) => 
-                <th key={i*numApiAttrs+j}>{attr.Header}</th>
-            )
-        */
+        )}
+        {!tbs && bestAttrs.map((attr, i) => 
+            <HeaderRenderer key={i} {...attr} headerProps={{rowSpan: '2', className: 'VerticalAlign'}}/>
         )}
         </tr>
     </thead>
@@ -241,7 +273,7 @@ function BOMRow(props){
     function changeShowOffers(){
         setShowAllOffers(!showAllOffers);
     }
-    const firstRowCellProps = showAllOffers && props.data.maxOffers > 0 ? {rowSpan: props.data.maxOffers} : {rowSpan: 1};
+    const firstRowCellProps = showAllOffers && props.data.maxOffers > 0 && props.tableState ? {rowSpan: props.data.maxOffers} : {rowSpan: 1};
     const numTableCols = props.attributeOrder.reduce((c, attr) => {
         if(attr.type == 'api'){
             return c+attr.subAttributes.length;
@@ -252,7 +284,16 @@ function BOMRow(props){
         props.onLineLock(!props.data.lineLock, props.rowNum);
     }
     const lockTTip = props.data.lineLock ? 'Unlock Line' : 'Lock Line';
-
+    const attributeOrder = props.tableState ? props.attributeOrder : props.functionLock ? props.attributeOrder : props.bestAttributeOrder;
+    const stockMode = stockString(props.highlightMode.stock);
+    const hl = props.data.highlights[stockMode][props.highlightMode.best];
+    const bestOffer = hl ? props.data[hl.api].offers[hl.offerNum] : null;
+    const data = props.tableState ? props.data : {
+        ...props.data,
+        ...bestOffer,
+        distributor: hl ? props.apisToHeader[hl.api] : ''
+    };
+    //console.log(props.bestAttributeOrder);
     return(
         <>
         <tr>
@@ -263,11 +304,13 @@ function BOMRow(props){
                     </HoverOverlay>
                 </td>
             }
-            <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={props.attributeOrder} 
-            data={props.data} cellProps={firstRowCellProps} highlightMode={props.highlightMode} 
+            {
+            <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={attributeOrder} 
+            data={data} cellProps={firstRowCellProps} highlightMode={props.highlightMode} 
             lock={props.data.lineLock} functionLock={props.functionLock}/>
+            }
         </tr>
-        {props.data.maxOffers > 1 && showAllOffers &&
+        {props.data.maxOffers > 1 && showAllOffers && props.tableState && 
         [...Array(props.data.maxOffers-1).keys()].map((i) => {
             const offerNum = i+1;
             return(
@@ -277,7 +320,7 @@ function BOMRow(props){
             </tr>
             );
         })}
-        {props.data.maxOffers > 1 &&
+        {props.data.maxOffers > 1 && props.tableState && 
         <tr onClick={changeShowOffers}>
             <td colSpan={numTableCols} className='NoPadding'>
             <HoverOverlay placement='auto' 
@@ -487,17 +530,21 @@ function QuantitiesRenderer(props){
 }
 
 function PricesRenderer(props){
-    const pt = <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex}/>;
+    const pt = props.value ? <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex[props.stockMode]}/> : <></>;
     return (
         <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
-            <td {...props.cellProps}>{props.value.price.toFixed(4)}</td>
+            <td {...props.cellProps}>{props.value && props.value.price[props.stockMode].toFixed(4)}</td>
         </SimplePopover>
     );
 }
 
+function TotalPriceRenderer(props){
+    return <td {...props.cellProps}>{props.value && props.value[props.stockMode]}</td>
+}
+
 function AdjustedQuantityRenderer(props){
     //console.log(props);
-    const display = props.value ? props.value[props.stockMode][props.highlightMode] : '-';
+    const display = props.value ? props.value[props.stockMode] : '-';
     return (
         <td {...props.cellProps}>{display}</td>
     );

@@ -327,26 +327,34 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 fully_evaluated: false
             }
         }
+        //console.log(stockOnly.offerinfoquantityprices);
+        //console.log(notStockOnly.offerinfoquantityprices);
+        const stockInfo = stockOnly.offerinfoquantityprices;
+        const noStockInfo = notStockOnly.offerinfoquantityprices;
         apisList.forEach((api) => {
             line[api].offerOrder.stock.price = bestPrice.sort[api];
             line[api].offerOrder.noStock.price = bestPriceNoStock.sort[api];
             line[api].offerOrder.stock.leadTime = leadTime.sort[api];
             line[api].offerOrder.noStock.leadTime = leadTimeNoStock.sort[api];
             line[api].offers.forEach((off, i) => {
-                //console.log(bestPrice.quantity[api]);
                 off.adjustedQuantity = {
-                    stock: {
-                        price: bestPrice.quantity[api][i],
-                        leadTime: leadTime.quantity[api][i]
-                    },
-                    noStock: {
-                        price: bestPriceNoStock.quantity[api][i],
-                        leadTime: leadTimeNoStock.quantity[api][i]
-                    }
+                    stock: stockInfo[api][i].quantity,
+                    noStock: noStockInfo[api][i].quantity
                 };
-                //have this on different algo (for stock, no stock)
-                off.prices.price = bestPrice.offer_info[api][i].price_per;
-                off.prices.pricingIndex = bestPrice.offer_info[api][i].index;
+
+                off.prices.price = {
+                    stock: stockInfo[api][i].price_per,
+                    noStock: noStockInfo[api][i].price_per,
+                };
+                off.prices.pricingIndex = {
+                    stock: stockInfo[api][i].index,
+                    noStock: noStockInfo[api][i].index
+                };
+                off.totalPrice = {
+                    stock: stockInfo[api][i].total,
+                    noStock: noStockInfo[api][i].total,
+                };
+                //off.prices.pricingIndex = algorithmsStockStructure(bestPrice.offer_info[api][i].index);
             });
         });
 
@@ -424,7 +432,7 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
                 url: serverUrl+'api/algorithms',
                 data: {
                     line: bom[row],
-                    algorithms: ['bestpricefull', 'bestleadtimefull'],
+                    algorithms: ['bestpricefull', 'bestleadtimefull', 'offerinfoquantityprices'],
                     in_stock: hasInStock,
                     lead_time_cut_off: ltco
                 }
@@ -519,6 +527,7 @@ export function useQuantityMultiplier(tableBOM, apiData, apisList,
     return [multiplier, adjustQuantity, handleNewMulti];
 }
 
+/*
 export function evalLineApis(line, apis, apiData, sort='price'){
     const mpn = line.mpns.current;
     const mpnData = apiData.get(mpn).data;
@@ -549,15 +558,17 @@ export function evalLineApis(line, apis, apiData, sort='price'){
     });
     return outApiData;
 }
+*/
+
 function evalApi(quantity, singleApiData){
     const newOffers = singleApiData.offers.map((offer) => {
         const {price, index} = findPriceBracket(offer.pricing, 
             quantity, offer.moq);
         offer.price = price;
         offer.prices = {
-            price: price,
+            price: algorithmsStockStructure(price),
             pricing: offer.pricing,
-            pricingIndex: index
+            pricingIndex: algorithmsStockStructure(index)
         }
         offer.adjustedQuantity = null;
         return offer;
@@ -565,7 +576,7 @@ function evalApi(quantity, singleApiData){
     return newOffers;
 }
 function evalApis(quantity, multiApiData, apisList){
-    console.log(multiApiData);
+    //console.log(multiApiData);
     const data = multiApiData.apis
     const evaledApis = apisList.reduce((obj, api) => {
         const order = [...Array(data[api].offers.length).keys()];
@@ -583,6 +594,7 @@ function evalApis(quantity, multiApiData, apisList){
     }, {});
     return evaledApis;
 }
+/*
 function newEvalApi(line, singleApiData){
     const newOffers = singleApiData.offers.map((offer) => {
         const {price, index} = findPriceBracket(offer.pricing, 
@@ -613,19 +625,7 @@ function newEvalApi(line, singleApiData){
         //message: mpnData.apis[api].message,
         //retry: mpnData.apis[api].retry
     };
-}
-
-function newEvalApis(line, multiApiData, apiList){
-    const c = Object.entries(multiApiData.apis).map(([k,v]) => {
-        console.log(v);
-        return {
-            api: k,
-            ...newEvalApi(line, v)
-        }
-    });
-    //console.log(c);
-    return c;
-}
+}*/
 
 function algorithmsInitialStructure(value=null){
     return {
@@ -637,6 +637,12 @@ function algorithmsInitialStructure(value=null){
             price: value,
             leadTime: value
         }
+    }
+}
+function algorithmsStockStructure(value=null){
+    return {
+        stock: value,
+        noStock: value
     }
 }
 

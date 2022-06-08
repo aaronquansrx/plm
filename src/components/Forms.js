@@ -181,7 +181,7 @@ export function MultiSelectRadioButtons(props){
         {props.options.map((opt, i) => {
             const ch = props.control ? props.control[opt.id] : selected[opt.id];
             return(
-            <Form.Check key={i} type='checkbox' {...opt} 
+            <Form.Check key={i} tyup up and awaytimepe='checkbox' {...opt} 
             checked={ch} onChange={handleChange}/>
             );
         })}
@@ -190,15 +190,16 @@ export function MultiSelectRadioButtons(props){
 }
 
 export function ToggleSwitch(props){
-    const [toggleState, setToggleState] = useState(false);
+    //const [toggleState, setToggleState] = useState(false);
     //console.log(props.onLabel);
     function handleChange(b){
         //setToggleState(b);
         if(props.onChange) props.onChange(b);
     }
+    //console.log(props.disabled);
     return(
-        <BootstrapSwitchButton onChange={handleChange} checked={true} 
+        <BootstrapSwitchButton onChange={handleChange} checked={props.checked} 
         onlabel={props.onLabel} offlabel={props.offLabel}
-        onstyle={props.onStyle} offstyle={props.offStyle} disabled={props.disabled}/>
+        onstyle={props.onStyle} offstyle={props.offStyle}/>
     )
 }   

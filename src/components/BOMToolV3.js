@@ -6,7 +6,7 @@ import Button from 'react-bootstrap/Button';
 
 import {
     useTableBOM, useApiAttributes, 
-    useQuantityMultiplier, evalLineApis
+    useQuantityMultiplier
 } from './../hooks/BOMTable';
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
 import {useBOMEvaluation} from './../hooks/BOMEvaluation';
@@ -253,7 +253,7 @@ function BOMToolV3(props){
             { buildtype !== 'production' &&
             <div>
             <ToggleSwitch onLabel={'APIs'} offLabel={'Best'} 
-            offStyle='primary' onChange={handleTableSwitch} disabled={!apiDataProgress.finished}/>
+            offStyle='primary' onChange={handleTableSwitch} checked={true}/>
             <Button onClick={handleRequestApis}>Call APIs</Button>
             <Button onClick={handleTest}>Test</Button>
             <Button onClick={exportTableJson}>Export JSON</Button>
