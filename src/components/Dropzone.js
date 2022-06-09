@@ -18,10 +18,9 @@ export function MyDropzone(props) {
       reader.onload = () => {
       // Do whatever you want with the file contents
         const binaryStr = reader.result;
-        const workbook = XLSX.read(binaryStr, {type:'binary'});
-        dropFunction(workbook, file);
+        const workbook = XLSX.read(binaryStr, {type:'binary', cellStyles:true});
+        if(dropFunction) dropFunction(workbook, file);
       }
-      //console.log(file);
       reader.readAsBinaryString(file);
     })
     
@@ -29,10 +28,9 @@ export function MyDropzone(props) {
   const {getRootProps, getInputProps} = useDropzone({onDrop});
 
   return (
-    <div {...getRootProps()} className='DropFiles'>
+    <div {...getRootProps()} className={props.class}>
       <input {...getInputProps()} />
-      <BsFileEarmarkArrowDown size={40}/>
-      <p>Drop BOM files (excel, csv)</p>
+      {props.children}
     </div>
   );
 }

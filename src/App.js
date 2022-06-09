@@ -9,6 +9,7 @@ import PartSearch from './pages/PartSearch';
 import Login from './pages/Login';
 import Index from './pages/Index';
 import BOMMain from './pages/BOMMain';
+import Excel from './pages/Excel';
 import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
 import useUsername from './hooks/useUsername';
@@ -78,6 +79,7 @@ function App() {
         <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
         <Route path={path('partsearch')} element={<PartSearch/>}/>
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
+        <Route path={path('excel')} element={<Excel/>}/>
         {!inProduction && <Route path={path('circular')} element={<CircularBufferTest/>}/>}
       </Routes>
     </div>

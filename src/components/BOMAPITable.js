@@ -172,14 +172,6 @@ export function BOMAPITableV2(props){
     );
 }
 
-function BOMAPITableHeader2(props){
-    return(
-        <thead>
-
-        </thead>
-    )
-}
-
 //vertical-align to center header elements for rowspan=2
 function BOMAPITableHeader(props){
     const tbs = props.tableState === 'APIs';

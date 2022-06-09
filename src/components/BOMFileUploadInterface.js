@@ -13,6 +13,8 @@ import { AutoColumnOptionModal } from './Modals';
 
 import {autoFindAttributesV2} from './../scripts/Upload';
 
+import { BsFileEarmarkArrowDown } from "react-icons/bs";
+
 import './../css/main.css';
 //import {ExcelDisplayTable, CheckboxRowCustomColumnTable} from './Tables';
 
@@ -51,7 +53,6 @@ function BOMFileUploadInterface(props){
         return head;
     }));
     function handleDrop(workbook, file){
-        //console.log(workbook);
         setFile(file);
         //Get first worksheet
         const wsname = workbook.SheetNames[0];
@@ -113,7 +114,10 @@ function BOMFileUploadInterface(props){
     }
     return (
         <div>
-            <MyDropzone onDrop={handleDrop}></MyDropzone>
+            <MyDropzone class='DropFiles' onDrop={handleDrop}>
+                <BsFileEarmarkArrowDown size={40}/>
+                <p>Drop BOM files (excel, csv)</p>
+            </MyDropzone>
             {/*file &&
             <div>
                 <span>{file.name}</span>
