@@ -14,12 +14,13 @@ function Excel(props){
         //const cbf = 
         //console.log(cbom);
         const mf = parseMasterFile(masterfile);
-        //console.log(mf);
+        console.log(mf);
         const fil = filterMasterFile(mf);
 
         const currency = workbook.Sheets['Currency Exchange'];
         const ex = parseExchange(currency);
         console.log(ex);
+
 
     }
     return(
@@ -29,13 +30,22 @@ function Excel(props){
         </div>
     );
 }
+//'(RoHS) ↵(Y/N)'
 function filterMasterFile(mf){
     const uniqueCPNs = mf.reduce((s, line) => {
         s.add(line.CPN);
         return s;
     }, new Set());
     //console.log(uniqueCPNs);
-    const chosenQuotes = mf.reduce((arr, line) => {
+    const quotedLines = mf.reduce((arr, line) => {
+        if('STS' in line){
+            if(line.STS === 'QUOTED'){
+                arr.push(line);
+            }
+        }
+        return arr;
+    }, []);
+    const chosenQuotes = quotedLines.reduce((arr, line) => {
         if('QUOTA' in line){
             if(line.QUOTA === 1){
                 arr.push(line);
@@ -43,7 +53,8 @@ function filterMasterFile(mf){
         }
         return arr;
     }, []);
-    console.log(chosenQuotes);
+    console.log(quotedLines);
+    //console.log(chosenQuotes);
     return chosenQuotes;
 }
 
@@ -211,7 +222,7 @@ function parseCBOM(sheet){
             }
         }
     }
-    //console.log(titles);
+    console.log(titles);
     //console.log(i);
     for(let y=i+1; y<=maxY; y++){
         let l = 'A';

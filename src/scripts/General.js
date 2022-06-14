@@ -18,3 +18,11 @@ export function downloadFile(fileName, contents){
     link.click();
     document.body.removeChild(link);
 }
+
+export function reverseStringMap(m){
+    const revM = Object.entries(m).reduce((mp, [k,v]) => {
+        mp[v] = k;
+        return mp;
+    }, {});
+    return revM;
+}
