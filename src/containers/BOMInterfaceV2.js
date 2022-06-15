@@ -84,7 +84,7 @@ function BOMInterface(props){
                 //return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 'tool':
                 return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} 
-                updateApiDataMap={updateApiDataMap} apiData={getApiData()} 
+                updateApiDataMap={updateApiDataMap} apiData={getApiData()} user={props.user}
                 store={props.store} currency={props.currency} changeLock={props.changeLock}/>;
             default:
                 return "Unknown interface state";

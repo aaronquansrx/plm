@@ -2,6 +2,8 @@ import React, {useEffect, useState, useMemo} from 'react';
 
 import update from 'immutability-helper';
 
+import axios from 'axios';
+
 import Button from 'react-bootstrap/Button';
 
 import {
@@ -24,9 +26,12 @@ import {downloadFile} from './../scripts/General';
 import './../css/temp.css';
 import './../css/bomtool.css';
 
+import { useServerUrl } from '../hooks/Urls';
+
 const buildtype = process.env.NODE_ENV;
 
 function BOMToolV3(props){
+    const serverUrl = useServerUrl();
     const waitingOffer = {
         offers: [],
         offerOrder: {
@@ -230,8 +235,31 @@ function BOMToolV3(props){
     }
     const [tableState, setTableState] = useState('APIs');
     function handleTableSwitch(state){
+        console.log(state);
         const tbs = state ? 'APIs' : 'Best';
         setTableState(tbs);
+    }
+    function saveBom(){
+        const bom = trimBom();
+        //console.log(bom);
+        //console.log(props.user);
+        if(props.user){
+            axios({
+                method: 'POST',
+                url: serverUrl+'api/saveBom',
+                data: {bom: bom, username: props.user, name: 'mybom'},
+            }).then(response => {
+                console.log(response.data);
+            });
+        }
+    }
+    function trimBom(){
+        return tableBOM.map(line => {
+            return {
+                mpn: line.mpns.current,
+                quantity: line.quantities.multi
+            }
+        });
     }
     //console.log(linesComplete);
     return(
@@ -250,6 +278,10 @@ function BOMToolV3(props){
             onChangeStock={handleChangeStock}
             options={highlightOptions}/>
             <BOMEval evaluation={bomEvaluation}/>
+            <div>
+            <LabeledCheckbox label={'Show All APIs'} 
+            checked={tableState === 'APIs'} onChange={handleTableSwitch} disabled={false}/>
+            </div>
             { buildtype !== 'production' &&
             <div>
             <ToggleSwitch onLabel={'APIs'} offLabel={'Best'} 
@@ -257,6 +289,7 @@ function BOMToolV3(props){
             <Button onClick={handleRequestApis}>Call APIs</Button>
             <Button onClick={handleTest}>Test</Button>
             <Button onClick={exportTableJson}>Export JSON</Button>
+            <Button onClick={saveBom}>Save</Button>
             </div>
             }
             </div>

@@ -75,7 +75,7 @@ function App() {
       {showVersionModal && <VersionModal show={showVersionModal} hideAction={handleHideVersion}/>}
       <Routes>
         <Route path={path('')} element={<Index/>}/>
-        <Route path={path('bomtool')} element={<BOMMain options={options} changeLock={handleLock}/>}/>
+        <Route path={path('bomtool')} element={<BOMMain options={options} changeLock={handleLock} user={username}/>}/>
         <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
         <Route path={path('partsearch')} element={<PartSearch/>}/>
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>

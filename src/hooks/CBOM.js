@@ -1,13 +1,10 @@
 
 import { reverseStringMap } from "../scripts/General";
 
-const lookupCriteria = {
-    'CPN': 'CPN',
-    'SRX PN': 'SRX PN',
-    'Descriptions': 'Descriptions',
-    'Approved MFR': 'Approved MFR',
-    'Approved MPN': 'Approved MPN'
-}
+const lookupCriteria = [
+    'CPN', 'SRX PN', 'Descriptions', 
+    'Approved MFR', 'Approved MPN'
+];
 const cbomSubmission = {
     'Quoted Supplier': 'Quoted Supplier',
     'LT': 'LT (wks)',
@@ -30,6 +27,8 @@ const cbomSubmission = {
     'Tooling Lead Time': 'Tooling Lead Time',
     'Comments': 'Comments'
 }
+
+const cbomRev = reverseStringMap(cbomSubmission);
 
 const masterFile = {
     'Quoted Supplier': 'Quoted Supplier',
