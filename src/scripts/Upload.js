@@ -102,13 +102,14 @@ export function autoFindAttributes(bom, attributes=[]){
                 });
                 return arr;
             }, []);
+            console.log(headers);
             return {found: true, bom: bomData, headers: headers};
         }
     }
     return {found: false};
 }
 
-export function bomEditParseV2(table, columnAttrs, rowChecked, tableHeaders){
+export function bomEditParseV2(table, columnAttrs, rowChecked, tableHeaders, headerOrder=null){
     const headerToAccessor = tableHeaders.reduce(function(map, obj) {
         map[obj.Header] = obj.accessor;
         return map;
@@ -142,18 +143,28 @@ export function bomEditParseV2(table, columnAttrs, rowChecked, tableHeaders){
         }
         return bomLine;
     });
-    const bomAttrs =  columnAttrs.reduce((arr, attr) => {
+    
+    const bomAttrs = headerOrder.reduce((arr, attr) => {
+        if(attr.accessor === 'quantity' || columnAttrs.includes(attr.Header)){
+            arr.push(attr);
+        }
+        return arr;
+    }, []);
+    //console.log(bomAttrs1);
+    /*
+    const bomAttrs = columnAttrs.reduce((arr, attr) => {
         if(attr !== tableHeaders[0].Header){
             arr.push({Header: attr, accessor: headerToAccessor[attr]});
         }
         return arr;
     }, []);
+    */
     //bomAttrs.push({Header: 'Quantity', accessor: 'quantity'});
     //console.log(bomAttrs);
     return {editedBom: editedBom, columnAttributes: bomAttrs};
 }
 
-export function autoFindAttributesV2(bom, attributes=[]){
+export function autoFindAttributesV2(bom, attributes=[], attributeOrder=null){
     if(bom.length > 0){
         const cols = attributes.reduce((arr, v) => {
             const i = findIndexStringSearchInArray(bom[0], v.search);
@@ -176,10 +187,10 @@ export function autoFindAttributesV2(bom, attributes=[]){
                 return attr.header;
             });
             if(quantityI === -1){
-                headers.push({Header: 'Quantity', accessor: 'quantities'});
+                headers.push({Header: 'Quantity', accessor: 'quantity'});
             }
             console.log(headers);
-            console.log(quantityI);
+            //console.log(quantityI);
             //headers.push()
             //if()
             //cols.splice(mpnI, 1);
@@ -202,4 +213,20 @@ export function autoFindAttributesV2(bom, attributes=[]){
         }
     }
     return {found: false};
+}
+
+export function parseLoadedBomV1(bom){
+    //expect mpn and quantity object fields
+    const headers = [
+        {Header: 'Manufacturer Part Number', accessor: 'mpn'},
+        {Header: 'Quantity', accessor: 'quantity'}
+    ];
+    const b = bom.map(line => {
+        return {
+            mpn: line.mpn,
+            mpnOptions: line.mpn_options,
+            quantity: line.quantity
+        }
+    });
+    return {bom: b, headers: headers};
 }

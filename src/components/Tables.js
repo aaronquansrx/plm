@@ -15,6 +15,7 @@ import './../css/temp.css';
 import './../css/offer.css';
 import { slice } from 'lodash';
 
+
 export function BOMAPITable(props){
     //const [init, setInit] = useState(false);
     const data = useMemo(() => props.data, [props.data]);
@@ -371,7 +372,7 @@ Dropdown list for each column
 Checkbox column displayed given checkedRow array (boolean array)
 */
 export function CheckboxRowCustomColumnTable(props){
-    console.log(props);
+    //console.log(props);
     const numCols = props.sheet.length > 0 ? props.sheet[0].length : 0;
     const checkCol = (i) => 
     <td>

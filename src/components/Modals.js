@@ -280,7 +280,7 @@ export function AutoColumnOptionModal(props){
         }
     }
     function disabledProps(accessor){
-        return accessor !== 'quantity';
+        return accessor === 'mpn';
     }
     return(
     <Modal show={props.show} onHide={handleClose}>

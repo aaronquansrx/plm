@@ -64,10 +64,11 @@ export function useTableBOM(req, bom, tableHeaders, apis, apiData,
         };
         const newHeaders = tableHeaders.concat([{Header: 'Apis', accessor: 'activeApis'}]);
         return newHeaders.map((header) => {
-            if(header.accessor in headerChangeMap){
-                header.accessor = headerChangeMap[header.accessor];
+            const newHeader = {...header};
+            if(newHeader.accessor in headerChangeMap){
+                newHeader.accessor = headerChangeMap[newHeader.accessor];
             }
-            return header;
+            return newHeader;
         });
     }, [tableHeaders]);
     const [initUpdateTable, setInitUpdateTable] = useState(0);

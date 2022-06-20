@@ -43,18 +43,6 @@ export function useBOMEvaluation(bomTable, apiDataFinished){
     }
     useEffect(() => {
         if(apiDataFinished){
-            //console.log('change eval');
-            /*
-            const nquoted = bomTable.reduce((n, line) => {
-                if(line.offerEvaluation.fully_evaluated) return n+1;
-                return n;
-            }, 0);
-            const qp = bomTable.length > 0 ? 100*(nquoted/bomTable.length) : 0
-            const uqp =  100-qp;
-            const total_price = bomTable.reduce((n, line) => {
-                return n+line.offerEvaluation.total_price;
-            }, 0);
-            */
             const bp = evalAlgorithm('price');
             const lt = evalAlgorithm('leadtime');
             setBomEvaluation({

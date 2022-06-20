@@ -56,19 +56,18 @@ function BOMEditInterfaceV2(props){
         let nextState = true;
         switch(interfaceStates[editState]){
             case 'edit': // editBOM based on the editTableState
-                console.log(editTableState.columnAttributes);
                 const hasMPNHeaderSet = editTableState.columnAttributes.reduce((b, attr) => {
                     if(attr === 'Manufacturer Part Number') return true;
                     return b;
                 }, false);
                 //use has mpn header set
                 if(hasMPNHeaderSet){
-                   const {editedBom: editedBom, columnAttributes: columnAttrs} = bomEditParseV2(props.bom, editTableState.columnAttributes, editTableState.checkedRows, props.tableHeaders);
+                   const {editedBom: editedBom, columnAttributes: columnAttrs} = bomEditParseV2(props.bom, editTableState.columnAttributes, 
+                    editTableState.checkedRows, props.tableHeaders, props.headerOrder);
                    setFormattedBOMData({
                        sheet: editedBom, attrs: columnAttrs
                    });
                    //setColumnAttributes(columnAttrs);
-                   console.log(editedBom);
                 }else{
                     nextState = false;
                 }

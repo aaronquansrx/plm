@@ -64,6 +64,25 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
         }
         callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, store, currency);
     }
+    function callApisRetry(cmpn, apis, onComplete){
+        const controller = new AbortController();
+        function apiCallbackMulti(mpn, data, maxOffers){
+            if(apiData.has(mpn)){
+                const mpnDt = apiData.get(mpn);
+                const mo = Math.max(mpnDt.data.maxOffers, maxOffers);
+                const apisUpdate = apis.reduce((obj, api) => {
+                    obj[api] = {$set: data[api]};
+                    return obj;
+                }, {});
+                console.log(apisUpdate);
+                const newDa = update(mpnDt.data, {
+                    apis: apisUpdate,
+                    maxOffers: {$set: mo}
+                });
+            }
+        }
+        callApi(cmpn, serverUrl, controller, apis, apiCallbackMulti, store, currency);
+    }
     function callMpn(cmpn, onComplete){
         const controller = new AbortController();
         function apiCallbackSingle(mpn, data, maxOffers){
@@ -81,7 +100,7 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
             callApi(cmpn, serverUrl, controller, apisList, apiCallbackSingle, store, currency);
         }
     }
-    return [callApiRetry, callMpn, dataProcessing.length !== 0];
+    return [callApiRetry, callMpn, dataProcessing.length !== 0, callApisRetry];
 }
 
 export function useApiDataProgress(mpnList, apiData, store, currency, changeLock){
@@ -94,7 +113,8 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
             }, [])
         )
     });
-
+    const [dataProcessingLock, setDataProcessingLock] = useState(true);
+    const [retryLines, setRetryLines] = useState([]); 
     //const [mpnsToDo, setMpnsToDo] = useState(new Set([...mpnList]));
     useEffect(() => {
         const leftMpns = [...progress.mpnsNotEvaluated].reduce((arr, mpn) => {
@@ -112,6 +132,7 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
         setProgress(newProgress);
         if(fin){
             changeLock(false);
+            setDataProcessingLock(false);
         }
     }, [apiData]);
     useEffect(() => {
@@ -131,7 +152,10 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
     function mpnIsEvaluated(mpn){
         return progress.mpnsNotEvaluated.has(mpn);
     }
-    return progress;
+    function retryProgress(retrys){
+        
+    }
+    return [progress, dataProcessingLock, retryProgress];
 }
 
 function callApi(mpn, serverUrl, controller, apis, callback, store, currency){

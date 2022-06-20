@@ -28,7 +28,7 @@ const tableHeaders = [
     {Header:'Quantity', accessor: 'quantity'}, {Header:'Manufacturer', accessor: 'manufacturer'},
     {Header: 'Internal Part Number', accessor: 'ipn'}, {Header: 'Customer Part Number', accessor: 'cpn'},
     {Header: 'Description', accessor: 'description'}, {Header: 'Reference Designator', accessor: 'reference'},
-    {Header:'Custom', accessor: 'custom'}
+    //{Header:'Custom', accessor: 'custom'}
 ];
 const uploadHeaders = tableHeaders.reduce((arr, header, i) => {
     if(i !== 0){
@@ -36,6 +36,13 @@ const uploadHeaders = tableHeaders.reduce((arr, header, i) => {
     }
     return arr;
 }, []);
+
+const headerOrder = [
+    {Header:'Manufacturer Part Number', accessor: 'mpn'}, 
+    {Header:'Quantity', accessor: 'quantity'}, {Header:'Manufacturer', accessor: 'manufacturer'},
+    {Header: 'Internal Part Number', accessor: 'ipn'}, {Header: 'Customer Part Number', accessor: 'cpn'},
+    {Header: 'Description', accessor: 'description'}, {Header: 'Reference Designator', accessor: 'reference'}
+];
 
 function BOMInterface(props){
     const [uploadedBOM, setUploadedBOM] = useState([]); // bom uploaded from file upload interface
@@ -54,6 +61,11 @@ function BOMInterface(props){
             setInterfaceState(1);
         }
     };
+    function handleBomLoad(bom, headers){
+        //setUploadedBOM(bom);
+        setBOMData({bom: bom, attrs: headers, apis: apis});
+        setInterfaceState(2);
+    }
     function handleFinishEditBOM(bom, headers){
         setBOMData({bom: bom, attrs: headers, apis: apis});
         setInterfaceState(2);
@@ -78,9 +90,11 @@ function BOMInterface(props){
     function renderInterfaceState(){
         switch(interfaceStates[interfaceState]){
             case 'upload':
-                return <BOMFileUploadInterface onBOMUpload={handleBOMUpload} headers={uploadHeaders}/>;
+                return <BOMFileUploadInterface user={props.user} onBOMUpload={handleBOMUpload} onBomLoad={handleBomLoad} 
+                headers={uploadHeaders} headerOrder={headerOrder}/>;
             case 'edit':
-                return <BOMEditInterfaceV2 bom={uploadedBOM} onFinishEdit={handleFinishEditBOM} tableHeaders={tableHeaders}/>
+                return <BOMEditInterfaceV2 bom={uploadedBOM} onFinishEdit={handleFinishEditBOM} 
+                tableHeaders={tableHeaders} headerOrder={headerOrder}/>
                 //return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 'tool':
                 return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} 

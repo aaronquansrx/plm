@@ -1,7 +1,8 @@
 import { values } from 'lodash';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 
 import update from 'immutability-helper';
+import axios from 'axios';
 import XLSX from 'xlsx';
 
 import Button from 'react-bootstrap/Button';
@@ -11,7 +12,9 @@ import {NamedCheckBox} from './Checkbox';
 import {HoverOverlay} from './Tooltips';
 import { AutoColumnOptionModal } from './Modals';
 
-import {autoFindAttributesV2} from './../scripts/Upload';
+import {autoFindAttributesV2, parseLoadedBomV1} from './../scripts/Upload';
+
+import { useServerUrl } from '../hooks/Urls';
 
 import { BsFileEarmarkArrowDown } from "react-icons/bs";
 
@@ -36,10 +39,16 @@ const headerToAccessor = tableHeaders.reduce(function(map, obj) {
 const autoSearchStrings = {
     mpn: ['mpn', 'manufacturing part number', 'manufacturer part number'],
     quantity: ['q', 'quantity'],
+    manufacturer: ['manufacturer'],
+    ipn: ['ipn', 'internal part number'],
+    cpn: ['cpn', 'customer part number'],
+    description: ['description'],
+    reference: ['reference designator']
 
 }
 
 function BOMFileUploadInterface(props){
+    const serverUrl = useServerUrl();
     const [file, setFile] = useState(null); 
     const [uploadedSheet, setUploadedSheet] = useState([]);
     const [autoFind, setAutoFind] = useState(true);
@@ -52,6 +61,8 @@ function BOMFileUploadInterface(props){
         }
         return head;
     }));
+
+    const [savedBoms, setSavedBoms] = useState([]);
     function handleDrop(workbook, file){
         setFile(file);
         //Get first worksheet
@@ -70,6 +81,8 @@ function BOMFileUploadInterface(props){
         //console.log(passData);
         setUploadedSheet(passData);
         if(autoFind){
+            //console.log(props.headers);
+            //console.log(activatedFindAttributes);
             const attributes = activatedFindAttributes.reduce((arr, attr) => {
                 if(attr.active){
                     const searchArr = attr.accessor in autoSearchStrings ? autoSearchStrings[attr.accessor] : [];
@@ -79,6 +92,7 @@ function BOMFileUploadInterface(props){
                 }
                 return arr;
             }, []);
+            //console.log(attributes);
             const autoFound = autoFindAttributesV2(passData, attributes);
             if(autoFound.found){
                 props.onBOMUpload(passData, {found: true, headers: autoFound.headers, bom: autoFound.bom});
@@ -112,6 +126,28 @@ function BOMFileUploadInterface(props){
             }
         }));
     }
+    function handleLoadBom(i){
+        return function(){
+            const bom = savedBoms[i];
+            //console.log(savedBoms);
+            //console.log(bom);
+            const pBom = parseLoadedBomV1(bom.data);
+            console.log(pBom);
+            props.onBomLoad(pBom.bom, pBom.headers);
+        }
+    }
+    useEffect(() => {
+        if(props.user){
+            axios({
+                method: 'GET',
+                url: serverUrl+'api/loadbom',
+                params: {username: props.user},
+            }).then(response => {
+                console.log(response.data);
+                setSavedBoms(response.data.boms);
+            });
+        }
+    }, []);
     return (
         <div>
             <MyDropzone class='DropFiles' onDrop={handleDrop}>
@@ -130,10 +166,15 @@ function BOMFileUploadInterface(props){
                 <NamedCheckBox label='Auto Columns' 
                 onChange={handleCheckboxChange} checked={autoFind} value='auto'/>
                 </HoverOverlay>
-                <Button onClick={handleShowAutoOptions}>Options (Beta)</Button>
+                <Button onClick={handleShowAutoOptions}>Options</Button>
             </div>
             <AutoColumnOptionModal show={autoOptionsModal} hideAction={handleCloseOptions} 
             attributes={activatedFindAttributes} onCheckChange={handleCheckChange}/>
+            {
+                savedBoms.map((bom, i) => 
+                    <div key={i} onClick={handleLoadBom(i)}>{bom.name}</div>
+                )
+            }
         </div>
     );
 }

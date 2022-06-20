@@ -31,6 +31,8 @@ import { useServerUrl } from '../hooks/Urls';
 const buildtype = process.env.NODE_ENV;
 
 function BOMToolV3(props){
+    //console.log(props.tableHeaders);
+    //console.log(props.bom);
     const serverUrl = useServerUrl();
     const waitingOffer = {
         offers: [],
@@ -48,9 +50,9 @@ function BOMToolV3(props){
     }, []), [props.bom]);
     const [requestApis, setRequestApis] = useState(0);
     const [updateTableCall, setUpdateTableCall] = useState(0);
-    const [callApiRetry, callMpn, dataProcessing] = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
+    const [callApiRetry, callMpn, dataProcessing, callApisRetry] = useApiData(requestApis, mpnList, apisList, props.updateApiDataMap, 
          props.store, props.currency, props.changeLock, props.apiData);
-    const apiDataProgress = useApiDataProgress(mpnList, props.apiData, 
+    const [apiDataProgress, dataProcessingLock, retryProgress] = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
     function handleLeadtimeCutOff(newLTC){
@@ -257,9 +259,24 @@ function BOMToolV3(props){
         return tableBOM.map(line => {
             return {
                 mpn: line.mpns.current,
-                quantity: line.quantities.multi
+                quantity: line.quantities.multi,
+                mpn_options: line.mpnOptions
             }
         });
+    }
+    function retryAll(){
+        //const mpnList;
+        console.log(props.apiData);
+        
+        const allRetrys = tableBOM.map((line) => {
+            const retryApis = apisList.reduce((arr, api) => {
+                if(line[api].retry) arr.push(api);
+                return arr;
+            }, []);
+            return retryApis;
+        });
+        //callApisRetry
+        console.log(allRetrys);
     }
     //console.log(linesComplete);
     return(
@@ -284,12 +301,11 @@ function BOMToolV3(props){
             </div>
             { buildtype !== 'production' &&
             <div>
-            <ToggleSwitch onLabel={'APIs'} offLabel={'Best'} 
-            offStyle='primary' onChange={handleTableSwitch} checked={true}/>
             <Button onClick={handleRequestApis}>Call APIs</Button>
             <Button onClick={handleTest}>Test</Button>
             <Button onClick={exportTableJson}>Export JSON</Button>
             <Button onClick={saveBom}>Save</Button>
+            <Button onClick={retryAll}>Retry All</Button>
             </div>
             }
             </div>

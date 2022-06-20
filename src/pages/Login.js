@@ -45,7 +45,7 @@ function Login(props){
                 <Form.Label>Password</Form.Label>
                 <Form.Control type="password" placeholder="Password" />
             </Form.Group>
-            <Button variant="primary" onClick={handleLogin}>
+            <Button href={path('')} variant="primary" onClick={handleLogin}>
                 Login
             </Button>
             </Form>
