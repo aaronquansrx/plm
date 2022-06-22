@@ -5,9 +5,9 @@ import axios from 'axios';
 
 import {useServerUrl} from './../hooks/Urls';
 
-export function useApiData(req, mpnList, apisList, updateApiDataMap, 
+export function useApiData(mpnList, apisList, updateApiDataMap, 
     store, currency, changeLock, apiData){
-    const [dataProcessing, setDataProcessing] = useState([]);
+    //const [dataProcessing, setDataProcessing] = useState([]);
     const serverUrl = useServerUrl();
     const expireTime = 1000000;
     useEffect(() => {
@@ -24,17 +24,34 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
             updateApiDataMap(apiDataMap);
             //dataProcessing
         }
+        function errorCallback(mpn){
+            const now = Date.now();
+            const errorApiData = apisList.reduce((obj, api) => {
+                obj[api] = {
+                    offers: [],
+                    message: 'Server Error',
+                    retry: false
+                }
+                return obj;
+            }, {});
+            const da = {
+                apis: errorApiData,
+                maxOffers: 0
+            }
+            apiDataMap.set(mpn, {data: da, date: now});
+            updateApiDataMap(apiDataMap);
+        }
         changeLock(true);
         const dt = Date.now();
-        setDataProcessing(mpnList);
+        //setDataProcessing(mpnList);
         mpnList.forEach(mpn => {
             if(apiData.has(mpn)){
                 if(dt > apiData.get(mpn).date + expireTime){
                     //console.log('recall');
-                    callApi(mpn, serverUrl, controller, apisList, apiCallback, store, currency);
+                    callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency);
                 }
             }else{
-                callApi(mpn, serverUrl, controller, apisList, apiCallback, store, currency);
+                callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency);
             }
         });
         //setDataProcessing(false);
@@ -62,11 +79,12 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
             }
 
         }
-        callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, store, currency);
+        callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, () => {}, store, currency);
     }
-    function callApisRetry(cmpn, apis, onComplete){
+    function callApisRetry(mpnRetrys, onComplete=null){
+        const apiRetryDataMap = new Map();
         const controller = new AbortController();
-        function apiCallbackMulti(mpn, data, maxOffers){
+        function apiCallbackMulti(mpn, data, maxOffers, apis){
             if(apiData.has(mpn)){
                 const mpnDt = apiData.get(mpn);
                 const mo = Math.max(mpnDt.data.maxOffers, maxOffers);
@@ -79,9 +97,16 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
                     apis: apisUpdate,
                     maxOffers: {$set: mo}
                 });
+                //const nm = new Map();
+                apiRetryDataMap.set(mpn, {data:newDa, date: mpnDt.date});
+                updateApiDataMap(apiRetryDataMap);
+                onComplete(mpn);
             }
         }
-        callApi(cmpn, serverUrl, controller, apis, apiCallbackMulti, store, currency);
+        mpnRetrys.forEach((mr) => {
+            console.log(mr.mpn);
+            callApi(mr.mpn, serverUrl, controller, mr.apis, apiCallbackMulti, () => {onComplete(mr.mpn)}, store, currency);
+        })
     }
     function callMpn(cmpn, onComplete){
         const controller = new AbortController();
@@ -97,10 +122,10 @@ export function useApiData(req, mpnList, apisList, updateApiDataMap,
             onComplete(da);
         }
         if(!apiData.has(cmpn)){
-            callApi(cmpn, serverUrl, controller, apisList, apiCallbackSingle, store, currency);
+            callApi(cmpn, serverUrl, controller, apisList, apiCallbackSingle , () => {}, store, currency);
         }
     }
-    return [callApiRetry, callMpn, dataProcessing.length !== 0, callApisRetry];
+    return [callApiRetry, callMpn, callApisRetry];
 }
 
 export function useApiDataProgress(mpnList, apiData, store, currency, changeLock){
@@ -113,29 +138,53 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
             }, [])
         )
     });
+    const [mpnsInProgress, setMpnsInProgress] = useState(new Set(
+        mpnList.reduce((arr, mpn) => {
+            if(!apiData.has(mpn)) arr.push(mpn);
+            return arr;
+        }, []))
+    );
+    const [showProgress, setShowProgress] = useState(true);
+    const [numMpns, setNumMpns] = useState(mpnList.length);
+    const [initialDataFlag, setInitialDataFlag] = useState(true); // run initial data bom collection first time
     const [dataProcessingLock, setDataProcessingLock] = useState(true);
-    const [retryLines, setRetryLines] = useState([]); 
+    const [retryMpns, setRetryMpns] = useState(new Set()); 
     //const [mpnsToDo, setMpnsToDo] = useState(new Set([...mpnList]));
     useEffect(() => {
-        const leftMpns = [...progress.mpnsNotEvaluated].reduce((arr, mpn) => {
-            if(apiData.has(mpn)){
-                arr.push(mpn);
-            }
-            return arr;
-        }, []);
-        const fin = progress.mpnsNotEvaluated.size - leftMpns.length === 0;
+        if(initialDataFlag){
+            const leftMpns = [...progress.mpnsNotEvaluated].reduce((arr, mpn) => {
+                if(apiData.has(mpn)){
+                    arr.push(mpn);
+                }
+                return arr;
+            }, []);
+            const remMpns = [...mpnsInProgress].reduce((arr, mpn) => {
+                if(apiData.has(mpn)){
+                    arr.push(mpn);
+                }
+                return arr;
+            }, []);
+            //change to mpnsinprogress
+            const fin = progress.mpnsNotEvaluated.size - leftMpns.length === 0;
 
-        const newProgress = update(progress, {
-            finished: {$set: fin},
-            mpnsNotEvaluated: {$remove: leftMpns}
-        });
-        setProgress(newProgress);
-        if(fin){
-            changeLock(false);
-            setDataProcessingLock(false);
+            const newProgress = update(progress, {
+                finished: {$set: fin},
+                mpnsNotEvaluated: {$remove: leftMpns}
+            });
+            setMpnsInProgress(update(mpnsInProgress, {
+                $remove: remMpns
+            }));
+            //console.log(newProgress);
+            setProgress(newProgress);
+            if(fin){
+                changeLock(false);
+                setInitialDataFlag(false);
+                setDataProcessingLock(false);
+            }
         }
     }, [apiData]);
     useEffect(() => {
+        //to do for mpnsinprogress
         const mpnsEvaled = new Set(
             mpnList.reduce((arr, mpn) => {
                 if(!apiData.has(mpn)) arr.push(mpn);
@@ -148,17 +197,23 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
         });
         setProgress(resetProgress);
     }, [store, currency]);
-
-    function mpnIsEvaluated(mpn){
-        return progress.mpnsNotEvaluated.has(mpn);
+    useEffect(() => {
+        if(mpnsInProgress.size === 0) setDataProcessingLock(false);
+    }, [mpnsInProgress])
+    function retryAllStart(retrySet){
+        setNumMpns(retrySet.size);
+        setMpnsInProgress(retrySet);
+        if(retrySet.size > 0){ 
+            setDataProcessingLock(true);
+            setShowProgress(true);
+        }
     }
-    function retryProgress(retrys){
-        
+    function handleHideBar(){
+        setShowProgress(false);
     }
-    return [progress, dataProcessingLock, retryProgress];
+    return [showProgress, handleHideBar, progress, numMpns, mpnsInProgress, dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress];
 }
-
-function callApi(mpn, serverUrl, controller, apis, callback, store, currency){
+function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency){
     const apiStr = apis.join(',');
     axios({
         method: 'GET',
@@ -168,9 +223,16 @@ function callApi(mpn, serverUrl, controller, apis, callback, store, currency){
     }).then(response => {
         if(typeof response.data !== 'object'){
             console.log(mpn); //catch problematic mpns
+            errorCallback(mpn);
+            axios({
+                method: 'GET',
+                url: serverUrl+'api/errormail',
+                params: {mpn: mpn},
+                signal: controller.signal
+            });
         }else{
             const formattedApiData = formatApiData(response.data.apis);
-            callback(mpn, formattedApiData, response.data.maxOffers);
+            callback(mpn, formattedApiData, response.data.maxOffers, apis);
         }
     });
 }
