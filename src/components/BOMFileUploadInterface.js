@@ -170,11 +170,14 @@ function BOMFileUploadInterface(props){
             </div>
             <AutoColumnOptionModal show={autoOptionsModal} hideAction={handleCloseOptions} 
             attributes={activatedFindAttributes} onCheckChange={handleCheckChange}/>
+            <div>
+                Saved Boms:
             {
                 savedBoms.map((bom, i) => 
-                    <div key={i} onClick={handleLoadBom(i)}>{bom.name}</div>
+                    <Button key={i} onClick={handleLoadBom(i)}>{bom.name}</Button>
                 )
             }
+            </div>
         </div>
     );
 }

@@ -6,6 +6,7 @@ import { Accordion } from 'react-bootstrap';
 
 import { NamedCheckBox } from './Checkbox';
 import { TabPages } from './Tabs';
+import { SaveForm } from './Forms';
 
 export function ModalController(props){
     const [show, setShow] = useState(false);
@@ -323,6 +324,32 @@ export function VersionModal(props){
                 In development
                 <TabPages tabs={versions}/>
             </Modal.Body>
+        </Modal>
+    );
+}
+
+export function SaveBom(props){
+    const [saveName, setSaveName] = useState('');
+    const handleClose = () => props.hideAction();
+    function handleSave(){
+        props.save(saveName);
+        props.hideAction();
+    }
+    function changeName(sn){
+        setSaveName(sn);
+    }
+    return(
+        <Modal show={props.show} onHide={handleClose}>
+            <Modal.Header closeButton>
+                <Modal.Title>Save BOM</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <SaveForm changeName={changeName} onClose={handleClose}/>
+            </Modal.Body>
+            <Modal.Footer>
+            <Button variant="secondary" onClick={handleClose}>Close</Button>
+            <Button variant="primary" onClick={handleSave}>Save</Button>
+            </Modal.Footer>
         </Modal>
     );
 }

@@ -12,13 +12,17 @@ import {
 } from './../hooks/BOMTable';
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
 import {useBOMEvaluation} from './../hooks/BOMEvaluation';
+import {useSaveBom} from './../hooks/BOMToolButtons';
+
 import {BOMAPITableV2} from './BOMAPITable';
+
 import {NumberInput, OutsideControlCheckbox, 
     LabeledCheckbox,
     SelectSingleRadioButtons, ToggleSwitch} from './Forms';
 import { NamedCheckBox } from './Checkbox';
 import BOMExporter from './BOMExporter';
 import BOMExporterV2 from './BOMExporterV2';
+import {SaveBom} from './Modals';
 import {BOMApiProgressBarV2} from './Progress';
 
 import {downloadFile} from './../scripts/General';
@@ -52,7 +56,7 @@ function BOMToolV3(props){
     const [callApiRetry, callMpn, callApisRetry] = useApiData(mpnList, apisList, props.updateApiDataMap, 
          props.store, props.currency, props.changeLock, props.apiData);
     const [showProgress, handleHideBar, 
-        apiDataProgress,  numMpns, mpnsInProgress,
+        apiDataProgress,  numMpns, mpnsInProgress, retryMpns,
         dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress] = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
@@ -65,8 +69,7 @@ function BOMToolV3(props){
         runBOMAlgorithms(tableBOM, newLTC);
     }
     const [tableBOM, setTable, tableColumns, 
-        runBOMAlgorithms, runBOMLineAlgorithms,
-        linesComplete, retryLine, waitingRowApi,
+        runBOMAlgorithms, runBOMLineAlgorithms, retryLine, waitingRowApi,
         changeMPNLine, evalMpn, tableLock] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, apiDataProgress, 
@@ -210,6 +213,7 @@ function BOMToolV3(props){
     function handleTest(){
         //runBOMAlgorithms(tableBOM);
         console.log(props.apiData);
+        console.log(retryMpns);
     }
     function exportTableJson(){
         downloadFile('tablejson', JSON.stringify(tableBOM));
@@ -243,32 +247,8 @@ function BOMToolV3(props){
         const tbs = state ? 'APIs' : 'Best';
         setTableState(tbs);
     }
-    function saveBom(){
-        const bom = trimBom();
-        //console.log(bom);
-        //console.log(props.user);
-        if(props.user){
-            axios({
-                method: 'POST',
-                url: serverUrl+'api/saveBom',
-                data: {bom: bom, username: props.user, name: 'mybom'},
-            }).then(response => {
-                console.log(response.data);
-            });
-        }
-    }
-    function trimBom(){
-        return tableBOM.map(line => {
-            return {
-                mpn: line.mpns.current,
-                quantity: line.quantities.multi,
-                mpn_options: line.mpnOptions
-            }
-        });
-    }
     function retryAll(){
-        //const mpnList;
-        console.log(props.apiData);
+        //console.log(props.apiData);
         const mpnRetrys = mpnList.reduce((arr, mpn) => {
             if(props.apiData.has(mpn)){
                 const mpnApisData = props.apiData.get(mpn).data.apis;
@@ -284,51 +264,32 @@ function BOMToolV3(props){
         }, []);
         const retryMpns = new Set(mpnRetrys.map((ret) => ret.mpn));
         retryAllStart(retryMpns);
-        //if(retryMpns.size > 0){
-        //    setDataProcessingLock(true);
-        //}
-        //const mpnData = 
-        //retryProgress(mpnRetrys);
         function onComplete(mpn){
-            //console.log(mpn);
-            //retryMpnComplete(mpn);
             retryMpns.delete(mpn);
             setMpnsInProgress(retryMpns);
-            //console.log(retryMpns);
             if(retryMpns.size === 0){
                 setDataProcessingLock(false);
                 console.log('lock release');
                 console.log(props.apiData);
             }
         }
-        //console.log(mpnRetrys);
         callApisRetry(mpnRetrys, onComplete);
-        //mpnRetrys.forEach((mr) => {
-          //  console.log(mr.mpn);
-            //callApisRetry(mr.mpn, mr.apis, onComplete);
-        //});
-        /*
-        const mpnRetryMap = mpnRetrys.reduce((obj, mr) => {
-            obj[mr.mpn] = mr.apis;
-            return obj;
-        }, {});
-        retryAllApis(mpnRetryMap);
-        */
-
     }
+    const [showSaveModal, toggleSavedBomModal, saveBom] = useSaveBom(tableBOM, props.user);
+
     return(
         <>
         <div className='FlexNormal'>
             <div className='Hori'>
             <div>
             <NumberInput label={'Multi'} value={quantityMultiplier} onBlur={handleMultiBlur} 
-            disabled={dataProcessingLock}/>
+            disabled={tableLock}/>
             <NumberInput label={'Leadtime Cut Off'} value={leadtimeCutOff} onBlur={handleLeadtimeCutOff} 
             disabled={tableLock}/>
             </div>
             {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
             apiAttrs={apiAttrs} evaluation={bomEvaluation} algorithm={highlightMode}/>}
-            <HighlightOptions disabled={!apiDataProgress.finished} onChangeHighlight={handleChangeHighlight}
+            <HighlightOptions disabled={tableLock} onChangeHighlight={handleChangeHighlight}
             onChangeStock={handleChangeStock}
             options={highlightOptions}/>
             <BOMEval evaluation={bomEvaluation}/>
@@ -340,17 +301,18 @@ function BOMToolV3(props){
             <div>
             <Button onClick={handleTest}>Test</Button>
             <Button onClick={exportTableJson}>Export JSON</Button>
-            <Button onClick={saveBom}>Save</Button>
-            <Button onClick={retryAll}>Retry All</Button>
+            <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save Modal</Button>
+            <Button onClick={retryAll}>Retry {retryMpns.size} MPN(s)</Button>
             </div>
             }
             </div>
         </div>
+        <SaveBom show={showSaveModal} save={saveBom} hideAction={toggleSavedBomModal}/>
         <BOMApiProgressBarV2 show={showProgress} numParts={numMpns}
         onHideBar={handleHideBar} numFinished={numMpns-mpnsInProgress.size}/>
         <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
         apis={props.apis} apiAttrs={apiAttrs} functions={functions}
-        highlightMode={highlightMode}  functionLock={!apiDataProgress.finished}
+        highlightMode={highlightMode}  functionLock={tableLock}
         hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}
         tableState={tableState}/>
         </>

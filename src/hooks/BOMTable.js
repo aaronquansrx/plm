@@ -74,7 +74,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     }, [tableHeaders]);
     const [initUpdateTable, setInitUpdateTable] = useState(0);
     const [lineNumsToEvaluate, setLineNumsToEvaluate] = useState(new Set([...Array(lenBOM).keys()]));
-    const linesComplete = lenBOM - lineNumsToEvaluate.size;
+    //const linesComplete = lenBOM - lineNumsToEvaluate.size;
     useEffect(() => {
         const updateTimeout = lineNumsToEvaluate.size !== 0 
         ? setTimeout(() => setInitUpdateTable(initUpdateTable+1), 1000)
@@ -214,8 +214,6 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 fully_evaluated: false
             }
         }
-        //console.log(stockOnly.offerinfoquantityprices);
-        //console.log(notStockOnly.offerinfoquantityprices);
         const stockInfo = stockOnly.offerinfoquantityprices;
         const noStockInfo = notStockOnly.offerinfoquantityprices;
         apisList.forEach((api) => {
@@ -302,7 +300,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         setTable(newBOM);
     }
     return [tableBOM, setTable, headers, runBOMAlgorithms, 
-        runBOMLineAlgorithms, linesComplete, 
+        runBOMLineAlgorithms,
         retryForApi,
         waitingRowApi, changeMPNLine, evalMpn, tableLock
     ];

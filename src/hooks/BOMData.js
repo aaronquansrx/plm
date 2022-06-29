@@ -151,6 +151,25 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
     const [retryMpns, setRetryMpns] = useState(new Set()); 
     //const [mpnsToDo, setMpnsToDo] = useState(new Set([...mpnList]));
     useEffect(() => {
+        /*
+        const retMpns = [];
+        //console.log(apiData);
+        apiData.forEach((val, mpn) => {
+            //if(!retryMpns.has(mpn)){
+                //console.log(val);
+            const hasRetry = Object.entries(val.data.apis).reduce((b, [api, v]) => {
+                if(v.retry) return true;
+                return b;
+            }, false);
+            if(hasRetry){
+                retMpns.push(mpn);
+            }
+            //}
+        });
+        setRetryMpns(update(retryMpns, {
+            $add: retMpns
+        }));*/
+        //console.log(apiData);
         if(initialDataFlag){
             const leftMpns = [...progress.mpnsNotEvaluated].reduce((arr, mpn) => {
                 if(apiData.has(mpn)){
@@ -184,6 +203,22 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
         }
     }, [apiData]);
     useEffect(() => {
+        if(!dataProcessingLock){
+            const retMpns = new Set();
+            apiData.forEach((val, mpn) => {
+                const hasRetry = Object.entries(val.data.apis).reduce((b, [api, v]) => {
+                    if(v.retry) return true;
+                    return b;
+                }, false);
+                if(hasRetry){
+                    retMpns.add(mpn);
+                }
+            });
+            console.log(retMpns);
+            setRetryMpns(new Set(retMpns));
+        }
+    }, [dataProcessingLock]);
+    useEffect(() => {
         //to do for mpnsinprogress
         const mpnsEvaled = new Set(
             mpnList.reduce((arr, mpn) => {
@@ -198,7 +233,26 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
         setProgress(resetProgress);
     }, [store, currency]);
     useEffect(() => {
-        if(mpnsInProgress.size === 0) setDataProcessingLock(false);
+        if(mpnsInProgress.size === 0){
+            setDataProcessingLock(false);
+
+            //may not have apiData updated 
+            /*
+            console.log(apiData);
+            const retMpns = [];
+            apiData.forEach((val, mpn) => {
+                const hasRetry = Object.entries(val.data.apis).reduce((b, [api, v]) => {
+                    if(v.retry) return true;
+                    return b;
+                }, false);
+                if(hasRetry){
+                    retMpns.push(mpn);
+                }
+            });
+            console.log(retMpns);
+            setRetryMpns(new Set(retMpns));
+            */
+        }
     }, [mpnsInProgress])
     function retryAllStart(retrySet){
         setNumMpns(retrySet.size);
@@ -211,7 +265,7 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
     function handleHideBar(){
         setShowProgress(false);
     }
-    return [showProgress, handleHideBar, progress, numMpns, mpnsInProgress, dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress];
+    return [showProgress, handleHideBar, progress, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress];
 }
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency){
     const apiStr = apis.join(',');

@@ -203,3 +203,15 @@ export function ToggleSwitch(props){
         onstyle={props.onStyle} offstyle={props.offStyle}/>
     )
 }   
+
+export function SaveForm(props){
+    //const [saveName, setSaveName] = useState('');
+    function handleChange(v){
+        props.changeName(v);
+    }
+    return(
+        <Form>
+            <TextInput focus label='Name' onChange={handleChange} value={props.value}/>
+        </Form>
+    );
+}
