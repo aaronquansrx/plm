@@ -91,7 +91,6 @@ const masterFileHeaders = {
 
 const masterFileRev = reverseStringMap(masterFileHeaders);
 
-
 function decodeRef(sheet){
     const dims = sheet['!ref'].split(':');
     const letterX = dims[1].match('^[A-Z]*')[0];
@@ -120,7 +119,7 @@ export function parseCBOM(sheet){
                             titles[l] = cbomRev[trimmedCell];
                         }else if(lookupCriteria.includes(trimmedCell)){
                             titles[l] = trimmedCell;
-                            console.log(trimmedCell);
+                            //console.log(trimmedCell);
                         }
                         /*else if(trimmedCell.split(' ')[0] === '(RoHS)'){
                             titles[lt] = cbomRev['(RoHS)'];
@@ -160,7 +159,7 @@ export function parseCBOM(sheet){
         }
         cbomObjs.push(cbo);
     }
-    return {titles: titles, objs: cbomObjs};
+    return {titles: titles, objs: cbomObjs, linesStart: i};
 }
 
 export function parseMasterFile(sheet){
@@ -214,6 +213,33 @@ export function parseMasterFile(sheet){
         masterFileObjs.push(mfo);
     }
     return {titles: titles, objs: masterFileObjs};
+}
+
+export function filterMasterFile(mf){
+    const uniqueCPNs = mf.reduce((s, line) => {
+        s.add(line.CPN);
+        return s;
+    }, new Set());
+    //console.log(uniqueCPNs);
+    const quotedLines = mf.reduce((arr, line) => {
+        if('STS' in line){
+            if(line.STS === 'QUOTED'){
+                arr.push(line);
+            }
+        }
+        return arr;
+    }, []);
+    const chosenQuotes = quotedLines.reduce((arr, line) => {
+        if('QUOTA' in line){
+            if(line.QUOTA === 1){
+                arr.push(line);
+            }
+        }
+        return arr;
+    }, []);
+    //console.log(quotedLines);
+    //console.log(chosenQuotes);
+    return chosenQuotes;
 }
 
 export function parseCurrencyExchange(sheet){
