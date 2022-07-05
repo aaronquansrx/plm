@@ -63,8 +63,16 @@ export const cbomHeaders = {
     'Issue': 'Issue (Y/N)',
     'NRE': 'NRE Charges',
     'Tooling Lead Time': 'Tooling Lead Time',
-    'Comments': 'Comments'
+    'Comments': 'Comments',
+    'Usage Per': 'Usage Per'
 }
+
+const cbomExtraHeaders = [
+    'S/N', 'Level', 
+    'Commodity', 'CPN', 'UOM', 'Designator', 'Drawing', 'Supplier Name',
+    'Batch 1', 'EAU', 'Comment', 'Vix Unit Price (USD)', 'Open Market (USD)',
+    'Min (USD)', 'Quota', 'Uni/Mul'
+];
 
 const cbomRev = reverseStringMap(cbomHeaders);
 
@@ -99,7 +107,7 @@ function decodeRef(sheet){
     return [letterX, maxX, maxY];
 }
 
-export function parseCBOM(sheet){
+export function parseCBOM(sheet, extraHeaders=false){
     const [letterX, maxX, maxY] = decodeRef(sheet);
     //const cbomfile = Array(maxY).fill().map(() => Array(maxX).fill(null));
     const cbomObjs = [];
@@ -120,6 +128,8 @@ export function parseCBOM(sheet){
                         }else if(lookupCriteria.includes(trimmedCell)){
                             titles[l] = trimmedCell;
                             //console.log(trimmedCell);
+                        }else if(extraHeaders && cbomExtraHeaders.includes(trimmedCell)){
+                            titles[l] = trimmedCell;
                         }
                         /*else if(trimmedCell.split(' ')[0] === '(RoHS)'){
                             titles[lt] = cbomRev['(RoHS)'];
@@ -252,4 +262,142 @@ export function parseCurrencyExchange(sheet){
         rates[curr.v] = val.v;
     }
     return rates;
+}
+
+function excelCell(value, pattern=null){
+    const pat = pattern ? pattern : {patternType: 'none'};
+    return {
+        t: 's', v: value, r: '<t>'+value+'</t>',
+        h: value, s: pat, w: value, z: 'General'
+    };
+}
+export function fillCBom(sheet, cbom, cbomTitlesRev, currEx, startLine){
+    cbom.forEach((line, i) => {
+        sheet = fillLine(sheet, line, startLine + i + 1, cbomTitlesRev, currEx);
+        /*
+        const ln = startLine + i + 1;
+        const strLn = ln.toString();
+        Object.entries(cbomTitlesRev).forEach(([k,v]) => {
+            if(k in line){
+                const letter = v;
+                const cellCoord = letter+strLn;
+                //console.log(cellCoord);
+                if(k == 'Reach'){
+                    if(line[k] = ''){
+                        sheet[cellCoord] = '0';
+                    }else{
+                        sheet[cellCoord] = excelCell([line[k]]);
+                    }
+                }else{
+                    sheet[cellCoord] = excelCell([line[k]]);
+                }
+            }
+        });
+        const exRateCell = cbomTitlesRev['Currency Exchange Rate']+strLn;
+        const exchangeRate = currEx[line['Currency']];
+        //console.log(line['Currency']);
+        //console.log(exchangeRate);
+        if(exchangeRate){
+            sheet[exRateCell] = excelCell(exchangeRate);
+            const quotedCell = cbomTitlesRev['Quoted Price']+strLn;
+            const quotedPrice = line['Price']/exchangeRate;
+            sheet[quotedCell] = excelCell(quotedPrice);
+            const extendedCell = cbomTitlesRev['Extended Price']+strLn;
+            sheet[extendedCell] = excelCell(quotedPrice*line['Usage Per']);
+        }*/
+    });
+    return sheet;
+}
+
+export function trimCBom(sheet, cbom, cbomTitlesRev, currEx, startLine){
+    const nLines = startLine+cbom.length;
+    console.log(nLines);
+    let newSheet = Object.entries(sheet).reduce((obj, [k,v]) => {
+        if(k === '!ref'){
+            obj[k] = v;
+            console.log(v);
+        }else{
+            const lineNum = parseInt(k.match('[0-9]*$'));
+            if(lineNum <= startLine){
+                obj[k] = v;
+            }
+            //obj[k] = v;
+        }
+        return obj;
+    }, {});
+    cbom.forEach((line, i) => {
+        newSheet = fillLine(newSheet, line, startLine + i + 1, cbomTitlesRev, currEx);
+    });
+    return newSheet;
+}
+
+function fillLine(sheet, line, ln, cbomTitlesRev, currEx){
+    //const ln = startLine + i + 1;
+    const strLn = ln.toString();
+    Object.entries(cbomTitlesRev).forEach(([k,v]) => {
+        if(k in line){
+            const letter = v;
+            const cellCoord = letter+strLn;
+            //console.log(cellCoord);
+            if(k == 'Reach'){
+                if(line[k] = ''){
+                    sheet[cellCoord] = '0';
+                }else{
+                    sheet[cellCoord] = excelCell([line[k]]);
+                }
+            }else{
+                sheet[cellCoord] = excelCell([line[k]]);
+            }
+        }
+    });
+    const exRateCell = cbomTitlesRev['Currency Exchange Rate']+strLn;
+    const exchangeRate = currEx[line['Currency']];
+    //console.log(line['Currency']);
+    //console.log(exchangeRate);
+    if(exchangeRate){
+        sheet[exRateCell] = excelCell(exchangeRate);
+        const quotedCell = cbomTitlesRev['Quoted Price']+strLn;
+        const quotedPrice = line['Price']/exchangeRate;
+        sheet[quotedCell] = excelCell(quotedPrice);
+        const extendedCell = cbomTitlesRev['Extended Price']+strLn;
+        sheet[extendedCell] = excelCell(quotedPrice*line['Usage Per']);
+    }
+    return sheet;
+}
+
+export function getFilledCBom(cbom, fmf){
+    const filledCBom = [...cbom].map((cLine) => {
+        const matches = cBomToMasterLookup(cLine, fmf);
+        if(matches.length > 0){
+            const match = matches[0];
+            Object.assign(cLine, match);
+        }
+        return cLine;
+    });
+    return filledCBom;
+}
+export function getTrimmedCBom(cbom, fmf){
+    const trimmedCBom = [...cbom].reduce((arr, cLine) => {
+        const matches = cBomToMasterLookup(cLine, fmf);
+        if(matches.length > 0){
+            const match = matches[0];
+            Object.assign(cLine, match);
+            arr.push(cLine);
+        }
+        return arr;
+    }, []);
+    return trimmedCBom;
+}
+function cBomToMasterLookup(cbomLine, masterFile){
+    let matches = [...masterFile];
+    lookupCriteria.forEach((lc) => {
+        //console.log(matches);
+        matches = matches.reduce((arr, line) => {
+            if(line[lc] === cbomLine[lc]){
+                arr.push(line);
+            }
+            return arr;
+        }, []);
+    });
+    return matches;
 }

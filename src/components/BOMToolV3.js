@@ -8,7 +8,7 @@ import Button from 'react-bootstrap/Button';
 
 import {
     useTableBOM, useApiAttributes, 
-    useQuantityMultiplier
+    useQuantityMultiplier, useApiRetrys
 } from './../hooks/BOMTable';
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
 import {useBOMEvaluation} from './../hooks/BOMEvaluation';
@@ -102,13 +102,15 @@ function BOMToolV3(props){
         });
         runBOMAlgorithms(newTable);
     }
+    const [retryApi/*, retryAll*/] = useApiRetrys(retryLine, waitingRowApi, callApiRetry);
+    /*
     function retryApi(mpn, api, rowNum){
         function onComplete(newData){
             retryLine(rowNum, api, newData);
         }
         waitingRowApi(rowNum, api);
         callApiRetry(mpn, api, onComplete);
-    }
+    }*/
     function changeMPNOption(row, newMPN){
         //console.log(row+' '+newMPN);
         const newLine = {...tableBOM[row]};
@@ -269,8 +271,8 @@ function BOMToolV3(props){
             setMpnsInProgress(retryMpns);
             if(retryMpns.size === 0){
                 setDataProcessingLock(false);
-                console.log('lock release');
-                console.log(props.apiData);
+                //console.log('lock release');
+                //console.log(props.apiData);
             }
         }
         callApisRetry(mpnRetrys, onComplete);

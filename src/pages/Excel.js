@@ -1,26 +1,32 @@
 import React, {useState} from 'react';
 
 import {MyDropzone} from './../components/Dropzone';
-import {
-    parseMasterFile, parseCBOM, 
-    parseCurrencyExchange, lookupCriteria,
-    filterMasterFile
-} from './../scripts/CBOM';
 
-import { reverseStringMap } from "../scripts/General";
-
-import Button from 'react-bootstrap/Button';
-
+import { HotTable } from '@handsontable/react';
 import XLSX from 'xlsx';
 
+import './../css/main.css';
+
+const settings = {
+    licenseKey: 'non-commercial-and-evaluation',
+    //... other options
+}
+
 function Excel(props){
+    
     const [workbook, setWorkbook] = useState(null);
     const [fileName, setFileName] = useState(null);
     function handleDrop(wb, file){
         console.log(file);
         setWorkbook(wb);
+        console.log(wb);
         setFileName(file.name);
+        const cbom = wb.Sheets['CBOM'];
+        const aoa = XLSX.utils.sheet_to_json(cbom, {header: 1});
+        console.log(aoa);
+        setData(aoa);
     }
+    /*
     function handleExport(){
         const masterfile = workbook.Sheets['Master File'];
         const cb = workbook.Sheets['CBOM'];
@@ -49,20 +55,30 @@ function Excel(props){
         const cbomSheet = fillCBom(newWorkbook.Sheets['CBOM'], filledCBom, cbomTitlesRev, currEx, cbom.linesStart);
         newWorkbook.Sheets['CBOM'] = cbomSheet;
         //console.log(cbomSheet);
+        console.log(newWorkbook);
         XLSX.writeFile(newWorkbook, 'test.xlsx');
     }
-    
+    */
+    const [data, setData] = useState([]);
+    /*
+    const data = [
+        ['', 'Tesla', 'Mercedes', 'Toyota', 'Volvo'],
+        ['2019', 10, 11, 12, 13],
+        ['2020', 20, 11, 14, 13],
+        ['2021', 30, 15, 12, 13]
+    ];
+    */
     return(
         <div>
-        <MyDropzone class='DropFiles' onDrop={handleDrop}/>
+        <MyDropzone class='DropFiles' onDrop={handleDrop} styles={true}/>
         <div>
-            {fileName}
-            <Button onClick={handleExport} disabled={workbook==null}>Export</Button>
+        <HotTable data={data} colHeaders={true} rowHeaders={true} settings={settings} height={600} width={800}/>
         </div>
         </div>
     );
 }
 
+/*
 function excelCell(value, pattern=null){
     const pat = pattern ? pattern : {patternType: 'none'};
     return {
@@ -71,29 +87,47 @@ function excelCell(value, pattern=null){
     };
 }
 function fillCBom(sheet, cbom, cbomTitlesRev, currEx, startLine){
-    //console.log(cbomTitlesRev);
+    console.log(currEx);
     cbom.forEach((line, i) => {
         const ln = startLine + i + 1;
+        const strLn = ln.toString();
         Object.entries(cbomTitlesRev).forEach(([k,v]) => {
             if(k in line){
                 const letter = v;
-                const cellCoord = letter+ln.toString();
+                const cellCoord = letter+strLn;
                 //console.log(cellCoord);
-                sheet[cellCoord] = excelCell([line[k]]);
+                if(k == 'Reach'){
+                    if(line[k] = ''){
+                        sheet[cellCoord] = '';
+                    }else{
+                        sheet[cellCoord] = excelCell([line[k]]);
+                    }
+                }else{
+                    sheet[cellCoord] = excelCell([line[k]]);
+                }
             }
         });
+        const exRateCell = cbomTitlesRev['Currency Exchange Rate']+strLn;
+        const exchangeRate = currEx[line['Currency']];
+        //console.log(line['Currency']);
+        //console.log(exchangeRate);
+        if(exchangeRate){
+            sheet[exRateCell] = excelCell(exchangeRate);
+            const quotedCell = cbomTitlesRev['Quoted Price']+strLn;
+            const quotedPrice = line['Price']/exchangeRate;
+            sheet[quotedCell] = excelCell(quotedPrice);
+            const extendedCell = cbomTitlesRev['Extended Price']+strLn;
+            sheet[extendedCell] = excelCell(quotedPrice*line['Usage Per']);
+        }
     });
     return sheet;
 }
 function getFilledCBom(cbom, fmf){
     const filledCBom = [...cbom].map((cLine) => {
         const matches = cBomToMasterLookup(cLine, fmf);
-        //console.log(matches);
         if(matches.length > 0){
             const match = matches[0];
-            //console.log(match);
             Object.assign(cLine, match);
-            //console.log(cLine);
         }
         return cLine;
     });
@@ -116,6 +150,7 @@ function cBomToMasterLookup(cbomLine, masterFile){
 function masterToCBomLookup(masterLine, cbom){
 
 }
+*/
 
 
 export default Excel;

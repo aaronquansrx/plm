@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Index from './pages/Index';
 import BOMMain from './pages/BOMMain';
 import Excel from './pages/Excel';
+import CBom from './pages/CBom';
 import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
 import useUsername from './hooks/useUsername';
@@ -80,6 +81,7 @@ function App() {
         <Route path={path('partsearch')} element={<PartSearch/>}/>
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
         <Route path={path('excel')} element={<Excel/>}/>
+        <Route path={path('cbom')} element={<CBom/>}/>
         {!inProduction && <Route path={path('circular')} element={<CircularBufferTest/>}/>}
       </Routes>
     </div>

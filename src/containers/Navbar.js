@@ -57,6 +57,7 @@ export function MainNavbar(props){
                 navbarScroll
             >
                 <Nav.Link href={path("bomtool")}>BOM Tool</Nav.Link>
+                <Nav.Link href={path("cbom")}>CBOM Exporter</Nav.Link>
                 <Nav.Link href={path("partsearch")}>Part Search</Nav.Link>
             </Nav>
             {/*

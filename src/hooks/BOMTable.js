@@ -372,38 +372,16 @@ export function useQuantityMultiplier(tableBOM, apiData, apisList,
     return [multiplier, adjustQuantity, handleNewMulti];
 }
 
-/*
-export function evalLineApis(line, apis, apiData, sort='price'){
-    const mpn = line.mpns.current;
-    const mpnData = apiData.get(mpn).data;
-    const outApiData = apis.map((api) => {
-        const newOffers = mpnData.apis[api].offers.map((offer) => {
-            const {price, index} = findPriceBracket(offer.pricing, 
-                line.quantities.multi, offer.moq);
-            offer.price = price;
-            offer.prices = {
-                price: price,
-                pricing: offer.pricing,
-                pricingIndex: index
-            }
-            offer.adjustedQuantity = null;
-            return offer;
-        });
-        //const priceOrder = sortOrderPrice(newOffers);
-        //const leadTimeOrder = sortOrderLeadTime(newOffers);
-        const order = [...Array(mpnData.apis[api].offers.length).keys()];
-        //console.log(order);
-        return {
-            api: api,
-            offers: newOffers, //sortedOffers,
-            offerOrder: algorithmsInitialStructure(order),
-            message: mpnData.apis[api].message,
-            retry: mpnData.apis[api].retry
-        };
-    });
-    return outApiData;
+export function useApiRetrys(retryLine, waitingRowApi, callApiRetry){
+    function retryApi(mpn, api, rowNum){
+        function onComplete(newData){
+            retryLine(rowNum, api, newData);
+        }
+        waitingRowApi(rowNum, api);
+        callApiRetry(mpn, api, onComplete);
+    }
+    return [retryApi]//, retryAll];
 }
-*/
 
 function evalApi(quantity, singleApiData){
     const newOffers = singleApiData.offers.map((offer) => {
@@ -439,38 +417,6 @@ function evalApis(quantity, multiApiData, apisList){
     }, {});
     return evaledApis;
 }
-/*
-function newEvalApi(line, singleApiData){
-    const newOffers = singleApiData.offers.map((offer) => {
-        const {price, index} = findPriceBracket(offer.pricing, 
-            line.quantities.multi, offer.moq);
-        offer.price = price;
-        offer.prices = {
-            price: price,
-            pricing: offer.pricing,
-            pricingIndex: index
-        }
-        offer.adjustedQuantity = null;
-        return offer;
-    });
-    const priceOrder = sortOrderPrice(newOffers);
-    const leadTimeOrder = sortOrderLeadTime(newOffers);
-    return {
-        offers: newOffers, //sortedOffers,
-        offerOrder: {
-            stock: {
-                price: priceOrder,
-                leadTime: leadTimeOrder
-            },
-            noStock: {
-                price: priceOrder,
-                leadTime: leadTimeOrder
-            }
-        },
-        //message: mpnData.apis[api].message,
-        //retry: mpnData.apis[api].retry
-    };
-}*/
 
 function algorithmsInitialStructure(value=null){
     return {

@@ -24,3 +24,14 @@
     justify-content: center;
     width: 100%;
 }
+
+.Hori{
+    display: flex;
+    flex-direction: row;
+}
+
+.Overflow{
+    overflow: auto;
+    width: 100%;
+    height: 100%;
+}

@@ -2,6 +2,7 @@ import React, {useCallback} from 'react';
 
 import {useDropzone} from 'react-dropzone';
 import XLSX from 'xlsx';
+//import XLSX from 'xlsx-style';
 
 import { BsFileEarmarkArrowDown } from "react-icons/bs";
 
@@ -18,7 +19,7 @@ export function MyDropzone(props) {
       reader.onload = () => {
       // Do whatever you want with the file contents
         const binaryStr = reader.result;
-        const workbook = XLSX.read(binaryStr, {type:'binary', cellStyles:true});
+        const workbook = XLSX.read(binaryStr, {type:'binary', cellStyles:true, cellFormula:true});
         if(dropFunction) dropFunction(workbook, file);
       }
       reader.readAsBinaryString(file);
