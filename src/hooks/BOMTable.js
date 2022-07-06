@@ -372,10 +372,12 @@ export function useQuantityMultiplier(tableBOM, apiData, apisList,
     return [multiplier, adjustQuantity, handleNewMulti];
 }
 
-export function useApiRetrys(retryLine, waitingRowApi, callApiRetry){
+export function useApiRetrys(retryLine, waitingRowApi, callApiRetry, setDataProcessingLock){
     function retryApi(mpn, api, rowNum){
+        setDataProcessingLock(true);
         function onComplete(newData){
             retryLine(rowNum, api, newData);
+            setDataProcessingLock(false);
         }
         waitingRowApi(rowNum, api);
         callApiRetry(mpn, api, onComplete);

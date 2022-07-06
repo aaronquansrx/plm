@@ -102,7 +102,7 @@ function BOMToolV3(props){
         });
         runBOMAlgorithms(newTable);
     }
-    const [retryApi/*, retryAll*/] = useApiRetrys(retryLine, waitingRowApi, callApiRetry);
+    const [retryApi/*, retryAll*/] = useApiRetrys(retryLine, waitingRowApi, callApiRetry, setDataProcessingLock);
     /*
     function retryApi(mpn, api, rowNum){
         function onComplete(newData){
