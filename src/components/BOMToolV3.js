@@ -298,13 +298,13 @@ function BOMToolV3(props){
             <div>
             <LabeledCheckbox label={'Show All APIs'} 
             checked={tableState === 'APIs'} onChange={handleTableSwitch} disabled={false}/>
+            <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save Modal</Button>
+            <Button onClick={retryAll}>Retry {retryMpns.size} MPN(s)</Button>
             </div>
             { buildtype !== 'production' &&
             <div>
             <Button onClick={handleTest}>Test</Button>
             <Button onClick={exportTableJson}>Export JSON</Button>
-            <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save Modal</Button>
-            <Button onClick={retryAll}>Retry {retryMpns.size} MPN(s)</Button>
             </div>
             }
             </div>
