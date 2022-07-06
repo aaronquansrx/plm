@@ -265,7 +265,7 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
     function handleHideBar(){
         setShowProgress(false);
     }
-    return [showProgress, handleHideBar, progress, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress];
+    return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress];
 }
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency){
     const apiStr = apis.join(',');

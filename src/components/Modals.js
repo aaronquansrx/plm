@@ -6,7 +6,7 @@ import { Accordion } from 'react-bootstrap';
 
 import { NamedCheckBox } from './Checkbox';
 import { TabPages } from './Tabs';
-import { SaveForm } from './Forms';
+import { NameForm } from './Forms';
 
 export function ModalController(props){
     const [show, setShow] = useState(false);
@@ -328,6 +328,32 @@ export function VersionModal(props){
     );
 }
 
+export function NamingModal(props){
+    const [name, setName] = useState('');
+    const handleClose = () => props.hideAction();
+    function handleSubmit(){
+        props.submitAction(name);
+        props.hideAction();
+    }
+    function changeName(sn){
+        setName(sn);
+    }
+    return(
+        <Modal show={props.show} onHide={handleClose}>
+            <Modal.Header closeButton>
+                <Modal.Title>{props.title}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <NameForm label={props.nameLabel} changeName={changeName} onClose={handleClose}/>
+            </Modal.Body>
+            <Modal.Footer>
+            <Button variant="secondary" onClick={handleClose}>Close</Button>
+            <Button variant="primary" onClick={handleSubmit}>{props.submitButton}</Button>
+            </Modal.Footer>
+        </Modal>
+    );
+}
+
 export function SaveBom(props){
     const [saveName, setSaveName] = useState('');
     const handleClose = () => props.hideAction();
@@ -344,7 +370,7 @@ export function SaveBom(props){
                 <Modal.Title>Save BOM</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <SaveForm changeName={changeName} onClose={handleClose}/>
+            <NameForm label={'File Name:'} changeName={changeName} onClose={handleClose}/>
             </Modal.Body>
             <Modal.Footer>
             <Button variant="secondary" onClick={handleClose}>Close</Button>

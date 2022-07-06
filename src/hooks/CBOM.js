@@ -21,7 +21,7 @@ export function useImportCBom(){
 }
 
 export function useExportCBom(workbook){
-    function exportCBom(trimLines){
+    function exportCBom(trimLines, exportName){
         //parse workbook
         const masterfile = workbook.Sheets['Master File'];
         const cb = workbook.Sheets['CBOM'];
@@ -43,7 +43,7 @@ export function useExportCBom(workbook){
             const cbomSheet = fillCBom(newWorkbook.Sheets['CBOM'], filledCBom, cbomTitlesRev, currEx, cbom.linesStart);
             newWorkbook.Sheets['CBOM'] = cbomSheet;
         }
-        XLSX.writeFile(newWorkbook, 'test.xlsx');
+        XLSX.writeFile(newWorkbook, exportName+'.xlsx');
     }
     return [exportCBom];
 }

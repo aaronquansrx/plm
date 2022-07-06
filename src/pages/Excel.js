@@ -5,6 +5,8 @@ import {MyDropzone} from './../components/Dropzone';
 import { HotTable } from '@handsontable/react';
 import XLSX from 'xlsx';
 
+import { BsFileEarmarkArrowDown } from "react-icons/bs";
+
 import './../css/main.css';
 
 const settings = {
@@ -70,7 +72,10 @@ function Excel(props){
     */
     return(
         <div>
-        <MyDropzone class='DropFiles' onDrop={handleDrop} styles={true}/>
+        <MyDropzone class='DropFiles' onDrop={handleDrop} styles={true}>
+        <BsFileEarmarkArrowDown size={40}/>
+        <p>Drop CBOM file</p>
+        </MyDropzone>
         <div>
         <HotTable data={data} colHeaders={true} rowHeaders={true} settings={settings} height={600} width={800}/>
         </div>

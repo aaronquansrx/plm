@@ -55,8 +55,7 @@ function BOMToolV3(props){
     const [updateTableCall, setUpdateTableCall] = useState(0);
     const [callApiRetry, callMpn, callApisRetry] = useApiData(mpnList, apisList, props.updateApiDataMap, 
          props.store, props.currency, props.changeLock, props.apiData);
-    const [showProgress, handleHideBar, 
-        apiDataProgress,  numMpns, mpnsInProgress, retryMpns,
+    const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
         dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress] = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
@@ -72,12 +71,12 @@ function BOMToolV3(props){
         runBOMAlgorithms, runBOMLineAlgorithms, retryLine, waitingRowApi,
         changeMPNLine, evalMpn, tableLock] = useTableBOM(
         props.bom, props.tableHeaders, 
-        props.apis, props.apiData, apiDataProgress, 
+        props.apis, props.apiData, 
         updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock
     );
     const apiAttrs = useApiAttributes();
     const [quantityMultiplier, adjustQuantity, handleMultiBlur] = useQuantityMultiplier(tableBOM, props.apiData, 
-        apisList, runBOMAlgorithms, runBOMLineAlgorithms, apiDataProgress);
+        apisList, runBOMAlgorithms, runBOMLineAlgorithms);
     function changeActiveApis(apis, row){
         const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
             actApi.active = apis[actApi.accessor];
@@ -102,7 +101,9 @@ function BOMToolV3(props){
         });
         runBOMAlgorithms(newTable);
     }
-    const [retryApi/*, retryAll*/] = useApiRetrys(retryLine, waitingRowApi, callApiRetry, setDataProcessingLock);
+    const [retryApi, retryAll] = useApiRetrys(props.apiData, apisList, mpnList, 
+        retryLine, waitingRowApi, callApiRetry, setDataProcessingLock,
+        retryAllStart, callApisRetry, setMpnsInProgress);
     /*
     function retryApi(mpn, api, rowNum){
         function onComplete(newData){
@@ -235,7 +236,7 @@ function BOMToolV3(props){
         });
         setTable(newTable);
     }
-    const [bomEvaluation] = useBOMEvaluation(tableBOM, apiDataProgress.finished);
+    const [bomEvaluation] = useBOMEvaluation(tableBOM, tableLock);
     
     /*
     const [showProgress, setShowProgress] = useState(true);
@@ -249,6 +250,7 @@ function BOMToolV3(props){
         const tbs = state ? 'APIs' : 'Best';
         setTableState(tbs);
     }
+    /*
     function retryAll(){
         //console.log(props.apiData);
         const mpnRetrys = mpnList.reduce((arr, mpn) => {
@@ -276,7 +278,7 @@ function BOMToolV3(props){
             }
         }
         callApisRetry(mpnRetrys, onComplete);
-    }
+    }*/
     const [showSaveModal, toggleSavedBomModal, saveBom] = useSaveBom(tableBOM, props.user);
 
     return(
@@ -298,8 +300,8 @@ function BOMToolV3(props){
             <div>
             <LabeledCheckbox label={'Show All APIs'} 
             checked={tableState === 'APIs'} onChange={handleTableSwitch} disabled={false}/>
-            <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save Modal</Button>
-            <Button onClick={retryAll}>Retry {retryMpns.size} MPN(s)</Button>
+            <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save BOM</Button>
+            <Button onClick={retryAll} disabled={tableLock || retryMpns.size === 0}>Retry {retryMpns.size} MPN(s)</Button>
             </div>
             { buildtype !== 'production' &&
             <div>

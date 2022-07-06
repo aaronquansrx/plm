@@ -9,7 +9,7 @@ import {useServerUrl} from '../hooks/Urls';
 import { BOMAPITable } from '../components/Tables';
 
 export function useTableBOM(bom, tableHeaders, apis, apiData, 
-    apiDataProgress, testCall, ltco, store, currency, dataProcessingLock){
+    testCall, ltco, store, currency, dataProcessingLock){
     const serverUrl = useServerUrl();
     const lenBOM = bom.length;
     const initTableBOM = useMemo(() => {
@@ -322,7 +322,7 @@ export function useApiAttributes(){
 
 
 export function useQuantityMultiplier(tableBOM, apiData, apisList, 
-    runBOMAlgorithms, runBOMLineAlgorithms, apiDataProgress){
+    runBOMAlgorithms, runBOMLineAlgorithms){
     const [multiplier, setMultiplier] = useState(1);
     function newLineChangeQuantity(line, single, multi){
         const newLine = {...line};
@@ -343,38 +343,40 @@ export function useQuantityMultiplier(tableBOM, apiData, apisList,
     }
     function adjustQuantity(newQuantity, row){
         if(newQuantity !== tableBOM[row].quantities.single){
-            if(!apiDataProgress.mpnsNotEvaluated.has(tableBOM[row].mpns.current)){
+            //condition handled at input level with lock
+            //if(!mpnsInProgress.has(tableBOM[row].mpns.current)){
                 const newLine = newLineChangeQuantity(tableBOM[row], newQuantity, 
                     newQuantity*multiplier);
                 const newTable = update(tableBOM, {
                     [row]: {$set: newLine}
                 });
                 runBOMLineAlgorithms(row, newTable);
-            }
+            //}
         }
     }
     function handleNewMulti(newM){
         const newMulti = newM === '0' ? 1 : parseInt(newM); 
-        if(apiDataProgress.finished){
-            if(multiplier !== newMulti){
-                console.log(newMulti);
-                const newTable = [...tableBOM].map((line) => {
-                    const newLine = newLineChangeQuantity(line, line.quantities.initial,
-                        line.quantities.initial*newMulti);
-                    return newLine;
-                });
-                runBOMAlgorithms(newTable);
-                setMultiplier(newMulti);
-            }
+        //lock handled at input level
+        if(multiplier !== newMulti){
+            console.log(newMulti);
+            const newTable = [...tableBOM].map((line) => {
+                const newLine = newLineChangeQuantity(line, line.quantities.initial,
+                    line.quantities.initial*newMulti);
+                return newLine;
+            });
+            runBOMAlgorithms(newTable);
+            setMultiplier(newMulti);
         }
         return newMulti;
     }
     return [multiplier, adjustQuantity, handleNewMulti];
 }
 
-export function useApiRetrys(retryLine, waitingRowApi, callApiRetry, setDataProcessingLock){
+export function useApiRetrys(apiData, apisList, mpnList, retryLine, waitingRowApi, callApiRetry, 
+    setDataProcessingLock, retryAllStart, callApisRetry, setMpnsInProgress){
     function retryApi(mpn, api, rowNum){
         setDataProcessingLock(true);
+        setMpnsInProgress([api]);
         function onComplete(newData){
             retryLine(rowNum, api, newData);
             setDataProcessingLock(false);
@@ -382,7 +384,34 @@ export function useApiRetrys(retryLine, waitingRowApi, callApiRetry, setDataProc
         waitingRowApi(rowNum, api);
         callApiRetry(mpn, api, onComplete);
     }
-    return [retryApi]//, retryAll];
+    function retryAll(){
+        const mpnRetrys = mpnList.reduce((arr, mpn) => {
+            if(apiData.has(mpn)){
+                const mpnApisData = apiData.get(mpn).data.apis;
+                const retryApis = apisList.reduce((arrApi, api)=> {
+                    if(mpnApisData[api].retry) arrApi.push(api);
+                    return arrApi;
+                }, []);
+                if(retryApis.length > 0){
+                    arr.push({mpn: mpn, apis: retryApis});
+                }
+                return arr;
+            }
+        }, []);
+        const retryMpns = new Set(mpnRetrys.map((ret) => ret.mpn));
+        retryAllStart(retryMpns);
+        function onComplete(mpn){
+            retryMpns.delete(mpn);
+            setMpnsInProgress(retryMpns);
+            if(retryMpns.size === 0){
+                setDataProcessingLock(false);
+                //console.log('lock release');
+                //console.log(props.apiData);
+            }
+        }
+        callApisRetry(mpnRetrys, onComplete);
+    }
+    return [retryApi, retryAll]//, retryAll];
 }
 
 function evalApi(quantity, singleApiData){

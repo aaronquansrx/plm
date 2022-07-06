@@ -204,14 +204,14 @@ export function ToggleSwitch(props){
     )
 }   
 
-export function SaveForm(props){
+export function NameForm(props){
     //const [saveName, setSaveName] = useState('');
     function handleChange(v){
         props.changeName(v);
     }
     return(
         <Form>
-            <TextInput focus label='Name' onChange={handleChange} value={props.value}/>
+            <TextInput focus label={props.label} onChange={handleChange} value={props.value}/>
         </Form>
     );
 }
