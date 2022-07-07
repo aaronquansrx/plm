@@ -43,7 +43,7 @@ export function useExportCBom(workbook){
             const cbomSheet = fillCBom(newWorkbook.Sheets['CBOM'], filledCBom, cbomTitlesRev, currEx, cbom.linesStart);
             newWorkbook.Sheets['CBOM'] = cbomSheet;
         }
-        const exName = exName === '' ? 'CBom' : exportName;
+        const exName = exportName === '' ? 'CBom' : exportName;
         XLSX.writeFile(newWorkbook, exName+'.xlsx');
     }
     return [exportCBom];
