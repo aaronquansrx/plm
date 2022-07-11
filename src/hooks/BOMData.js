@@ -300,11 +300,10 @@ function formatApiData(rawApiData){
                 available: offer.Quantity.Available,
                 moq: offer.Quantity.MinimumOrder,
                 spq: offer.Quantity.OrderMulti,
-                //leadtime: offer.LeadTime,
                 leadtime: offer.LeadTimeWeeks,
-                leadtimedays: offer.LeadTimeDays,
+                //leadtimedays: offer.LeadTimeDays,
                 pricing: offer.Pricing,
-                currency: offer.Currency,
+                //currency: offer.Currency,
                 packaging: offer.Packaging
             }
         }) : [];

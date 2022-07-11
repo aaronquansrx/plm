@@ -55,7 +55,7 @@ function BOMInterface(props){
         //assume first col is MPN
         setUploadedBOM(bom);
         if(autoFind.found){
-            setBOMData({bom: autoFind.bom, attrs: autoFind.headers, apis: apis});
+            setBOMData({bom: autoFind.bom, attrs: autoFind.headers, apis: apis, type: 'auto_upload'});
             setInterfaceState(2);
         }else{
             setInterfaceState(1);
@@ -63,11 +63,11 @@ function BOMInterface(props){
     };
     function handleBomLoad(bom, headers){
         //setUploadedBOM(bom);
-        setBOMData({bom: bom, attrs: headers, apis: apis});
+        setBOMData({bom: bom, attrs: headers, apis: apis, type: 'saved'});
         setInterfaceState(2);
     }
     function handleFinishEditBOM(bom, headers){
-        setBOMData({bom: bom, attrs: headers, apis: apis});
+        setBOMData({bom: bom, attrs: headers, apis: apis, type: 'upload'});
         setInterfaceState(2);
     }
     function changeState(state, bom=[]){

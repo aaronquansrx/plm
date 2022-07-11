@@ -446,7 +446,6 @@ function MPNRenderer(props){
 }
 
 function MPNsRenderer(props){
-    //const [showSelector, setShowSelector] = useState(false);
     const [editSelector, setEditSelector] = useState(false);
     const clientUrl = useClientUrl();
     const mpn = props.value.current;

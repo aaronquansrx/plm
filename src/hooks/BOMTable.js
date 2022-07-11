@@ -416,16 +416,17 @@ export function useApiRetrys(apiData, apisList, mpnList, retryLine, waitingRowAp
 
 function evalApi(quantity, singleApiData){
     const newOffers = singleApiData.offers.map((offer) => {
-        const {price, index} = findPriceBracket(offer.pricing, 
-            quantity, offer.moq);
-        offer.price = price;
-        offer.prices = {
+        const newOffer = {...offer};
+        const {price, index} = findPriceBracket(newOffer.pricing, 
+            quantity, newOffer.moq);
+        newOffer.price = price;
+        newOffer.prices = {
             price: algorithmsStockStructure(price),
             pricing: offer.pricing,
             pricingIndex: algorithmsStockStructure(index)
         }
-        offer.adjustedQuantity = null;
-        return offer;
+        newOffer.adjustedQuantity = null;
+        return newOffer;
     }); 
     return newOffers;
 }

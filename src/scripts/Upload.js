@@ -221,11 +221,24 @@ export function parseLoadedBomV1(bom){
         {Header: 'Manufacturer Part Number', accessor: 'mpn'},
         {Header: 'Quantity', accessor: 'quantity'}
     ];
+    if(bom.length > 0){
+        if(bom[0].manufacturer) headers.push({Header: 'Manufacturer', accessor: 'manufacturer'});
+        if(bom[0].ipn) headers.push({Header: 'Internal Part Number', accessor: 'ipn'});
+        if(bom[0].cpn) headers.push({Header: 'Customer Part Number', accessor: 'cpn'});
+        if(bom[0].description) headers.push({Header: 'Description', accessor: 'description'});
+        if(bom[0].reference) headers.push({Header: 'Reference', accessor: 'reference'});
+    }
+    const accessors = headers.map((hd) => {
+        return hd.accessor;
+    });
     const b = bom.map(line => {
+        const lineObj = accessors.reduce((obj, acc) => {
+            obj[acc] = line[acc];
+            return obj;
+        }, {});
         return {
-            mpn: line.mpn,
-            mpnOptions: line.mpn_options,
-            quantity: line.quantity
+            ...lineObj,
+            mpnOptions: line.mpn_options
         }
     });
     return {bom: b, headers: headers};
