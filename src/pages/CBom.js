@@ -34,7 +34,7 @@ function CBom(){
         <div>
             {fileName}
             <div className='Hori'>
-            <Button onClick={toggleExportModal}>Export</Button>
+            <Button onClick={toggleExportModal} disabled={workbook==null}>Export</Button>
             {/*<Button onClick={handleExportCBom} disabled={workbook==null}>Export</Button>*/}
             <LabeledCheckbox className={'Pointer'} label={'Trim Lines'} checked={trimLinesChecked} onChange={handleTrimLinesChange}/>
             </div>
