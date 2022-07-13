@@ -117,8 +117,8 @@ export function MainNavbar(props){
             {/*<a href={path("login")}>Login</a><a href={path('login')} onClick={props.onLogout}>Logout</a>*/}
             {!props.username ? <span className='NavClickable' onClick={toggleLoginModal}>Login</span> : 
                 <div>
-                    <LoggedAs>Logged in as: {props.username}</LoggedAs>
-                    <span cclassName='NavClickable' onClick={props.onLogout}>Logout</span>
+                    <LoggedAs>Logged in as: {props.username} </LoggedAs>
+                    <span className='NavClickable' onClick={props.onLogout}>Logout</span>
                 </div>
             }
             </div>
