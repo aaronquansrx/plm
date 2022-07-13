@@ -6,7 +6,7 @@ import { Accordion } from 'react-bootstrap';
 
 import { NamedCheckBox } from './Checkbox';
 import { TabPages } from './Tabs';
-import { NameForm, LoginForm } from './Forms';
+import { NameForm, LoginForm, LabeledCheckbox} from './Forms';
 
 export function ModalController(props){
     const [show, setShow] = useState(false);
@@ -356,10 +356,15 @@ export function NamingModal(props){
 
 export function SaveBom(props){
     const [saveName, setSaveName] = useState('');
+    const [saveApiData, setSaveApiData] = useState(true);
     const handleClose = () => props.hideAction();
     function handleSave(){
-        props.save(saveName);
+        props.save(saveName, saveApiData);
         props.hideAction();
+    }
+    function handleChangeSaveApiData(){
+        console.log(!saveApiData);
+        setSaveApiData(!saveApiData);
     }
     function changeName(sn){
         setSaveName(sn);
@@ -371,6 +376,7 @@ export function SaveBom(props){
             </Modal.Header>
             <Modal.Body>
             <NameForm label={'File Name:'} changeName={changeName} onClose={handleClose}/>
+            <LabeledCheckbox label={'Save API Data'} checked={saveApiData} onChange={handleChangeSaveApiData}/>
             </Modal.Body>
             <Modal.Footer>
             <Button variant="secondary" onClick={handleClose}>Close</Button>

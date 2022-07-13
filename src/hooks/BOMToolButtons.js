@@ -42,12 +42,13 @@ export function useSaveBom(bom, apiData, apisList, mpnList, user, currency, stor
         }, []);
         return mpnData;
     }
-    function saveBom(name){
+    function saveBom(name, include_data=true){
         const nm = name === '' ? 'bom' : name;
         const bom = trimBom();
+        console.log(include_data);
         //console.log(bom);
-        const mpnData = getMpnData();
-        console.log(mpnData);
+        const mpnData = include_data ? getMpnData() : null;
+        //console.log(mpnData);
         if(user){
             axios({
                 method: 'POST',
