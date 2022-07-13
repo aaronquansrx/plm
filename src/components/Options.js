@@ -14,6 +14,7 @@ import { SelectSingleRadioButtons } from './Forms';
 import {useServerUrl} from './../hooks/Urls';
 
 import './../css/options.css';
+import './../css/main.css';
 
 export function StoreCurrencyOptions(props){
     const flags = {
@@ -25,7 +26,7 @@ export function StoreCurrencyOptions(props){
     const [hideCounter, setHideCounter] = useState(0);
     const activator = (
         <div className='Select'>
-        {flags[props.store]}/{props.currency}
+        {flags[props.store]}<span className='NavClickable'>/{props.currency}</span>
         </div>
     )
     useEffect(() => {

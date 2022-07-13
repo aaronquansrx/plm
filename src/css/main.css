@@ -35,3 +35,18 @@
     width: 100%;
     height: 100%;
 }
+
+.Linker{
+    color: #0d6efd;
+    cursor: pointer;
+}
+
+.NavClickable{
+    color: #94baf1;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.NavClickable:hover{
+    color: #5592ee;
+}

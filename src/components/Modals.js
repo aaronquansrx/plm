@@ -6,7 +6,7 @@ import { Accordion } from 'react-bootstrap';
 
 import { NamedCheckBox } from './Checkbox';
 import { TabPages } from './Tabs';
-import { NameForm } from './Forms';
+import { NameForm, LoginForm } from './Forms';
 
 export function ModalController(props){
     const [show, setShow] = useState(false);
@@ -378,4 +378,34 @@ export function SaveBom(props){
             </Modal.Footer>
         </Modal>
     );
+}
+
+export function Login(props){
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const handleClose = () => props.hideAction();
+    function changeUN(un){
+        setUsername(un);
+    }
+    function changePW(pw){
+        setPassword(pw);
+    }
+    function handleLogin(){
+        props.login(username, password);
+        props.hideAction();
+    }
+    return(
+        <Modal show={props.show} onHide={handleClose}>
+            <Modal.Header closeButton>
+                <Modal.Title>Login</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+            <LoginForm changeUsername={changeUN} changePassword={changePW}/>
+            </Modal.Body>
+            <Modal.Footer>
+            <Button variant="secondary" onClick={handleClose}>Close</Button>
+            <Button variant="primary" onClick={handleLogin}>Login</Button>
+            </Modal.Footer>
+        </Modal>
+    )
 }

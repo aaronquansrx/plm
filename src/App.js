@@ -1,7 +1,10 @@
 import {useState} from 'react';
 import {Routes, Route} from "react-router-dom";
 
+import {useClientUrl, useServerUrl} from './hooks/Urls';
+
 import update from 'immutability-helper';
+import axios from 'axios';
 
 //import BOMInterface from './containers/BOMInterface';
 import PartDetails from './pages/PartDetails';
@@ -30,7 +33,8 @@ const currencies = [
 const inProduction = process.env.NODE_ENV === 'production';
 
 function App() {
-  const {username, setUsername} = useUsername();
+  const serverUrl = useServerUrl();
+  const [saveUsername, username] = useUsername();
   const [showVersionModal, setShowVersionModal] = useState(false);
   const [options, setOptions] = useState({store: stores[0].id, currency: currencies[0].id});
   const [dataProcessLock, setDataProcessLock] = useState(false);
@@ -48,11 +52,25 @@ function App() {
       currency: {$set: curr}
     }));
   }
-  function handleLogin(u){
-    setUsername(u);
+  function handleLogin(u, pw){
+    axios({
+        method: 'POST',
+        url: serverUrl+'api/login',
+        data: {username: u, password: pw},
+    }).then(response => {
+        console.log(response.data);
+        saveUsername(u);
+    });
   }
   function handleLogout(){
-    setUsername(false);
+    axios({
+      method: 'POST',
+      url: serverUrl+'api/logout',
+      data: {username: username},
+    }).then(response => {
+      console.log(response.data);
+      saveUsername(false);
+    });
   }
   function handleVersionClick(){
     const version = true;
@@ -68,11 +86,11 @@ function App() {
   return (
     <div className="App">
       <MainNavbar username={username} 
-      onLogout={handleLogout} onVersionClick={handleVersionClick}
+      onVersionClick={handleVersionClick}
       store={options.store} currency={options.currency} 
       onOptionChange={handleOptionChange}
       stores={stores} currencies={currencies}
-      dataProcessLock={dataProcessLock}/>
+      dataProcessLock={dataProcessLock} onLogin={handleLogin} onLogout={handleLogout}/>
       {showVersionModal && <VersionModal show={showVersionModal} hideAction={handleHideVersion}/>}
       <Routes>
         <Route path={path('')} element={<Index/>}/>

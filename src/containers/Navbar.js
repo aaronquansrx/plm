@@ -1,8 +1,9 @@
 import React, {useEffect, useState} from 'react';
 
-import {useClientUrl} from './../hooks/Urls';
+import {useClientUrl, useServerUrl} from './../hooks/Urls';
 
 import styled from 'styled-components';
+import axios from 'axios';
 
 import Nav from 'react-bootstrap/Nav'
 import Navbar from 'react-bootstrap/Navbar';
@@ -13,6 +14,7 @@ import background from './../bg_srx_pattern_grey.gif';
 import logo from './../logo_srx_global.png';
 
 import {StoreCurrencyOptions} from './../components/Options';
+import {Login} from './../components/Modals';
 
 import './../css/main.css';
 
@@ -28,13 +30,45 @@ const LoggedAs = styled.span`
 
 export function MainNavbar(props){
     //console.log(props.username);
+    const [showLogin, setShowLogin] = useState(false);
+    const [pingCount, setPingCount] = useState(0);
     const clientUrl = useClientUrl();
+    const serverUrl = useServerUrl();
     function path(p){
         //const prePath = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
         //const server = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_SERVER : process.env.REACT_APP_SERVER_TEST;
         return clientUrl+'/'+p;
         //return server+prePath+p;
     }
+    function toggleLoginModal(){
+        setShowLogin(!showLogin);
+    }
+    function handleLogin(username, password){
+        props.onLogin(username, password);
+    }
+    function handlePing(){
+        console.log('ping');
+        if(props.username){
+            axios({
+                method: 'GET',
+                url: serverUrl+'api/ping',
+                params: {username: props.username},
+            }).then(response => {
+                console.log(response.data);
+                setPingCount(pingCount+1);
+            });
+        }
+    }
+    useEffect(() => {
+        if(props.username){
+            console.log('ping in min');
+            if(pingCount === 0){
+                handlePing();
+            }
+            setTimeout(handlePing, 60000);
+        }
+    }, [props.username, pingCount]);
+    //console.log(props.username);
     return(
         <div className='FlexNormal'>
         <SRXBackgroundNavbar bg="dark" variant='dark' expand="lg">
@@ -71,6 +105,7 @@ export function MainNavbar(props){
                 <Button variant="outline-success">Search</Button>
             </Form>
             */}
+            {/*<Nav className='nav-link' onClick={handlePing}>Ping</Nav>*/}
             <Nav className='nav-link'>
                 <StoreCurrencyOptions store={props.store} currency={props.currency} 
                 onOptionChange={props.onOptionChange} 
@@ -79,10 +114,11 @@ export function MainNavbar(props){
             </Nav>
             <Nav><Version className='nav-link' onClick={props.onVersionClick}>V1.0</Version></Nav>
             <div>
-            {!props.username ? <a href={path("login")}>Login</a> : 
+            {/*<a href={path("login")}>Login</a><a href={path('login')} onClick={props.onLogout}>Logout</a>*/}
+            {!props.username ? <span className='NavClickable' onClick={toggleLoginModal}>Login</span> : 
                 <div>
                     <LoggedAs>Logged in as: {props.username}</LoggedAs>
-                    <a href={path('login')} onClick={props.onLogout}>Logout</a>
+                    <span cclassName='NavClickable' onClick={props.onLogout}>Logout</span>
                 </div>
             }
             </div>
@@ -90,6 +126,7 @@ export function MainNavbar(props){
             </Navbar.Collapse>
         </Container>
         </SRXBackgroundNavbar>
+        {<Login show={showLogin} hideAction={toggleLoginModal} login={handleLogin}/>}
         </div>
     );
 }

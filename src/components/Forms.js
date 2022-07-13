@@ -215,3 +215,26 @@ export function NameForm(props){
         </Form>
     );
 }
+
+export function LoginForm(props){
+    function handleUsernameChange(e){
+        props.changeUsername(e.target.value);
+    }
+    function handlePasswordChange(e){
+        props.changePassword(e.target.value);
+    }
+    return(
+    <Form>
+        <Form.Group className="mb-3" controlId="formBasicUsername">
+            <Form.Label>Username</Form.Label>
+            <Form.Control type="input" placeholder="Enter username" 
+            onChange={handleUsernameChange}/>
+        </Form.Group>
+        <Form.Group className="mb-3" controlId="formBasicPassword">
+            <Form.Label>Password</Form.Label>
+            <Form.Control type="password" placeholder="Password" 
+            onChange={handlePasswordChange}/>
+        </Form.Group>
+    </Form>
+    );
+}

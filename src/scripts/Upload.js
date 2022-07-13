@@ -197,18 +197,22 @@ export function autoFindAttributesV2(bom, attributes=[], attributeOrder=null){
             //cols.splice(quantityI, 1); // remove quantity (evaluate seperate)
             //cols.shift(); // remove mpn (eval seperate)
             bom.shift(); // remove header line (contains search strings for headers)
-            const bomData = bom.map((line) => {
+            const bomData = bom.reduce((arr, line) => {
+                //console.log(line);
                 const bomLine = cols.reduce((obj, col) => {
                     obj[col.header.accessor] = line[col.index];
                     return obj;
                 }, {});
                 //overwrite any header configs with custom 
-                const mpns = line[mpnI].split(', '); // mpn
-                bomLine.mpn = mpns[0];
-                bomLine.mpnOptions = mpns;
-                bomLine.quantity = isNaN(line[quantityI]) ? 1 : parseInt(line[quantityI]); 
-                return bomLine;
-            });
+                const mpns = mpnI in line ? line[mpnI].split(', ') : null; // mpn
+                if(mpns !== null){
+                    bomLine.mpn = mpns[0];
+                    bomLine.mpnOptions = mpns;
+                    bomLine.quantity = isNaN(line[quantityI]) ? 1 : parseInt(line[quantityI]);
+                    arr.push(bomLine);
+                }
+                return arr;
+            }, []);
             return {found: true, bom: bomData, headers: headers};
         }
     }

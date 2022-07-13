@@ -63,7 +63,8 @@ function BOMInterface(props){
     };
     function handleBomLoad(bom, headers){
         //setUploadedBOM(bom);
-        setBOMData({bom: bom, attrs: headers, apis: apis, type: 'saved'});
+        //use bom id to load
+        setBOMData({bom: bom, attrs: headers, apis: apis, type: 'saved', bom_id: 0});
         setInterfaceState(2);
     }
     function handleFinishEditBOM(bom, headers){

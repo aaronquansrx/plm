@@ -48,6 +48,8 @@ const autoSearchStrings = {
 
 }
 
+const isProduction = process.env.NODE_ENV == 'production';
+
 function BOMFileUploadInterface(props){
     const serverUrl = useServerUrl();
     const [file, setFile] = useState(null); 
@@ -71,14 +73,15 @@ function BOMFileUploadInterface(props){
         const ws = workbook.Sheets[wsname];
         //Convert worksheet to array of arrays
         const data = XLSX.utils.sheet_to_json(ws, {header:1});
-        const passData = data.map(l => {
+        const passData = data.reduce((arr,l) => {
             const line = [];
             for(let i=0; i<l.length; i++){
                 const v = l[i] ? l[i].toString() : '';
                 line.push(v);
             }
-            return line;
-        });
+            if(line.length > 0) arr.push(line);
+            return arr;
+        }, []);
         //console.log(passData);
         setUploadedSheet(passData);
         if(autoFind){
@@ -138,13 +141,13 @@ function BOMFileUploadInterface(props){
         }
     }
     useEffect(() => {
-        if(props.user){
+        if(props.user && !isProduction){
             axios({
                 method: 'GET',
                 url: serverUrl+'api/loadbom',
                 params: {username: props.user},
             }).then(response => {
-                console.log(response.data);
+                console.log(response.data); //make sure this contains bom id to load
                 setSavedBoms(response.data.boms);
             });
         }
@@ -171,6 +174,7 @@ function BOMFileUploadInterface(props){
             </div>
             <AutoColumnOptionModal show={autoOptionsModal} hideAction={handleCloseOptions} 
             attributes={activatedFindAttributes} onCheckChange={handleCheckChange}/>
+            { !isProduction &&
             <div>
                 Saved Boms:
             {
@@ -179,6 +183,7 @@ function BOMFileUploadInterface(props){
                 )
             }
             </div>
+            }
         </div>
     );
 }

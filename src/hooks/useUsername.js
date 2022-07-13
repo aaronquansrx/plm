@@ -10,15 +10,13 @@ export default function useUsername(){
         const un = JSON.parse(userString);
         return un;
     }
-    console.log(getUsername());
+    //console.log(getUsername());
     const [username, setUsername] = useState(getUsername());
 
     const saveUsername = un => {
         sessionStorage.setItem('username', JSON.stringify(un));
-        setUsername(un.username);
+        setUsername(un);
+        //console.log(un);
     };
-    return {
-        setUsername: saveUsername,
-        username
-    }
+    return [saveUsername, username];
 }
