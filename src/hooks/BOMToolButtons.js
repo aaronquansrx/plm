@@ -85,6 +85,16 @@ export function useLoadBom(){
         //console.log(selBom);
         setSelectedBom(selBom);
     }
+    function deleteSelectedBom(name){
+        axios({
+            method: 'GET',
+            url: serverUrl+'api/deletebom',
+            params: {username: name, bom_id: selectedBom.id},
+        }).then(response => {
+            console.log(response.data);
+            setSavedBoms(response.data.boms);
+        });
+    }
     function loadSelectedBom(postLoad){
         //console.log(selectedBom);
         axios({
@@ -98,5 +108,6 @@ export function useLoadBom(){
         });
         
     }
-    return [savedBoms, setSavedBoms, selectedBom, changeSelectedBom, loadSelectedBom];
+    return [savedBoms, setSavedBoms, selectedBom, 
+        changeSelectedBom, loadSelectedBom, deleteSelectedBom];
 }

@@ -194,7 +194,8 @@ function BOMToolV3(props){
         }))
     }
     function handleTest(){
-        runBOMAlgorithms(tableBOM);
+        console.log(props.apiData);
+        ///runBOMAlgorithms(tableBOM);
     }
     function exportTableJson(){
         downloadFile('tablejson', JSON.stringify(tableBOM));

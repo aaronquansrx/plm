@@ -70,7 +70,7 @@ function BOMFileUploadInterface(props){
 
     //const [savedBoms, setSavedBoms] = useState([]);
     //const [currentSavedBomIndex, setCurrentSavedBomIndex] = useState(null);
-    const [savedBoms, setSavedBoms, selectedBom, changeSelectedBom, loadSelectedBom] = useLoadBom();
+    const [savedBoms, setSavedBoms, selectedBom, changeSelectedBom, loadSelectedBom, deleteSelectedBom] = useLoadBom();
     function handleDrop(workbook, file){
         setFile(file);
         //Get first worksheet
@@ -149,6 +149,9 @@ function BOMFileUploadInterface(props){
             //props.onBomLoad(pBom.bom, pBom.headers);
         //}
     }
+    function handleDeleteBom(){
+        deleteSelectedBom(props.user);
+    }
     useEffect(() => {
         if(props.user && !isProduction){
             axios({
@@ -189,6 +192,7 @@ function BOMFileUploadInterface(props){
                 Saved Boms:
                 <BomDropdown boms={savedBoms} selectedBom={selectedBom} onChange={changeSelectedBom}/>
                 <Button onClick={handleLoadBom}>Load</Button>
+                <Button onClick={handleDeleteBom}>Delete</Button>
                 <BomDetails bom={selectedBom}/>
             </div>
             }
