@@ -346,25 +346,28 @@ function fillLine(sheet, line, ln, cbomTitlesRev, currEx){
         if(k in line){
             const letter = v;
             const cellCoord = letter+strLn;
-            //console.log(cellCoord);
+            //console.log(k);
             if(k == 'Reach'){
-                if(line[k] = ''){
+                if(line[k] == ''){
                     sheet[cellCoord] = '0';
                 }else{
-                    sheet[cellCoord] = excelCell([line[k]]);
+                    sheet[cellCoord] = excelCell(line[k]);
                 }
             }else{
-                if(k == 'MOQ'){
-                    //console.log(excelCell(line[k], null, '0'));
+                if(k === 'Price'){
+                    if(line[k] != ''){
+                        sheet[cellCoord] = excelCell(line[k].toFixed(4));
+                    }else{
+                        sheet[cellCoord] = excelCell(line[k]);
+                    }
+                }else{
+                    sheet[cellCoord] = excelCell(line[k]);
                 }
-                sheet[cellCoord] = excelCell([line[k]]);
             }
         }
     });
     const exRateCell = cbomTitlesRev['Currency Exchange Rate']+strLn;
     const exchangeRate = currEx[line['Currency']];
-    //console.log(line['Currency']);
-    //console.log(exchangeRate);
     if(exchangeRate){
         sheet[exRateCell] = excelCell(exchangeRate.toFixed(4));
         const quotedCell = cbomTitlesRev['Quoted Price']+strLn;
