@@ -218,7 +218,7 @@ function BOMToolV3(props){
     
     const [tableState, setTableState] = useState('APIs');
     function handleTableSwitch(state){
-        console.log(state);
+        //console.log(state);
         const tbs = state ? 'APIs' : 'Best';
         setTableState(tbs);
     }
@@ -244,16 +244,18 @@ function BOMToolV3(props){
             <div>
             <LabeledCheckbox label={'Show All APIs'} 
             checked={tableState === 'APIs'} onChange={handleTableSwitch} disabled={false}/>
-            <HoverOverlay tooltip={props.user ? 'Save BOM' : 'Requires Login'}>
-            {/*<Button onClick={toggleSavedBomModal} disabled={!props.user}>Save BOM</Button>*/}
-            </HoverOverlay>
+            {/*<HoverOverlay tooltip={props.user ? 'Save BOM' : 'Requires Login'}>
+            <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save BOM</Button>
+            </HoverOverlay>*/}
             <Button onClick={retryAll} disabled={tableLock || retryMpns.size === 0}>Retry {retryMpns.size} MPN(s)</Button>
             </div>
             { buildtype !== 'production' &&
             <div>
             <Button onClick={handleTest}>Test</Button>
             <Button onClick={exportTableJson}>Export JSON</Button>
+            <HoverOverlay tooltip={props.user ? 'Save BOM' : 'Requires Login'} placement='auto'>
             <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save BOM</Button>
+            </HoverOverlay>
             </div>
             }
             </div>
@@ -274,21 +276,21 @@ function BOMEval(props){
     return(
         <div>
             <div>BOM Evaluation</div>
-                <div>Number Of Lines: {props.evaluation.numLines}</div>
-                <div className='Hori'>
-                    <div className='SmallPadding'>
-                        <div>Best Price</div>
-                        <div>Quoted: {props.evaluation.price.quotedPercent.toFixed(2)}%</div>
-                        <div>Unquoted: {props.evaluation.price.unquotedPercent.toFixed(2)}%</div>
-                        <div>Total Price: {props.evaluation.price.total_price.toFixed(2)}</div>
-                    </div>
-                    <div className='SmallPadding'>
-                        <div>Lead Time</div>
-                        <div>Quoted: {props.evaluation.leadtime.quotedPercent.toFixed(2)}%</div>
-                        <div>Unquoted: {props.evaluation.leadtime.unquotedPercent.toFixed(2)}%</div>
-                        <div>Total Price: {props.evaluation.leadtime.total_price.toFixed(2)}</div>
-                    </div>
+            <div>Number Of Lines: {props.evaluation.numLines}</div>
+            <div className='Hori'>
+                <div className='SmallPadding'>
+                    <div>Best Price</div>
+                    <div>Quoted: {props.evaluation.price.quotedPercent.toFixed(2)}%</div>
+                    <div>Unquoted: {props.evaluation.price.unquotedPercent.toFixed(2)}%</div>
+                    <div>Total Price: {props.evaluation.price.total_price.toFixed(2)}</div>
                 </div>
+                <div className='SmallPadding'>
+                    <div>Lead Time</div>
+                    <div>Quoted: {props.evaluation.leadtime.quotedPercent.toFixed(2)}%</div>
+                    <div>Unquoted: {props.evaluation.leadtime.unquotedPercent.toFixed(2)}%</div>
+                    <div>Total Price: {props.evaluation.leadtime.total_price.toFixed(2)}</div>
+                </div>
+            </div>
         </div>
     );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerUrl } from "./Urls";
 
 import axios from "axios";
@@ -53,7 +53,8 @@ export function useSaveBom(bom, apiData, apisList, mpnList, user, currency, stor
             axios({
                 method: 'POST',
                 url: serverUrl+'api/saveBom',
-                data: {bom: bom, mpn_data: mpnData, username: user, name: nm, currency: currency, store: store},
+                data: {bom: bom, mpn_data: mpnData, username: user, 
+                    name: nm, currency: currency, store: store},
             }).then(response => {
                 console.log(response.data);
             });
@@ -61,4 +62,41 @@ export function useSaveBom(bom, apiData, apisList, mpnList, user, currency, stor
         
     }
     return [showSaveModal, toggleSavedBomModal, saveBom];
+}
+
+export function useLoadBom(){
+    const serverUrl = useServerUrl();
+    const [savedBoms, setSavedBoms] = useState([]);
+    //const [currentSavedBomIndex, setCurrentSavedBomIndex] = useState(null);
+    const [selectedBom, setSelectedBom] = useState(null);
+    //const findSelectedBom = currentSavedBomIndex ? savedBoms[currentSavedBomIndex] : null;
+    useEffect(() =>{
+        if(savedBoms.length > 0){
+            console.log(savedBoms[0]);
+            setSelectedBom(savedBoms[0]);
+        }
+    }, [savedBoms]);
+
+    
+    function changeSelectedBom(i){
+        //console.log(i);
+        //setCurrentSavedBomIndex(i);
+        const selBom = i < savedBoms.length ? savedBoms[i] : null;
+        //console.log(selBom);
+        setSelectedBom(selBom);
+    }
+    function loadSelectedBom(postLoad){
+        //console.log(selectedBom);
+        axios({
+            method: 'GET',
+            url: serverUrl+'api/loadbom',
+            params: {bom_id: selectedBom.id, include_data: true},
+        }).then(response => {
+            console.log(response.data); //make sure this contains bom id to load
+            //setSavedBoms(response.data.boms);
+            postLoad();
+        });
+        
+    }
+    return [savedBoms, setSavedBoms, selectedBom, changeSelectedBom, loadSelectedBom];
 }

@@ -185,6 +185,7 @@ export function parseMasterFile(sheet){
                 if('v' in cell){
                     const trimmedCell = cell.v.trim();
                     if(trimmedCell in masterFileRev){
+                
                         titles[lt] = masterFileRev[trimmedCell];
                     }else if(lookupCriteria.includes(trimmedCell)){
                         titles[lt] = trimmedCell;
@@ -197,6 +198,7 @@ export function parseMasterFile(sheet){
         }
         lt = letterExcelNumberIncrement(lt);
     }
+    console.log(titles);
     for(let y=2; y<=maxY; y++){
         let l = 'A';
         const mfo = {};
@@ -214,7 +216,13 @@ export function parseMasterFile(sheet){
                     masterFile[y-1][x-1] = c;
                     */
                     if(l in titles){
-                        mfo[titles[l]] = 'v' in cellVal ? cellVal.v : '';
+                        let c = cellVal;
+                        if(titles[l] === 'MOQ'){
+                            //const c = cellVal;
+                            c.v = Math.round(c.v);
+                            //console.log(c);
+                        }
+                        mfo[titles[l]] = 'v' in c ? c.v : '';
                     }
                 //}
             }
@@ -264,11 +272,11 @@ export function parseCurrencyExchange(sheet){
     return rates;
 }
 
-function excelCell(value, pattern=null){
+function excelCell(value, pattern=null, z='General'){
     const pat = pattern ? pattern : {patternType: 'none'};
     return {
         t: 's', v: value, r: '<t>'+value+'</t>',
-        h: value, s: pat, w: value, z: 'General'
+        h: value, s: pat, w: value, z: z
     };
 }
 export function fillCBom(sheet, cbom, cbomTitlesRev, currEx, startLine){
@@ -346,6 +354,9 @@ function fillLine(sheet, line, ln, cbomTitlesRev, currEx){
                     sheet[cellCoord] = excelCell([line[k]]);
                 }
             }else{
+                if(k == 'MOQ'){
+                    //console.log(excelCell(line[k], null, '0'));
+                }
                 sheet[cellCoord] = excelCell([line[k]]);
             }
         }
@@ -355,12 +366,12 @@ function fillLine(sheet, line, ln, cbomTitlesRev, currEx){
     //console.log(line['Currency']);
     //console.log(exchangeRate);
     if(exchangeRate){
-        sheet[exRateCell] = excelCell(exchangeRate);
+        sheet[exRateCell] = excelCell(exchangeRate.toFixed(4));
         const quotedCell = cbomTitlesRev['Quoted Price']+strLn;
         const quotedPrice = line['Price']/exchangeRate;
-        sheet[quotedCell] = excelCell(quotedPrice);
+        sheet[quotedCell] = excelCell(quotedPrice.toFixed(4));
         const extendedCell = cbomTitlesRev['Extended Price']+strLn;
-        sheet[extendedCell] = excelCell(quotedPrice*line['Usage Per']);
+        sheet[extendedCell] = excelCell((quotedPrice*line['Usage Per']).toFixed(4));
     }
     return sheet;
 }

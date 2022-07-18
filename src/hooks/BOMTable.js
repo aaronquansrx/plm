@@ -221,7 +221,9 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             line[api].offerOrder.noStock.price = bestPriceNoStock.sort[api];
             line[api].offerOrder.stock.leadTime = leadTime.sort[api];
             line[api].offerOrder.noStock.leadTime = leadTimeNoStock.sort[api];
+
             line[api].offers.forEach((off, i) => {
+                //if(!stockInfo[api][i] || !noStockInfo[api][i]) return;
                 off.adjustedQuantity = {
                     stock: stockInfo[api][i].quantity,
                     noStock: noStockInfo[api][i].quantity

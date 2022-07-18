@@ -9,11 +9,14 @@ import XLSX from 'xlsx';
 import Button from 'react-bootstrap/Button';
 
 import {MyDropzone} from './Dropzone';
+import {BomDropdown} from './Dropdown';
 import {NamedCheckBox} from './Checkbox';
 import {HoverOverlay} from './Tooltips';
 import { AutoColumnOptionModal } from './Modals';
+import {useLoadBom} from './../hooks/BOMToolButtons';
 
 import {autoFindAttributesV2, parseLoadedBomV1} from './../scripts/Upload';
+import {decodeStringBoolean} from './../scripts/General';
 
 import { useServerUrl } from '../hooks/Urls';
 
@@ -65,7 +68,9 @@ function BOMFileUploadInterface(props){
         return head;
     }));
 
-    const [savedBoms, setSavedBoms] = useState([]);
+    //const [savedBoms, setSavedBoms] = useState([]);
+    //const [currentSavedBomIndex, setCurrentSavedBomIndex] = useState(null);
+    const [savedBoms, setSavedBoms, selectedBom, changeSelectedBom, loadSelectedBom] = useLoadBom();
     function handleDrop(workbook, file){
         setFile(file);
         //Get first worksheet
@@ -130,15 +135,19 @@ function BOMFileUploadInterface(props){
             }
         }));
     }
-    function handleLoadBom(i){
-        return function(){
-            const bom = savedBoms[i];
+    function handleLoadBom(){
+        function postLoad(){
+
+        }
+        loadSelectedBom(postLoad);
+        //return function(){
+            //const bom = savedBoms[i];
             //console.log(savedBoms);
             //console.log(bom);
-            const pBom = parseLoadedBomV1(bom.data);
-            console.log(pBom);
-            props.onBomLoad(pBom.bom, pBom.headers);
-        }
+            //const pBom = parseLoadedBomV1(bom.data);
+            //console.log(pBom);
+            //props.onBomLoad(pBom.bom, pBom.headers);
+        //}
     }
     useEffect(() => {
         if(props.user && !isProduction){
@@ -149,9 +158,10 @@ function BOMFileUploadInterface(props){
             }).then(response => {
                 console.log(response.data); //make sure this contains bom id to load
                 setSavedBoms(response.data.boms);
+                //if(response.data.boms > 0) changeSelectedBom(0);
             });
         }
-    }, []);
+    }, [props.user]);
     return (
         <div>
             <MyDropzone class='DropFiles' onDrop={handleDrop}>
@@ -174,14 +184,29 @@ function BOMFileUploadInterface(props){
             </div>
             <AutoColumnOptionModal show={autoOptionsModal} hideAction={handleCloseOptions} 
             attributes={activatedFindAttributes} onCheckChange={handleCheckChange}/>
-            { !isProduction &&
+            {!isProduction && props.user && 
             <div>
                 Saved Boms:
-            {
-                savedBoms.map((bom, i) => 
-                    <Button key={i} onClick={handleLoadBom(i)}>{bom.name}</Button>
-                )
+                <BomDropdown boms={savedBoms} selectedBom={selectedBom} onChange={changeSelectedBom}/>
+                <Button onClick={handleLoadBom}>Load</Button>
+                <BomDetails bom={selectedBom}/>
+            </div>
             }
+        </div>
+    );
+}
+
+function BomDetails(props){
+    
+    return(
+        <div >
+            {props.bom &&
+            <div>
+            Date: {props.bom.date_created}
+            Modified: {props.bom.last_modified}
+            Store: {props.bom.store}
+            Currency: {props.bom.currency}
+            Has Saved Data: {props.bom.has_saved_data}
             </div>
             }
         </div>

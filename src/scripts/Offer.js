@@ -131,6 +131,7 @@ export function findPartialComplete(best){
 }
 
 export function findPriceBracket(pricing, qu, moq){
+    if(pricing.length === 0) return {price: 0, index: null};
     const quantity = moq > qu ? moq : qu;
     let n = 0; //quantity bracket index
     while(n+1 < pricing.length && quantity >= pricing[n+1].BreakQuantity){

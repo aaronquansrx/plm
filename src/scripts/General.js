@@ -26,3 +26,7 @@ export function reverseStringMap(m){
     }, {});
     return revM;
 }
+
+export function decodeStringBoolean(s){
+    return s !== "0";
+}
