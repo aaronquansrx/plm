@@ -416,6 +416,16 @@ export function useApiRetrys(apiData, apisList, mpnList, retryLine, waitingRowAp
     return [retryApi, retryAll]//, retryAll];
 }
 
+export function useMpnOptions(){
+    function addMpnOption(){
+
+    }
+    function editMpnOption(){
+        
+    }
+    return [addMpnOption, editMpnOption];
+}
+
 function evalApi(quantity, singleApiData){
     const newOffers = singleApiData.offers.map((offer) => {
         const newOffer = {...offer};

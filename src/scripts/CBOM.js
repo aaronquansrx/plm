@@ -108,7 +108,7 @@ function decodeRef(sheet){
 }
 
 export function parseCBOM(sheet, extraHeaders=false){
-    const [letterX, maxX, maxY] = decodeRef(sheet);
+    const [letterX, _, maxY] = decodeRef(sheet);
     //const cbomfile = Array(maxY).fill().map(() => Array(maxX).fill(null));
     const cbomObjs = [];
     let titles = {};
@@ -148,7 +148,7 @@ export function parseCBOM(sheet, extraHeaders=false){
         let l = 'A';
         const cbo = {};
         while(l !== letterX){
-            const x = letterValue(l);
+            //const x = letterValue(l);
             const cell = l+y.toString();
             const cellVal = sheet[cell];
             if(cellVal){
@@ -173,7 +173,7 @@ export function parseCBOM(sheet, extraHeaders=false){
 }
 
 export function parseMasterFile(sheet){
-    const [letterX, maxX, maxY] = decodeRef(sheet);
+    const [letterX, _, maxY] = decodeRef(sheet);
     //const masterFile = Array(maxY).fill().map(() => Array(maxX).fill(null));
     const masterFileObjs = [];
     let titles = {};
@@ -203,7 +203,7 @@ export function parseMasterFile(sheet){
         let l = 'A';
         const mfo = {};
         while(l !== letterX){
-            const x = letterValue(l);
+            //const x = letterValue(l);
             const cell = l+y.toString();
             const cellVal = sheet[cell];
             if(cellVal){
@@ -234,10 +234,10 @@ export function parseMasterFile(sheet){
 }
 
 export function filterMasterFile(mf){
-    const uniqueCPNs = mf.reduce((s, line) => {
+    /*const uniqueCPNs = mf.reduce((s, line) => {
         s.add(line.CPN);
         return s;
-    }, new Set());
+    }, new Set());*/
     //console.log(uniqueCPNs);
     const quotedLines = mf.reduce((arr, line) => {
         if('STS' in line){
@@ -261,7 +261,7 @@ export function filterMasterFile(mf){
 }
 
 export function parseCurrencyExchange(sheet){
-    const [letterX, maxX, maxY] = decodeRef(sheet);
+    const [_, _m, maxY] = decodeRef(sheet);
     const rates = {};
     //assuming B3:C13 for currency
     for(let y=3; y<=maxY; y++){
@@ -347,15 +347,15 @@ function fillLine(sheet, line, ln, cbomTitlesRev, currEx){
             const letter = v;
             const cellCoord = letter+strLn;
             //console.log(k);
-            if(k == 'Reach'){
-                if(line[k] == ''){
+            if(k === 'Reach'){
+                if(line[k] === ''){
                     sheet[cellCoord] = '0';
                 }else{
                     sheet[cellCoord] = excelCell(line[k]);
                 }
             }else{
                 if(k === 'Price'){
-                    if(line[k] != ''){
+                    if(line[k] !== ''){
                         sheet[cellCoord] = excelCell(line[k].toFixed(4));
                     }else{
                         sheet[cellCoord] = excelCell(line[k]);

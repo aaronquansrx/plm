@@ -136,8 +136,10 @@ function BOMFileUploadInterface(props){
         }));
     }
     function handleLoadBom(){
-        function postLoad(){
-
+        function postLoad(data){
+            const plb = parseLoadedBomV1(data.bom_data);
+            //console.log(plb);
+            props.onBomLoad(plb.bom, plb.headers, data.id, data.mpn_data, data.loads_mpn_data);
         }
         loadSelectedBom(postLoad);
         //return function(){
@@ -187,7 +189,7 @@ function BOMFileUploadInterface(props){
             </div>
             <AutoColumnOptionModal show={autoOptionsModal} hideAction={handleCloseOptions} 
             attributes={activatedFindAttributes} onCheckChange={handleCheckChange}/>
-            {!isProduction && props.user && 
+            {!isProduction && props.user && savedBoms.length > 0 && 
             <div>
                 Saved Boms:
                 <BomDropdown boms={savedBoms} selectedBom={selectedBom} onChange={changeSelectedBom}/>
@@ -205,12 +207,12 @@ function BomDetails(props){
     return(
         <div >
             {props.bom &&
-            <div>
-            Date: {props.bom.date_created}
-            Modified: {props.bom.last_modified}
-            Store: {props.bom.store}
-            Currency: {props.bom.currency}
-            Has Saved Data: {props.bom.has_saved_data}
+            <div className='Vert'>
+            <span>Date: {props.bom.date_created}</span>
+            <span>Modified: {props.bom.last_modified}</span>
+            <span>Store: {props.bom.store}</span>
+            <span>Currency: {props.bom.currency}</span>
+            <span>Has Saved Data: {props.bom.has_saved_data}</span>
             </div>
             }
         </div>

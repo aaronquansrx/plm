@@ -459,6 +459,7 @@ function MPNsRenderer(props){
             }else if(e.altKey){
                 if(props.value.options.length > 1){
                     console.log('delete');
+                    props.functions.deleteOption(props.rowNum, mpn);
                 }
             }
         }
@@ -485,7 +486,7 @@ function MPNsRenderer(props){
     }
     }
     const showSelector = props.value.options.length > 1;
-    const tooltipText = 'Select MPN options | shift-click to edit | ctrl-click for details';
+    const tooltipText = 'Select MPN options | shift-click to edit | ctrl-click for details | alt-click delete current';
     return(
     <td {...props.cellProps}>
         <HoverOverlay tooltip={tooltipText}>

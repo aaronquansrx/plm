@@ -4,8 +4,11 @@ import Button from 'react-bootstrap/Button';
 
 import {MyDropzone} from './../components/Dropzone';
 import {LabeledCheckbox} from './../components/Forms';
-import {useImportCBom, useExportCBom} from './../hooks/CBOM';
+import {useImportCBom, useExportCBom, useCBomFunctions} from './../hooks/CBOM';
+import {lookupCriteria} from './../scripts/CBOM';
 import {NamingModal} from './../components/Modals';
+
+import {CBomTable} from './../components/CBomTable';
 
 import { BsFileEarmarkArrowDown } from "react-icons/bs";
 
@@ -14,8 +17,10 @@ import './../css/main.css';
 function CBom(){
     const [workbook, fileName, handleDrop] = useImportCBom();
     const [exportCBom] = useExportCBom(workbook);
+    const [lookup, lookupData] = useCBomFunctions(workbook);
     const [trimLinesChecked, setTrimLinesChecked] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [data, setData] = useState([]);
     function toggleExportModal(){
         setShowExportModal(!showExportModal);
     }
@@ -25,6 +30,11 @@ function CBom(){
     function handleExportCBom(exportName){
         exportCBom(trimLinesChecked, exportName);
     }
+
+    function handleLookup(){
+        lookup();
+    }
+
     return(
         <div>
         <MyDropzone class='DropFiles' onDrop={handleDrop} styles={true}>
@@ -41,6 +51,11 @@ function CBom(){
         </div>
         <NamingModal show={showExportModal} submitAction={handleExportCBom} hideAction={toggleExportModal}
          title='Export CBOM' nameLabel='File Name:' submitButton='Export'/>
+         <div>
+            <Button onClick={handleLookup} disabled={workbook==null}>Get Lookup Criteria</Button>
+            {' '}Master File Lookup Criteria
+            <CBomTable tableHeaders={lookupCriteria} data={lookupData}/>
+         </div>
         </div>
     );
 }

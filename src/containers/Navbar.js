@@ -13,6 +13,8 @@ import { Container } from 'react-bootstrap';
 import background from './../bg_srx_pattern_grey.gif';
 import logo from './../logo_srx_global.png';
 
+import {BiHelpCircle} from 'react-icons/bi';
+
 import {StoreCurrencyOptions} from './../components/Options';
 import {Login} from './../components/Modals';
 
@@ -106,13 +108,16 @@ export function MainNavbar(props){
             </Form>
             */}
             {/*<Nav className='nav-link' onClick={handlePing}>Ping</Nav>*/}
+            <Nav className='nav-link Help' >
+                <BiHelpCircle size={30}/>
+            </Nav>
             <Nav className='nav-link'>
                 <StoreCurrencyOptions store={props.store} currency={props.currency} 
                 onOptionChange={props.onOptionChange} 
                 stores={props.stores} currencies={props.currencies}
                 dataProcessLock={props.dataProcessLock}/>
             </Nav>
-            <Nav><Version className='nav-link' onClick={props.onVersionClick}>V1.0</Version></Nav>
+            <Nav><Version className='nav-link' onClick={props.onVersionClick}>V1.1</Version></Nav>
             <div>
             {/*<a href={path("login")}>Login</a><a href={path('login')} onClick={props.onLogout}>Logout</a>*/}
             {!props.username ? <span className='NavClickable' onClick={toggleLoginModal}>Login</span> : 

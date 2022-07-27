@@ -6,54 +6,78 @@ import axios from 'axios';
 import {useServerUrl} from './../hooks/Urls';
 
 export function useApiData(mpnList, apisList, updateApiDataMap, 
-    store, currency, changeLock, apiData){
+    store, currency, changeLock, apiData, bomType, loadData){
     //const [dataProcessing, setDataProcessing] = useState([]);
     const serverUrl = useServerUrl();
     const expireTime = 1000000;
     useEffect(() => {
-        //console.log(store);
         const controller = new AbortController();
-        const apiDataMap = new Map();
-        function apiCallback(mpn, data, maxOffers){
-            const now = Date.now();
-            const da = {
-                apis: data,
-                maxOffers: maxOffers
-            };
-            apiDataMap.set(mpn, {data:da, date: now});
-            updateApiDataMap(apiDataMap);
-            //dataProcessing
-        }
-        function errorCallback(mpn){
-            const now = Date.now();
-            const errorApiData = apisList.reduce((obj, api) => {
-                obj[api] = {
-                    offers: [],
-                    message: 'Server Error',
-                    retry: false
-                }
-                return obj;
-            }, {});
-            const da = {
-                apis: errorApiData,
-                maxOffers: 0
+        console.log(bomType);
+        if(bomType !== 'saved'){
+            //console.log(store);
+            //const controller = new AbortController();
+            const apiDataMap = new Map();
+            function apiCallback(mpn, data, maxOffers){
+                const now = Date.now();
+                const da = {
+                    apis: data,
+                    maxOffers: maxOffers
+                };
+                apiDataMap.set(mpn, {data:da, date: now});
+                updateApiDataMap(apiDataMap);
+                //dataProcessing
             }
-            apiDataMap.set(mpn, {data: da, date: now});
-            updateApiDataMap(apiDataMap);
-        }
-        changeLock(true);
-        const dt = Date.now();
-        //setDataProcessing(mpnList);
-        mpnList.forEach(mpn => {
-            if(apiData.has(mpn)){
-                if(dt > apiData.get(mpn).date + expireTime){
-                    //console.log('recall');
+            function errorCallback(mpn){
+                const now = Date.now();
+                const errorApiData = apisList.reduce((obj, api) => {
+                    obj[api] = {
+                        offers: [],
+                        message: 'Server Error',
+                        retry: false
+                    }
+                    return obj;
+                }, {});
+                const da = {
+                    apis: errorApiData,
+                    maxOffers: 0
+                }
+                apiDataMap.set(mpn, {data: da, date: now});
+                updateApiDataMap(apiDataMap);
+            }
+            changeLock(true);
+            const dt = Date.now();
+            //setDataProcessing(mpnList);
+            mpnList.forEach(mpn => {
+                if(apiData.has(mpn)){
+                    if(dt > apiData.get(mpn).date + expireTime){
+                        //console.log('recall');
+                        callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency);
+                    }
+                }else{
                     callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency);
                 }
-            }else{
-                callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency);
+            });
+        }else{
+            //check keys of loaddata
+            const ad = loadData.api_data;
+            const kk = Object.keys(ad);
+            if(kk.length === mpnList.length){
+                //console.log(loadData);
+                const now = Date.now();
+                const apiDataMap = new Map();
+                for(const mpn in ad){
+                    const da = {
+                        apis: apisList.reduce((obj, api) => {
+                            obj[api] = ad[mpn][api];
+                            return obj;
+                        }, {}),
+                        maxOffers: ad[mpn].maxOffers
+                    };
+                    apiDataMap.set(mpn, {data: da, date: now});
+                }
+                updateApiDataMap(apiDataMap);
             }
-        });
+        }
         //setDataProcessing(false);
         return () => {
             controller.abort();

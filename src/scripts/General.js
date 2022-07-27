@@ -27,6 +27,15 @@ export function reverseStringMap(m){
     return revM;
 }
 
+export function trimObjects(data, fields){
+    return data.map((line) => {
+        return fields.reduce((obj, f) => {
+            obj[f] = line[f];
+            return obj;
+        }, {});
+    });
+}
+
 export function decodeStringBoolean(s){
     return s !== "0";
 }

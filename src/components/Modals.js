@@ -307,12 +307,53 @@ export function VersionModal(props){
     const handleClose = () => props.hideAction();
     const versions = [
         {
+            name: '1.1',
+            content: 
+            <div>
+                <h3>Version 1.1</h3>
+                <p>
+                    New CBOM exporter - drag and drop a CBOM file with completed master file and export with a filled CBOM
+                </p>
+                <p>
+                    Login system
+                </p>
+                <p>
+                    Saving and loading BOM's in the BOM Tool (requires login)
+                </p>
+
+            </div>
+        },
+        {
             name: '1.0',
-            content: <div>Version 1.0</div>
+            content: 
+            <div>
+                <h3>Version 1.0</h3>
+                <p>
+                    Full stable release of BOM Tool
+                </p>
+                <p>
+                    Introducing user options - quantity multiplier, in stock only, API filtering, line locking, and MPN options
+                </p>
+                <p>
+                    Exporting of offer data into an excel file
+                </p>
+                <p>
+                    Improved reliability of input files and data
+                </p>
+                <p>
+                    Choosing of region and currency options
+                </p>
+            </div>
         },
         {
             name: '0.0',
-            content: 'o'
+            content: 
+            <div>
+                <h3>Version 0.0</h3>
+                <p>
+                    Demo version of BOM Tool - import a excel file and search MPNs for offers from APIs 
+                </p>
+            </div>
         }
     ]
     return(
@@ -321,7 +362,6 @@ export function VersionModal(props){
                 <Modal.Title>Version Details</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                In development
                 <TabPages tabs={versions}/>
             </Modal.Body>
         </Modal>
@@ -357,14 +397,18 @@ export function NamingModal(props){
 export function SaveBom(props){
     const [saveName, setSaveName] = useState('');
     const [saveApiData, setSaveApiData] = useState(true);
+    const [overWriteSave, setOverwriteSave] = useState(false);
     const handleClose = () => props.hideAction();
     function handleSave(){
-        props.save(saveName, saveApiData);
+        props.save(saveName, saveApiData, overWriteSave);
         props.hideAction();
     }
     function handleChangeSaveApiData(){
-        console.log(!saveApiData);
+        //console.log(!saveApiData);
         setSaveApiData(!saveApiData);
+    }
+    function handleChangeOverwriteSave(){
+        setOverwriteSave(!overWriteSave);
     }
     function changeName(sn){
         setSaveName(sn);
@@ -377,6 +421,7 @@ export function SaveBom(props){
             <Modal.Body>
             <NameForm label={'File Name:'} changeName={changeName} onClose={handleClose}/>
             <LabeledCheckbox label={'Save API Data'} checked={saveApiData} onChange={handleChangeSaveApiData}/>
+            {props.showOverwrite && <LabeledCheckbox label={'Overwrite Save'} checked={overWriteSave} onChange={handleChangeOverwriteSave}/>}
             </Modal.Body>
             <Modal.Footer>
             <Button variant="secondary" onClick={handleClose}>Close</Button>

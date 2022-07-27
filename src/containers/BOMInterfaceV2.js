@@ -47,6 +47,7 @@ const headerOrder = [
 function BOMInterface(props){
     const [uploadedBOM, setUploadedBOM] = useState([]); // bom uploaded from file upload interface
     const [BOMData, setBOMData] = useState({bom: [], attrs: [], apis: apis});
+    const [loadData, setLoadData] = useState({bom_id: null, api_data: null});
     const [interfaceState, setInterfaceState] = useState(0);
     const [initialBOMEdit, setInitialBOMEdit] = useState([]);
     const [apiData, setApiData] = useState(new Map());
@@ -61,10 +62,13 @@ function BOMInterface(props){
             setInterfaceState(1);
         }
     };
-    function handleBomLoad(bom, headers){
+    function handleBomLoad(bom, headers, bom_id, api_data, has_saved_data){
         //setUploadedBOM(bom);
         //use bom id to load
-        setBOMData({bom: bom, attrs: headers, apis: apis, type: 'saved', bom_id: 0});
+        const tpString = has_saved_data ? 'saved' : 'saved_nodata';
+        const obj = {bom: bom, attrs: headers, apis: apis, type: tpString};
+        setLoadData({bom_id: bom_id, api_data: api_data});
+        setBOMData(obj);
         setInterfaceState(2);
     }
     function handleFinishEditBOM(bom, headers){
@@ -100,7 +104,8 @@ function BOMInterface(props){
             case 'tool':
                 return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} 
                 updateApiDataMap={updateApiDataMap} apiData={getApiData()} user={props.user}
-                store={props.store} currency={props.currency} changeLock={props.changeLock}/>;
+                store={props.store} currency={props.currency} changeLock={props.changeLock}
+                loadData={loadData} bomType={BOMData.type}/>;
             default:
                 return "Unknown interface state";
         }

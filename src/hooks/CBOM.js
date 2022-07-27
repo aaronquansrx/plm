@@ -2,12 +2,12 @@ import {useState, useEffect} from 'react';
 
 import XLSX from 'xlsx';
 
-import { reverseStringMap } from "../scripts/General";
+import { reverseStringMap, trimObjects } from "./../scripts/General";
 import {
     parseMasterFile, parseCBOM,
     parseCurrencyExchange,
     filterMasterFile, getFilledCBom,
-    fillCBom, getTrimmedCBom, trimCBom
+    fillCBom, getTrimmedCBom, trimCBom, lookupCriteria
 } from './../scripts/CBOM';
 
 export function useImportCBom(){
@@ -47,4 +47,18 @@ export function useExportCBom(workbook){
         XLSX.writeFile(newWorkbook, exName+'.xlsx');
     }
     return [exportCBom];
+}
+
+export function useCBomFunctions(workbook){
+    const [lookupData, setLookupData] = useState([]);
+    function lookup(){
+        const masterfile = workbook.Sheets['Master File'];
+        const mf = parseMasterFile(masterfile);
+        //const filteredMasterFile = filterMasterFile(mf.objs);
+        //console.log(filteredMasterFile);
+        const tr = trimObjects(mf.objs, lookupCriteria);
+        console.log(tr);
+        setLookupData(tr);
+    }
+    return [lookup, lookupData];
 }

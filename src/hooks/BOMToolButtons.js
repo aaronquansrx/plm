@@ -4,7 +4,7 @@ import { useServerUrl } from "./Urls";
 import axios from "axios";
 
 
-export function useSaveBom(bom, apiData, apisList, mpnList, user, currency, store){
+export function useSaveBom(bom, apiData, apisList, mpnList, user, currency, store, bomId){
     const serverUrl = useServerUrl();
     const [showSaveModal, setShowSaveModal] = useState(false);
     function toggleSavedBomModal(){
@@ -42,19 +42,21 @@ export function useSaveBom(bom, apiData, apisList, mpnList, user, currency, stor
         }, []);
         return mpnData;
     }
-    function saveBom(name, include_data=true){
+    function saveBom(name, include_data=true, overwrite=false){
         const nm = name === '' ? 'bom' : name;
         const bom = trimBom();
-        console.log(include_data);
+        //console.log(include_data);
         //console.log(bom);
         const mpnData = include_data ? getMpnData() : null;
         //console.log(mpnData);
+        //console.log(bomId);
+        const bd = overwrite ? bomId : null;
         if(user){
             axios({
                 method: 'POST',
                 url: serverUrl+'api/saveBom',
                 data: {bom: bom, mpn_data: mpnData, username: user, 
-                    name: nm, currency: currency, store: store},
+                    name: nm, currency: currency, store: store, bom_id: bd},
             }).then(response => {
                 console.log(response.data);
             });
@@ -100,11 +102,11 @@ export function useLoadBom(){
         axios({
             method: 'GET',
             url: serverUrl+'api/loadbom',
-            params: {bom_id: selectedBom.id, include_data: true},
+            params: {bom_id: selectedBom.id, /*include_data: true*/},
         }).then(response => {
             console.log(response.data); //make sure this contains bom id to load
             //setSavedBoms(response.data.boms);
-            postLoad();
+            postLoad(response.data);
         });
         
     }

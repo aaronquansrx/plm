@@ -30,6 +30,21 @@
     flex-direction: row;
 }
 
+.Vert{
+    display: flex;
+    flex-direction: column;
+}
+
+.Help{
+    color: #94baf1;
+    align-items: center;
+    cursor: pointer;
+}
+.Help:hover{
+    color: #5592ee;
+}
+
+
 .Overflow{
     overflow: auto;
     width: 100%;

@@ -8,7 +8,8 @@ import Button from 'react-bootstrap/Button';
 
 import {
     useTableBOM, useApiAttributes, 
-    useQuantityMultiplier, useApiRetrys
+    useQuantityMultiplier, useApiRetrys,
+    useMpnOptions
 } from './../hooks/BOMTable';
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
 import {useBOMEvaluation} from './../hooks/BOMEvaluation';
@@ -53,9 +54,10 @@ function BOMToolV3(props){
         line.mpnOptions.forEach(mpn => arr.push(mpn));
         return arr;
     }, []), [props.bom]);
+    const isLoadedBom = props.bomType === 'saved' || props.bomType === 'saved_nodata';
     const [updateTableCall, setUpdateTableCall] = useState(0);
     const [callApiRetry, callMpn, callApisRetry] = useApiData(mpnList, apisList, props.updateApiDataMap, 
-         props.store, props.currency, props.changeLock, props.apiData);
+         props.store, props.currency, props.changeLock, props.apiData, props.bomType, props.loadData);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
         dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress] = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency, props.changeLock);
@@ -110,6 +112,7 @@ function BOMToolV3(props){
         const newLine = {...tableBOM[row]};
         changeMPNLine(row, newLine, newMPN);
     }
+    const [addMpnOption, editMpnOption] = useMpnOptions();
     function addMPNOption(row){
         const newLine = {...tableBOM[row]};
         newLine.mpns.current = '';
@@ -224,8 +227,7 @@ function BOMToolV3(props){
         setTableState(tbs);
     }
     const [showSaveModal, toggleSavedBomModal, saveBom] = useSaveBom(tableBOM, props.apiData, apisList, mpnList, 
-        props.user, props.currency, props.store);
-
+        props.user, props.currency, props.store, props.loadData.bom_id);
     return(
         <>
         <div className='FlexNormal'>
@@ -261,7 +263,7 @@ function BOMToolV3(props){
             }
             </div>
         </div>
-        <SaveBom show={showSaveModal} save={saveBom} hideAction={toggleSavedBomModal}/>
+        <SaveBom show={showSaveModal} save={saveBom} showOverwrite={isLoadedBom} hideAction={toggleSavedBomModal}/>
         <BOMApiProgressBarV2 show={showProgress} numParts={numMpns}
         onHideBar={handleHideBar} numFinished={numMpns-mpnsInProgress.size}/>
         <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
