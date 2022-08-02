@@ -59,9 +59,12 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
             });
         }else{
             //check keys of loaddata
+            console.log('load data');
             const ad = loadData.api_data;
-            const kk = Object.keys(ad);
-            if(kk.length === mpnList.length){
+            //const kk = Object.keys(ad);
+            //console.log(kk);
+            //console.log(mpnList);
+            //if(kk.length === mpnList.length){
                 //console.log(loadData);
                 const now = Date.now();
                 const apiDataMap = new Map();
@@ -76,7 +79,7 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
                     apiDataMap.set(mpn, {data: da, date: now});
                 }
                 updateApiDataMap(apiDataMap);
-            }
+            //}
         }
         //setDataProcessing(false);
         return () => {
@@ -128,7 +131,7 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
             }
         }
         mpnRetrys.forEach((mr) => {
-            console.log(mr.mpn);
+            //console.log(mr.mpn);
             callApi(mr.mpn, serverUrl, controller, mr.apis, apiCallbackMulti, () => {onComplete(mr.mpn)}, store, currency);
         })
     }

@@ -302,7 +302,12 @@ export function AutoColumnOptionModal(props){
     </Modal>
     );
 }
+/*
+<p>
+                    Saving and loading BOM's in the BOM Tool (requires login)
+                </p>
 
+*/
 export function VersionModal(props){
     const handleClose = () => props.hideAction();
     const versions = [
@@ -317,10 +322,7 @@ export function VersionModal(props){
                 <p>
                     Login system
                 </p>
-                <p>
-                    Saving and loading BOM's in the BOM Tool (requires login)
-                </p>
-
+                
             </div>
         },
         {

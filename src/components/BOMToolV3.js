@@ -90,6 +90,7 @@ function BOMToolV3(props){
                 activeApis: {$set: newActiveApis}
             }
         });
+        //console.log(newActiveApis);
         runBOMLineAlgorithms(row, newTable);
     }
     function changeActiveApisGlobal(apis){
@@ -112,7 +113,8 @@ function BOMToolV3(props){
         const newLine = {...tableBOM[row]};
         changeMPNLine(row, newLine, newMPN);
     }
-    const [addMpnOption, editMpnOption] = useMpnOptions();
+    const [addMpnOption, editMpnOption, deleteMpnOption] = useMpnOptions(tableBOM, props.apiData,
+        apisList, setTable, runBOMLineAlgorithms, callMpn, changeMPNLine);
     function addMPNOption(row){
         const newLine = {...tableBOM[row]};
         newLine.mpns.current = '';
@@ -135,7 +137,7 @@ function BOMToolV3(props){
         newLine.mpns.current = newMpn;
         function onComp(data){
             const ea = evalMpn(newLine, data);
-            console.log(ea);
+            //console.log(ea);
             Object.assign(newLine, ea);
             newLine.maxOffers = data.maxOffers;
             const newBOM = update(tableBOM, {
@@ -163,19 +165,36 @@ function BOMToolV3(props){
         newLine.mpns.options.splice(i, 1)
         changeMPNLine(row, newLine, newMpn);
     }
+    function requestOctopart(row, callback){
+        //console.log('octopart');
+        //console.log(row);
+        const mpn = tableBOM[row].mpns.current;
+        
+        axios({
+            method: 'GET',
+            url: serverUrl+'api/octopart',
+            params: {search: mpn, currency: props.currency, store: props.store},
+            //signal: controller.signal
+        }).then(response => {
+            //console.log(response.data);
+            callback(mpn, response.data, props.currency);
+        });
+        
+    }
     const functions = {
         mpns: {
             changeOption: changeMPNOption,
-            addOption: addMPNOption,
-            editOption: editMPNOption,
-            deleteOption: deleteMPNOption
+            addOption: addMpnOption,
+            editOption: editMpnOption,
+            deleteOption: deleteMpnOption
         },
         quantities: {
             adjustQuantity: adjustQuantity
         },
         activeApis: {
             submitNewApis: changeActiveApis,
-            submitGlobalApis: changeActiveApisGlobal
+            submitGlobalApis: changeActiveApisGlobal,
+            requestOctopart: requestOctopart
         },
         api: {
             retry: retryApi
@@ -222,7 +241,6 @@ function BOMToolV3(props){
     
     const [tableState, setTableState] = useState('APIs');
     function handleTableSwitch(state){
-        //console.log(state);
         const tbs = state ? 'APIs' : 'Best';
         setTableState(tbs);
     }

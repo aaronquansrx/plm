@@ -102,7 +102,7 @@ export function autoFindAttributes(bom, attributes=[]){
                 });
                 return arr;
             }, []);
-            console.log(headers);
+            //console.log(headers);
             return {found: true, bom: bomData, headers: headers};
         }
     }
@@ -189,7 +189,7 @@ export function autoFindAttributesV2(bom, attributes=[], attributeOrder=null){
             if(quantityI === -1){
                 headers.push({Header: 'Quantity', accessor: 'quantity'});
             }
-            console.log(headers);
+            //console.log(headers);
             //console.log(quantityI);
             //headers.push()
             //if()

@@ -77,10 +77,12 @@ function BOMFileUploadInterface(props){
         const wsname = workbook.SheetNames[0];
         const ws = workbook.Sheets[wsname];
         //Convert worksheet to array of arrays
+        const colRange = XLSX.utils.decode_range(ws['!ref']).e.c+1;
+        //console.log(range);
         const data = XLSX.utils.sheet_to_json(ws, {header:1});
         const passData = data.reduce((arr,l) => {
             const line = [];
-            for(let i=0; i<l.length; i++){
+            for(let i=0; i<colRange; i++){
                 const v = l[i] ? l[i].toString() : '';
                 line.push(v);
             }

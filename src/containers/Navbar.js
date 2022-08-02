@@ -14,6 +14,7 @@ import background from './../bg_srx_pattern_grey.gif';
 import logo from './../logo_srx_global.png';
 
 import {BiHelpCircle} from 'react-icons/bi';
+import { HoverOverlay } from '../components/Tooltips';
 
 import {StoreCurrencyOptions} from './../components/Options';
 import {Login} from './../components/Modals';
@@ -109,7 +110,7 @@ export function MainNavbar(props){
             */}
             {/*<Nav className='nav-link' onClick={handlePing}>Ping</Nav>*/}
             <Nav className='nav-link Help' >
-                <BiHelpCircle size={30}/>
+            <HoverOverlay tooltip='Help (in development)' placement='auto'><BiHelpCircle size={30}/></HoverOverlay>
             </Nav>
             <Nav className='nav-link'>
                 <StoreCurrencyOptions store={props.store} currency={props.currency} 

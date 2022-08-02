@@ -181,7 +181,7 @@ export function MultiSelectRadioButtons(props){
         {props.options.map((opt, i) => {
             const ch = props.control ? props.control[opt.id] : selected[opt.id];
             return(
-            <Form.Check key={i} tyup up and awaytimepe='checkbox' {...opt} 
+            <Form.Check key={i} type='checkbox' {...opt} 
             checked={ch} onChange={handleChange}/>
             );
         })}

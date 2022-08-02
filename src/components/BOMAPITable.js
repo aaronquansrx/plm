@@ -24,6 +24,8 @@ import lockIcon from './../lock-128.png';
 import './../css/table.css';
 import './../css/offer.css';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const renderers = {
     'mpn': (p) => <MPNRenderer {...p}/>,
     'mpns': (p) => <MPNsRenderer {...p}/>,
@@ -543,6 +545,7 @@ function AdjustedQuantityRenderer(props){
 }
 
 function ActiveApisRenderer(props){
+    const [octoData, setOctoData] = useState([]);
     const apisActivator = (
         <Button>Select</Button>
     );
@@ -562,8 +565,50 @@ function ActiveApisRenderer(props){
         props.functions.submitNewApis(activeApis, props.rowNum);
         setShowModal(showModal+1);
     };
+    function callbackOctoRequest(octoMpn, octoData, currency){
+        console.log(octoData);
+        //const octoMpn = '';
+        //const dt = data.data[0].data
+        const findMpnData = octoData.data.find((octo) => octo.mpn === octoMpn);
+        console.log(findMpnData);
+        if(findMpnData !== undefined){
+            const dists = findMpnData.data.map((d) => {
+                const offers = d.Offers.reduce((arr, offer) => {
+                    if(Object.keys(offer.Pricing).length > 0){
+                        if(currency in offer.Pricing){
+                            const prices = offer.Pricing[currency].map((pr) => {
+                                return pr;
+                            });
+                            const obj = {
+                                available: offer.Available,
+                                moq: offer.MinimumOrder,
+                                leadtime: offer.LeadTimeDays,
+                                spq: offer.OrderMulti,
+                                pricing: prices
+                            }
+                            arr.push(obj);
+                        }
+                    }
+                    return arr;
+                }, []);
+                return {
+                    distributor: d.Company,
+                    offers: offers
+                };
+            });
+            console.log(dists);
+            //console.log(findMpnData);
+        }
+    }
+    function onOctopart(){
+        props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
+    }
     const apisCheckboxes = (
+        <div>
         <MultiSelectRadioButtons init={init} options={apis} onChange={onChangeApi}/>
+        {!isProduction && <Button onClick={onOctopart}>Octopart</Button>}
+        {octoData.length > 0 && !isProduction && <OctopartTable data={octoData}/>}
+        </div>
     );
     const footer = (
         <Button onClick={onSubmit} disabled={props.lock}>Submit</Button>
@@ -633,4 +678,37 @@ function DefaultRenderer(props){
     return(
         <td {...props.cellProps}>{props.value}</td>
     )
+}
+
+function OctopartTable(props){
+    const headers = [
+        {Header: 'Distributor', accessor: 'distributor'},
+        {Header: 'Stock', accessor: 'available'},
+        {Header: 'MOQ', accessor: 'moq'},
+        {Header: 'Lead Time', accessor: 'leadtime'},
+        {Header: 'Price', accessor: 'price'},
+        {Header: 'SPQ', accessor: 'spq'},
+    ];
+    return (
+    <Table>
+        <thead>
+            <tr>
+            {headers.map((header, i) => {
+                return <th key={i}>{header.Header}</th>;
+            })}
+            </tr>
+        </thead>
+        <tbody>
+            {props.data.map((dataObj, i) => {
+                return (
+                    <tr key={i}>
+                        {headers.map((header, j) => {
+                            return <td key={j}>{dataObj[header.accessor]}</td>;
+                        })}
+                    </tr>
+                );
+            })}
+        </tbody>
+    </Table>
+    );
 }

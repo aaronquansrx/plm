@@ -416,14 +416,68 @@ export function useApiRetrys(apiData, apisList, mpnList, retryLine, waitingRowAp
     return [retryApi, retryAll]//, retryAll];
 }
 
-export function useMpnOptions(){
-    function addMpnOption(){
-
+export function useMpnOptions(tableBOM, apiData, apisList, setTable, runBOMLineAlgorithms, 
+    callMpn, changeMPNLine){
+    const waitingOffer = {
+        offers: [],
+        offerOrder: {
+            stock: {price: [], leadTime: []},
+            noStock: {price: [], leadTime: []}
+        },
+        message: 'Waiting...',
+        retry: false
+    };
+    function addMpnOption(row){
+        const newLine = {...tableBOM[row]};
+        newLine.mpns.current = '';
+        newLine.mpns.options.push('');
+        apisList.forEach((api) => {
+            newLine[api] = waitingOffer;
+        });
+        newLine.maxOffers = 1;
+        const newTable = update(tableBOM, {
+            [row]: {
+                $set: newLine
+            }
+        });
+        setTable(newTable);
     }
-    function editMpnOption(){
-        
+    function editMpnOption(row, oldMpn, newMpn){
+        const newLine = {...tableBOM[row]};
+        const i = newLine.mpns.options.indexOf(oldMpn);
+        newLine.mpns.options[i] = newMpn;
+        newLine.mpns.current = newMpn;
+        function onComp(data){
+            //const ea = evalMpn(newLine, data);
+            const ea = evalApis(newLine.quantities.multi, data, apisList);
+            Object.assign(newLine, ea);
+            newLine.maxOffers = data.maxOffers;
+            const newBOM = update(tableBOM, {
+                [row]: {$set: newLine}
+            });
+            runBOMLineAlgorithms(row, newBOM);
+        }
+        if(apiData.has(newMpn)){
+            onComp(apiData.get(newMpn).data);
+        }else{
+            apisList.forEach((api) => {
+                newLine[api] = waitingOffer;
+            });
+            const newBOM = update(tableBOM, {
+                [row]: {$set: newLine}
+            });
+            setTable(newBOM);
+            callMpn(newMpn, onComp);
+        }
     }
-    return [addMpnOption, editMpnOption];
+    function deleteMpnOption(row, delMpn){
+        const newLine = {...tableBOM[row]};
+        const i = newLine.mpns.options.indexOf(delMpn);
+        const newMpn = i === 0 ? newLine.mpns.options[1] : newLine.mpns.options[i-1];
+        newLine.mpns.options.splice(i, 1)
+        changeMPNLine(row, newLine, newMpn);
+    }
+    return [addMpnOption, editMpnOption, deleteMpnOption];
 }
 
 function evalApi(quantity, singleApiData){
