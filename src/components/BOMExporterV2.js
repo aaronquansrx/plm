@@ -43,6 +43,7 @@ function BOMExporterV2(props){
         const opt = optionStructure(options);
         const base = baseTableFormat(trimmedBomAttrs);
         const bod = bestOfferData();
+        console.log(bod);
         base.forEach((b, i) =>{
             Object.assign(b, bod[i]);
         });
@@ -97,7 +98,7 @@ function BOMExporterV2(props){
                         */
                        obj[key] = apiAttrDecode(offer, heading.accessor, stockStr, props.algorithm.best);
                     });
-                    obj['Total Price'] = offer.totalPrice[stockStr];
+                    //obj['Total Price'] = offer.totalPrice[stockStr];
                     //offer.prices.price * offer.adjustedQuantity[stockStr];
                 }
                 return obj;
@@ -129,9 +130,9 @@ function BOMExporterV2(props){
                     obj[attr.Header] = apiAttrDecode(best, attr.accessor, stockStr, props.algorithm.best)
                     return obj;
                 }, {});
-                offerData['Total Price'] = best.totalPrice;
+                offerData['Total Price'] = best.totalPrice[stockStr];
                 //best.prices.price * best.adjustedQuantity[stockStr];
-                offerData.Distributer = apiHeader;
+                offerData.Distributor = apiHeader;
                 return offerData;
             }
             return {};

@@ -544,6 +544,12 @@ function AdjustedQuantityRenderer(props){
     );
 }
 
+function ExcessRenderer(props){
+    return (
+        <td {...props.cellProps}>{props.value}</td>
+    )
+}
+
 function ActiveApisRenderer(props){
     const [octoData, setOctoData] = useState([]);
     const apisActivator = (

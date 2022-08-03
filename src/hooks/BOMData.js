@@ -241,7 +241,7 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
                     retMpns.add(mpn);
                 }
             });
-            console.log(retMpns);
+            //console.log(retMpns);
             setRetryMpns(new Set(retMpns));
         }
     }, [dataProcessingLock]);
