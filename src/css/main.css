@@ -65,3 +65,8 @@
 .NavClickable:hover{
     color: #5592ee;
 }
+
+.OctopartOffers{
+    padding: 30px;
+    max-width: none;
+}

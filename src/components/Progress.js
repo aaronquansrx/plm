@@ -38,7 +38,6 @@ export function BOMApiProgressBarV2(props){
         const ratio = props.numParts >= 0 ? props.numFinished/props.numParts : 1;
         const per = ratio*100;
         setPercentage(per);
-        //console.log()
         if(ratio >= 1){
             setTimeout(() => props.onHideBar(), 3000);
         }

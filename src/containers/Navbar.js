@@ -50,7 +50,7 @@ export function MainNavbar(props){
         props.onLogin(username, password);
     }
     function handlePing(){
-        console.log('ping');
+        //console.log('ping');
         if(props.username){
             axios({
                 method: 'GET',
@@ -64,7 +64,7 @@ export function MainNavbar(props){
     }
     useEffect(() => {
         if(props.username){
-            console.log('ping in min');
+            //console.log('ping in min');
             if(pingCount === 0){
                 handlePing();
             }

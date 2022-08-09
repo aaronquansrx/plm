@@ -16,9 +16,9 @@ function PartDetails(props){
         axios({
             method: 'get',
             url: server_url+'api/partdetails',
-            params: {part: part}
+            params: {part: part, save: true}
         }).then(res =>{
-            //console.log(res.data);
+            console.log(res.data);
             if(res.data.success) setDetails(res.data.details);
         })
     }, []);
@@ -34,8 +34,24 @@ function PartDetails(props){
             <div>RoHS: <span>{details.RoHS}</span></div>
             <div>Lead: <span>{details.Lead}</span></div>
             <DisplayDetails parameters={details.Parameters}/>
+            <Urls urls={details.Urls}/>
             </div>
             }
+        </div>
+    )
+}
+
+function Urls(props){
+    return(
+        <div>
+            <b>Urls</b>
+            {Object.entries(props.urls).map(([k,v], i) => {
+                return(
+                    <div key={i}>
+                        {k}: <a href={v}>{v}</a>
+                    </div>
+                );
+            })}
         </div>
     )
 }

@@ -23,6 +23,7 @@ import lockIcon from './../lock-128.png';
 
 import './../css/table.css';
 import './../css/offer.css';
+import './../css/main.css';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -33,8 +34,14 @@ const renderers = {
     'prices': (p) => <PricesRenderer {...p}/>,
     'activeApis': (p) => <ActiveApisRenderer {...p}/>,
     'adjustedQuantity': (p) => <AdjustedQuantityRenderer {...p}/>,
-    'totalPrice': (p) => <TotalPriceRenderer {...p}/>
+    'totalPrice': (p) => <TotalPriceRenderer {...p}/>,
+    'octopart': (p) => <OctopartRenderer {...p}/>
 };
+
+
+const octoRenderers = {
+    'prices': (p) => <OctoPricesRenderer {...p}/>,
+}
 
 const headerRenderers = {
     'activeApis': (p) => <ActiveApisHeaderRenderer {...p}/>,
@@ -156,8 +163,8 @@ export function BOMAPITableV2(props){
             }
             <tbody>
                 {pageRows.map((line, i) => 
-                    <BOMRow key={i} highlightMode={props.highlightMode} rowNum={pageNumber*pageSize+i} 
-                    data={line} hasLineLocks={props.hasLineLocks} 
+                    <BOMRow key={i} highlightMode={props.highlightMode} rowNum={line.rowNum} 
+                    data={line} hasLineLocks={props.hasLineLocks} mpn={line.mpns.current}
                     attributeOrder={attributeOrder} functionLock={props.functionLock}
                     onLineLock={props.onLineLock} bestAttributeOrder={bestAttributeOrder}
                     tableState={tbs} apisToHeader={apisToHeader}/>
@@ -301,7 +308,7 @@ function BOMRow(props){
             {
             <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={attributeOrder} 
             data={data} cellProps={firstRowCellProps} highlightMode={props.highlightMode} 
-            lock={props.data.lineLock} functionLock={props.functionLock}/>
+            lock={props.data.lineLock} functionLock={props.functionLock} mpn={props.mpn}/>
             }
         </tr>
         {props.data.maxOffers > 1 && showAllOffers && props.tableState && 
@@ -310,7 +317,7 @@ function BOMRow(props){
             return(
             <tr key={i}>       
                 <BOMOffer offerNum={offerNum} rowNum={props.rowNum} attributeOrder={props.attributeOrder} 
-                data={props.data} highlightMode={props.highlightMode}/>
+                data={props.data} highlightMode={props.highlightMode} mpn={props.mpn}/>
             </tr>
             );
         })}
@@ -357,7 +364,7 @@ function BOMOffer(props){
             return (
                 <BOMAttributeRenderer key={i} {...specAttrs} {...attr} cellProps={props.cellProps}
                 value={props.data[attr.attribute]} offerNum={offerNum} offerIndex={props.offerNum} rowNum={props.rowNum} 
-                lock={props.lock} stockMode={stockMode} functionLock={props.functionLock}/> 
+                lock={props.lock} stockMode={stockMode} functionLock={props.functionLock} mpn={props.mpn}/> 
             );
         })}
         </>
@@ -551,9 +558,8 @@ function ExcessRenderer(props){
 }
 
 function ActiveApisRenderer(props){
-    const [octoData, setOctoData] = useState([]);
     const apisActivator = (
-        <Button>Select</Button>
+        <Button disabled={props.lock}>Select</Button>
     );
     const apis = props.value.map((api) => {
         return {id: api.accessor, label: api.Header};
@@ -571,59 +577,63 @@ function ActiveApisRenderer(props){
         props.functions.submitNewApis(activeApis, props.rowNum);
         setShowModal(showModal+1);
     };
-    function callbackOctoRequest(octoMpn, octoData, currency){
-        console.log(octoData);
-        //const octoMpn = '';
-        //const dt = data.data[0].data
-        const findMpnData = octoData.data.find((octo) => octo.mpn === octoMpn);
-        console.log(findMpnData);
-        if(findMpnData !== undefined){
-            const dists = findMpnData.data.map((d) => {
-                const offers = d.Offers.reduce((arr, offer) => {
-                    if(Object.keys(offer.Pricing).length > 0){
-                        if(currency in offer.Pricing){
-                            const prices = offer.Pricing[currency].map((pr) => {
-                                return pr;
-                            });
-                            const obj = {
-                                available: offer.Available,
-                                moq: offer.MinimumOrder,
-                                leadtime: offer.LeadTimeDays,
-                                spq: offer.OrderMulti,
-                                pricing: prices
-                            }
-                            arr.push(obj);
-                        }
-                    }
-                    return arr;
-                }, []);
-                return {
-                    distributor: d.Company,
-                    offers: offers
-                };
-            });
-            console.log(dists);
-            //console.log(findMpnData);
-        }
-    }
-    function onOctopart(){
-        props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
-    }
     const apisCheckboxes = (
         <div>
         <MultiSelectRadioButtons init={init} options={apis} onChange={onChangeApi}/>
-        {!isProduction && <Button onClick={onOctopart}>Octopart</Button>}
-        {octoData.length > 0 && !isProduction && <OctopartTable data={octoData}/>}
         </div>
     );
     const footer = (
+        <>
         <Button onClick={onSubmit} disabled={props.lock}>Submit</Button>
+        <Button variant='secondary' onClick={() => setShowModal(showModal+1)}>Close</Button>
+        </>
     );
     return (
         <td {...props.cellProps}>
         <ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' body={apisCheckboxes} footer={footer}/>
         </td>
     )
+}
+
+function OctopartRenderer(props){
+    const [showModal, setShowModal] = useState(0);
+    const [octoRequested, setOctoRequested] = useState(false);
+    const [modalOn, setModalOn] = useState(false);
+    const activator = (
+        <Button onClick={() => setModalOn(true)} disabled={props.lock}>Request</Button>
+    );
+    function onClose(){
+        setShowModal(showModal+1);
+        setModalOn(false)
+    };
+    const [octoData, setOctoData] = useState([]);
+    useEffect(() => {
+        if(modalOn && !octoRequested){
+            props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
+            console.log('req octo');
+            setOctoRequested(true);
+        }
+    }, [modalOn]);
+    function callbackOctoRequest(od){
+        setOctoData(od);
+    }
+    /*
+    function onOctopart(){
+        props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
+    }*/
+    const title = 'Octopart Offers for '+props.mpn;
+    const body = (
+        <>
+        {/*!isProduction && <Button onClick={onOctopart}>Octopart</Button>*/}
+        {octoData.length > 0 && !isProduction && <OctopartTable data={octoData}/>}
+        </>
+    );
+    const footer = <Button variant='secondary' onClick={onClose}>Close</Button>
+    return (
+        <td {...props.cellProps}>
+            <ModalController modalClass='OctopartOffers' hide={showModal} activateModal={activator} title={title} body={body} footer={footer}/>
+        </td>
+    );
 }
 
 function AdjustedQuantityHeaderRenderer(props){
@@ -652,7 +662,7 @@ function ActiveApisHeaderRenderer(props){
         setShowModal(showModal+1);
     };
     const apisActivator = (
-        <Button>Apis</Button>
+        <Button disabled={props.lock}>Apis</Button>
     );
     const apisCheckboxes = (
         <MultiSelectRadioButtons control={activeApis} options={apis} onChange={onChangeApi}/>
@@ -687,14 +697,20 @@ function DefaultRenderer(props){
 }
 
 function OctopartTable(props){
-    const headers = [
-        {Header: 'Distributor', accessor: 'distributor'},
+    const octoHeaders = [{Header: 'Distributor', accessor: 'distributor'}];
+    const offerHeaders = [
         {Header: 'Stock', accessor: 'available'},
         {Header: 'MOQ', accessor: 'moq'},
         {Header: 'Lead Time', accessor: 'leadtime'},
-        {Header: 'Price', accessor: 'price'},
+        {Header: 'Price', accessor: 'prices'},
         {Header: 'SPQ', accessor: 'spq'},
+        {Header: 'Packaging', accessor: 'packaging'}
     ];
+    const headers = octoHeaders.concat(offerHeaders);
+    const octoAttributes = octoHeaders.map(smartAttr('octopart', {}, {}, octoRenderers));
+    const offerAttributes = offerHeaders.map(smartAttr('subattr', {}, {}, octoRenderers));
+    //const attributes = octoAttributes.
+    //console.log(offerAttributes);
     return (
     <Table>
         <thead>
@@ -706,15 +722,66 @@ function OctopartTable(props){
         </thead>
         <tbody>
             {props.data.map((dataObj, i) => {
+                //console.log(dataObj);
                 return (
-                    <tr key={i}>
-                        {headers.map((header, j) => {
-                            return <td key={j}>{dataObj[header.accessor]}</td>;
-                        })}
-                    </tr>
+                    <OctopartRow key={i} data={dataObj} octoAttrs={octoAttributes} offerAttrs={offerAttributes}/>
                 );
             })}
         </tbody>
     </Table>
+    );
+}
+
+function OctopartRow(props){
+    const rows = props.data.offers.length;
+    const [showAllOffers, setShowAllOffers] = useState(false);
+    const octoCellProps = showAllOffers ? {
+        rowSpan: rows,
+    } : {};
+    function changeShowOffers(){
+        setShowAllOffers(!showAllOffers);
+    }
+    const numTableCols = props.octoAttrs.length + props.offerAttrs.length;
+    return(
+        <>
+        <tr>
+        {props.data.offers.length > 0 && props.octoAttrs.map((attr, i) => {
+            return <BOMAttributeRenderer key={i} value={props.data[attr.attribute]} custom={attr.custom} cellProps={octoCellProps}/>;
+        })}
+        {props.data.offers.length > 0 && props.offerAttrs.map((attr, i) => {
+            return <BOMAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom}/>
+        })}
+        </tr>
+        {props.data.offers.length > 1 && showAllOffers && 
+        [...Array(props.data.offers.length-1).keys()].map((i) => {
+            const offerNum = i+1;
+            return(
+            <tr key={i}>
+                {props.offerAttrs.map((attr, j) => {
+                    return <BOMAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom}/>
+                })}
+            </tr>
+            );
+        })}
+        {props.data.offers.length > 1 && 
+            <tr onClick={changeShowOffers}>
+                <td colSpan={numTableCols} className='NoPadding'>
+                <HoverOverlay placement='auto' 
+                tooltip={showAllOffers ? 'Close offers' : 'Open offers'}>
+                <HoverToggleSolidColour toggle={showAllOffers}/>
+                </HoverOverlay>
+                </td>
+            </tr>
+        }
+        </>
+    )
+}
+
+function OctoPricesRenderer(props){
+    const pt = props.value ? <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex}/> : <></>;
+    return (
+        <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
+            <td {...props.cellProps}>{props.value && props.value.price}</td>
+        </SimplePopover>
     );
 }

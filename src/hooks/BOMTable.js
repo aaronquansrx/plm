@@ -9,11 +9,14 @@ import {useServerUrl} from '../hooks/Urls';
 import { BOMAPITable } from '../components/Tables';
 
 export function useTableBOM(bom, tableHeaders, apis, apiData, 
-    testCall, ltco, store, currency, dataProcessingLock){
+    testCall, ltco, store, currency, dataProcessingLock, appLock, searchMpn){
     const serverUrl = useServerUrl();
     const lenBOM = bom.length;
     const initTableBOM = useMemo(() => {
-        return bom.map((line) => {
+        return bom.map((line, i) => {
+            line.rowNum = i;
+            line.selectedOffers = [];
+            //line.octopart = line.mpn;
             line.mpns = {
                 current: line.mpn,
                 options: line.mpnOptions
@@ -53,18 +56,20 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             }
             line.lineLock = false;
             return line;
-        })
+        });
     });
     const [tableLock, setTableLock] = useState(true);
     const apisList = apis.map(api => api.accessor);
     const [tableBOM, setTableBOM] = useState(initTableBOM);
+    const [filteredTableBOM, setFilteredTableBOM] = useState(initTableBOM);
     const headers = useMemo(() => {
         const headerChangeMap = {
             mpn: 'mpns',
             quantity: 'quantities'
         };
-        const newHeaders = tableHeaders.concat([{Header: 'Apis', accessor: 'activeApis'}]);
-        return newHeaders.map((header) => {
+        const addedHeaders = [{Header: 'Apis', accessor: 'activeApis'}, {Header: 'Octopart', accessor: 'octopart'}];
+        const allHeaders = tableHeaders.concat(addedHeaders);
+        return allHeaders.map((header) => {
             const newHeader = {...header};
             if(newHeader.accessor in headerChangeMap){
                 newHeader.accessor = headerChangeMap[newHeader.accessor];
@@ -106,8 +111,17 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         }
     }, [initUpdateTable]);
     useEffect(() => {
+        if(searchMpn !== ''){
+            searchMpnTableFilter(searchMpn);
+        }else{
+            setFilteredTableBOM(tableBOM);
+        }
+
+    }, [tableBOM, searchMpn]);
+    useEffect(() => {
         setLineNumsToEvaluate(new Set([...Array(lenBOM)].keys()));
         setInitUpdateTable(initUpdateTable+1);
+        setTableBOM(initTableBOM);
     }, [store, currency]);
     useEffect(() => {
         //runBOMAlgorithms(tableBOM);
@@ -130,10 +144,14 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             runBOMAlgorithms(newTable);
             console.log('run algos');
         }else{
-            setTableLock(true);
+            //setTableLock(true);
+            changeLocks(true);
         }
     }, [dataProcessingLock]);
-    
+    function changeLocks(bool){
+        setTableLock(bool);
+        appLock(bool);
+    }
     function setTable(table){
         setTableBOM(table);
     }
@@ -267,8 +285,8 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 return newLine;
             });
             setTable(newTableBOM);
-            //changeLock(false);
-            setTableLock(false);
+            //setTableLock(false);
+            changeLocks(false);
         });
     }
     function runBOMLineAlgorithms(row, b=null){
@@ -301,10 +319,21 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         });
         setTable(newBOM);
     }
-    return [tableBOM, setTable, headers, runBOMAlgorithms, 
+    function searchMpnTableFilter(searchTerm){
+        const filtered = tableBOM.reduce((arr, line) => {
+            if(line.mpnOptions.findIndex((mpn) => mpn.includes(searchTerm)) !== -1){
+                arr.push(line);
+            }
+            return arr;
+        }, []);
+        setFilteredTableBOM(filtered);
+        return filtered;
+    }
+    return [tableBOM, filteredTableBOM, setTable, headers, runBOMAlgorithms, 
         runBOMLineAlgorithms,
         retryForApi,
-        waitingRowApi, changeMPNLine, evalMpn, tableLock
+        waitingRowApi, changeMPNLine, evalMpn, tableLock,
+        searchMpnTableFilter
     ];
 }
 
@@ -492,6 +521,7 @@ function evalApi(quantity, singleApiData){
             pricingIndex: algorithmsStockStructure(index)
         }
         newOffer.adjustedQuantity = null;
+        newOffer.excess = null;
         return newOffer;
     }); 
     return newOffers;
