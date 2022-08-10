@@ -132,7 +132,7 @@ export function MainNavbar(props){
             </Navbar.Collapse>
         </Container>
         </SRXBackgroundNavbar>
-        {<Login show={showLogin} hideAction={toggleLoginModal} login={handleLogin}/>}
+        {<Login show={showLogin} hideAction={toggleLoginModal} login={handleLogin} store={props.store} currency={props.currency}/>}
         </div>
     );
 }

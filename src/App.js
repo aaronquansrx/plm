@@ -51,14 +51,26 @@ function App() {
       store: {$set: st},
       currency: {$set: curr}
     }));
+    if(username){
+      axios({
+        method: 'GET',
+        url: serverUrl+'api/changeoptions',
+        params: {username: username, store:st, currency: curr}
+      }).then(response => {
+        console.log(response.data);
+      });
+      console.log('c');
+    }
   }
   function handleLogin(u, pw){
     axios({
         method: 'POST',
         url: serverUrl+'api/login',
-        data: {username: u, password: pw},
+        data: {username: u, password: pw, store: options.store, currency: options.currency},
     }).then(response => {
         console.log(response.data);
+        const data = response.data;
+        setOptions({store: data.store, currency: data.currency});
         saveUsername(u);
     });
   }
