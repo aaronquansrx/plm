@@ -59,7 +59,6 @@ function App() {
       }).then(response => {
         console.log(response.data);
       });
-      console.log('c');
     }
   }
   function handleLogin(u, pw){

@@ -8,3 +8,28 @@ export second sheet with all details (algo used, quoted/unquoted etc.)
 
 in-stock only option, checkbox (if checked only consider with stock) stock > 0
 packaging field in table (maybe multiple packaging)
+
+SMCJ58CA - check this mpn
+
+excess quantity and excess price 1
+
+leadtime doesnt matter if stock in there
+digikey - ships immediately if 
+
+exchange rates from internal srx
+
+check data SPQ for mouser, digikey, etc.
+search for mpn inside options 
+saving/loading edit state
+custom headers for edit
+column resizing
+fix currency/store switching
+
+attrition column
+
+TODO
+
+excess columns
+click offers
+bug fixes (in notebook)
+
