@@ -6,13 +6,14 @@ import axios from 'axios';
 import {useServerUrl} from './../hooks/Urls';
 
 export function useApiData(mpnList, apisList, updateApiDataMap, 
-    store, currency, changeLock, apiData, bomType, loadData){
+    store, currency, apiData, bomType, loadData, appLock){
     //const [dataProcessing, setDataProcessing] = useState([]);
     const serverUrl = useServerUrl();
     const expireTime = 1000000;
     useEffect(() => {
         const controller = new AbortController();
-        console.log(bomType);
+        console.log(currency);
+        appLock(true);
         if(bomType !== 'saved'){
             //console.log(store);
             //const controller = new AbortController();
@@ -44,7 +45,6 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
                 apiDataMap.set(mpn, {data: da, date: now});
                 updateApiDataMap(apiDataMap);
             }
-            changeLock(true);
             const dt = Date.now();
             //setDataProcessing(mpnList);
             mpnList.forEach(mpn => {
@@ -155,7 +155,7 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
     return [callApiRetry, callMpn, callApisRetry];
 }
 
-export function useApiDataProgress(mpnList, apiData, store, currency, changeLock){
+export function useApiDataProgress(mpnList, apiData, store, currency){
     const [progress, setProgress] = useState({
         finished: false,
         mpnsNotEvaluated: new Set(
@@ -198,12 +198,13 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
         }));*/
         //console.log(apiData);
         if(initialDataFlag){
+            /*
             const leftMpns = [...progress.mpnsNotEvaluated].reduce((arr, mpn) => {
                 if(apiData.has(mpn)){
                     arr.push(mpn);
                 }
                 return arr;
-            }, []);
+            }, []);*/
             const remMpns = [...mpnsInProgress].reduce((arr, mpn) => {
                 if(apiData.has(mpn)){
                     arr.push(mpn);
@@ -211,19 +212,19 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
                 return arr;
             }, []);
             //change to mpnsinprogress
-            const fin = progress.mpnsNotEvaluated.size - leftMpns.length === 0;
-
+            const fin = mpnsInProgress.size - remMpns.length === 0;
+            /*
             const newProgress = update(progress, {
                 finished: {$set: fin},
                 mpnsNotEvaluated: {$remove: leftMpns}
-            });
+            });*/
             setMpnsInProgress(update(mpnsInProgress, {
                 $remove: remMpns
             }));
             //console.log(newProgress);
-            setProgress(newProgress);
+            //setProgress(newProgress);
             if(fin){
-                changeLock(false);
+                console.log('end');
                 setInitialDataFlag(false);
                 setDataProcessingLock(false);
             }
@@ -246,23 +247,22 @@ export function useApiDataProgress(mpnList, apiData, store, currency, changeLock
         }
     }, [dataProcessingLock]);
     useEffect(() => {
-        //to do for mpnsinprogress
         const mpnsEvaled = new Set(
             mpnList.reduce((arr, mpn) => {
                 if(!apiData.has(mpn)) arr.push(mpn);
                 return arr;
             }, [])
         );
-        const fin = mpnsEvaled.size === 0;
-        const resetProgress = update(progress, {
-            $set: {finished: fin, mpnsNotEvaluated: mpnsEvaled}
-        });
-        setProgress(resetProgress);
+        setInitialDataFlag(true);
+        setDataProcessingLock(true);
+        if(mpnsEvaled.size > 0){
+            setShowProgress(true);
+        }
+        setMpnsInProgress(mpnsEvaled);
     }, [store, currency]);
     useEffect(() => {
         if(mpnsInProgress.size === 0){
             setDataProcessingLock(false);
-
             //may not have apiData updated 
             /*
             console.log(apiData);

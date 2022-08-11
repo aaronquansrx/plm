@@ -8,6 +8,8 @@ import { NamedCheckBox } from './Checkbox';
 import { TabPages } from './Tabs';
 import { NameForm, LoginForm, LabeledCheckbox} from './Forms';
 
+import './../css/main.css';
+
 export function ModalController(props){
     const [show, setShow] = useState(false);
     function handleClose(){
@@ -20,7 +22,7 @@ export function ModalController(props){
         setShow(false);
     }, [props.hide]);
     const tempModal = (
-        <TemplateModal show={show} body={props.body} title={props.title} 
+        <TemplateModal modalClass={props.modalClass} show={show} body={props.body} title={props.title} 
         footer={props.footer} onClose={handleClose}/>
     )
     return (
@@ -39,7 +41,7 @@ export function TemplateModal(props){
         if(props.onClose) props.onClose();
     }
     return(
-        <Modal show={props.show} onHide={handleClose}>
+        <Modal dialogClassName={props.modalClass} show={props.show} onHide={handleClose}>
         <Modal.Header closeButton={closeButton}>
             {props.title && <Modal.Title>{props.title}</Modal.Title>}
         </Modal.Header>

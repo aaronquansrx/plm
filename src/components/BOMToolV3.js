@@ -5,6 +5,7 @@ import update from 'immutability-helper';
 import axios from 'axios';
 
 import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form';
 
 import {
     useTableBOM, useApiAttributes, 
@@ -26,6 +27,7 @@ import BOMExporterV2 from './BOMExporterV2';
 import {SaveBom} from './Modals';
 import {BOMApiProgressBarV2} from './Progress';
 import {HoverOverlay} from './Tooltips';
+import { findPriceBracket } from '../scripts/Offer';
 
 import {downloadFile} from './../scripts/General';
 
@@ -49,6 +51,7 @@ function BOMToolV3(props){
         message: 'Waiting...',
         retry: false
     };
+    const [searchTerm, setSearchTerm] = useState('');
     const apisList = useMemo(() => props.apis.map((api => api.accessor)));
     const mpnList = useMemo(() => props.bom.reduce((arr, line) => {
         line.mpnOptions.forEach(mpn => arr.push(mpn));
@@ -57,10 +60,10 @@ function BOMToolV3(props){
     const isLoadedBom = props.bomType === 'saved' || props.bomType === 'saved_nodata';
     const [updateTableCall, setUpdateTableCall] = useState(0);
     const [callApiRetry, callMpn, callApisRetry] = useApiData(mpnList, apisList, props.updateApiDataMap, 
-         props.store, props.currency, props.changeLock, props.apiData, props.bomType, props.loadData);
+         props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
         dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress] = useApiDataProgress(mpnList, props.apiData, 
-        props.store, props.currency, props.changeLock);
+        props.store, props.currency);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
     function handleLeadtimeCutOff(newLTC){
         if(newLTC === ''){
@@ -70,12 +73,14 @@ function BOMToolV3(props){
         }
         runBOMAlgorithms(tableBOM, newLTC);
     }
-    const [tableBOM, setTable, tableColumns, 
+    const [tableBOM, filteredTableBOM, setTable, tableColumns, 
         runBOMAlgorithms, runBOMLineAlgorithms, retryLine, waitingRowApi,
-        changeMPNLine, evalMpn, tableLock] = useTableBOM(
+        changeMPNLine, evalMpn, tableLock,
+        searchMpnTableFilter] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, 
-        updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock
+        updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock, props.changeLock,
+        searchTerm
     );
     const apiAttrs = useApiAttributes();
     const [quantityMultiplier, adjustQuantity, handleMultiBlur] = useQuantityMultiplier(tableBOM, props.apiData, 
@@ -115,6 +120,7 @@ function BOMToolV3(props){
     }
     const [addMpnOption, editMpnOption, deleteMpnOption] = useMpnOptions(tableBOM, props.apiData,
         apisList, setTable, runBOMLineAlgorithms, callMpn, changeMPNLine);
+    /*
     function addMPNOption(row){
         const newLine = {...tableBOM[row]};
         newLine.mpns.current = '';
@@ -165,19 +171,61 @@ function BOMToolV3(props){
         newLine.mpns.options.splice(i, 1)
         changeMPNLine(row, newLine, newMpn);
     }
+    */
     function requestOctopart(row, callback){
         //console.log('octopart');
         //console.log(row);
         const mpn = tableBOM[row].mpns.current;
-        
+        const quantity = tableBOM[row].quantities.multi;
         axios({
             method: 'GET',
             url: serverUrl+'api/octopart',
             params: {search: mpn, currency: props.currency, store: props.store},
             //signal: controller.signal
         }).then(response => {
+            console.log(response.data);
+            const octoData = response.data;
+            const findMpnData = octoData.data.find((octo) => octo.mpn === mpn);
+            if(findMpnData !== undefined){
+                const dists = findMpnData.data.map((d) => {
+                    const offers = d.Offers.reduce((arr, offer) => {
+                        if(Object.keys(offer.Pricing).length > 0){
+                            if(props.currency in offer.Pricing){
+                                const pricing = offer.Pricing[props.currency].map((pr) => {
+                                    return pr;
+                                });
+                                const {price, index} = findPriceBracket(pricing, 
+                                    quantity, offer.Quantity.MinimumOrder);
+                                const obj = {
+                                    available: offer.Quantity.Available,
+                                    moq: offer.Quantity.MinimumOrder,
+                                    leadtime: offer.LeadTime,
+                                    spq: offer.Quantity.OrderMulti,
+                                    //pricing: pricing,
+                                    prices: {
+                                        price: price,
+                                        pricing: pricing,
+                                        pricingIndex: index,
+                                    },
+                                    packaging: offer.Packaging
+                                }
+                                arr.push(obj);
+                            }else{
+                                console.log(offer.Pricing);
+                            }
+                        }
+                        return arr;
+                    }, []);
+                    return {
+                        distributor: d.Company,
+                        offers: offers
+                    };
+                });
+                console.log(dists);
+                callback(dists);
+            }
             //console.log(response.data);
-            callback(mpn, response.data, props.currency);
+            //callback(mpn, response.data, props.currency);
         });
         
     }
@@ -194,6 +242,8 @@ function BOMToolV3(props){
         activeApis: {
             submitNewApis: changeActiveApis,
             submitGlobalApis: changeActiveApisGlobal,
+        },
+        octopart: {
             requestOctopart: requestOctopart
         },
         api: {
@@ -244,6 +294,10 @@ function BOMToolV3(props){
         const tbs = state ? 'APIs' : 'Best';
         setTableState(tbs);
     }
+    function searchMpns(searchTerm){
+        setSearchTerm(searchTerm);
+        //console.log(searchMpnTableFilter(searchTerm));
+    }
     const [showSaveModal, toggleSavedBomModal, saveBom] = useSaveBom(tableBOM, props.apiData, apisList, mpnList, 
         props.user, props.currency, props.store, props.loadData.bom_id);
     return(
@@ -255,6 +309,7 @@ function BOMToolV3(props){
             disabled={tableLock}/>
             <NumberInput label={'Leadtime Cut Off'} value={leadtimeCutOff} onBlur={handleLeadtimeCutOff} 
             disabled={tableLock}/>
+            <Search search={searchMpns} on/>
             </div>
             {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
             apiAttrs={apiAttrs} evaluation={bomEvaluation} algorithm={highlightMode}/>}
@@ -284,7 +339,7 @@ function BOMToolV3(props){
         <SaveBom show={showSaveModal} save={saveBom} showOverwrite={isLoadedBom} hideAction={toggleSavedBomModal}/>
         <BOMApiProgressBarV2 show={showProgress} numParts={numMpns}
         onHideBar={handleHideBar} numFinished={numMpns-mpnsInProgress.size}/>
-        <BOMAPITableV2 data={tableBOM} bomAttrs={tableColumns} 
+        <BOMAPITableV2 data={filteredTableBOM} bomAttrs={tableColumns} 
         apis={props.apis} apiAttrs={apiAttrs} functions={functions}
         highlightMode={highlightMode}  functionLock={tableLock}
         hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}
@@ -332,6 +387,25 @@ function HighlightOptions(props){
         <SelectSingleRadioButtons options={props.options}
         onChange={handleChange} disabled={props.disabled}/>
         </div>
+    )
+}
+
+function Search(props){
+    const [searchTerm, setSearchTerm] = useState('');
+    function handleChangeTerm(e){
+        const st = e.target.value;
+        setSearchTerm(e.target.value);
+        props.search(st);
+    }
+    return (
+        <Form className="d-flex">
+            <Form.Control
+            type="search" placeholder="Search"
+            className="me-2" aria-label="Search"
+            //value={searchTerm}
+            onChange={handleChangeTerm}
+            />
+        </Form>
     )
 }
 
