@@ -320,8 +320,9 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         setTable(newBOM);
     }
     function searchMpnTableFilter(searchTerm){
+        const loweredSearchTerm = searchTerm.toLowerCase();
         const filtered = tableBOM.reduce((arr, line) => {
-            if(line.mpnOptions.findIndex((mpn) => mpn.includes(searchTerm)) !== -1){
+            if(line.mpnOptions.findIndex((mpn) => mpn.toLowerCase().includes(loweredSearchTerm)) !== -1){
                 arr.push(line);
             }
             return arr;
@@ -332,8 +333,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     return [tableBOM, filteredTableBOM, setTable, headers, runBOMAlgorithms, 
         runBOMLineAlgorithms,
         retryForApi,
-        waitingRowApi, changeMPNLine, evalMpn, tableLock,
-        searchMpnTableFilter
+        waitingRowApi, changeMPNLine, evalMpn, tableLock
     ];
 }
 

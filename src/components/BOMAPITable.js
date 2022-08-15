@@ -152,6 +152,9 @@ export function BOMAPITableV2(props){
         setPageSize(s);
         handlePageChange(0);
     }
+    useEffect(() => {
+        
+    }, [props.data]);
     return (
         <>
         <div className='MainTable'>

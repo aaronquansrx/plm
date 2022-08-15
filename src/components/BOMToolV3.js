@@ -75,8 +75,7 @@ function BOMToolV3(props){
     }
     const [tableBOM, filteredTableBOM, setTable, tableColumns, 
         runBOMAlgorithms, runBOMLineAlgorithms, retryLine, waitingRowApi,
-        changeMPNLine, evalMpn, tableLock,
-        searchMpnTableFilter] = useTableBOM(
+        changeMPNLine, evalMpn, tableLock] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, 
         updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock, props.changeLock,
@@ -120,58 +119,6 @@ function BOMToolV3(props){
     }
     const [addMpnOption, editMpnOption, deleteMpnOption] = useMpnOptions(tableBOM, props.apiData,
         apisList, setTable, runBOMLineAlgorithms, callMpn, changeMPNLine);
-    /*
-    function addMPNOption(row){
-        const newLine = {...tableBOM[row]};
-        newLine.mpns.current = '';
-        newLine.mpns.options.push('');
-        apisList.forEach((api) => {
-            newLine[api] = waitingOffer;
-        });
-        newLine.maxOffers = 1;
-        const newTable = update(tableBOM, {
-            [row]: {
-                $set: newLine
-            }
-        });
-        setTable(newTable);
-    }
-    function editMPNOption(row, oldMpn, newMpn){
-        const newLine = {...tableBOM[row]};
-        const i = newLine.mpns.options.indexOf(oldMpn);
-        newLine.mpns.options[i] = newMpn;
-        newLine.mpns.current = newMpn;
-        function onComp(data){
-            const ea = evalMpn(newLine, data);
-            //console.log(ea);
-            Object.assign(newLine, ea);
-            newLine.maxOffers = data.maxOffers;
-            const newBOM = update(tableBOM, {
-                [row]: {$set: newLine}
-            });
-            runBOMLineAlgorithms(row, newBOM);
-        }
-        if(props.apiData.has(newMpn)){
-            onComp(props.apiData.get(newMpn).data);
-        }else{
-            apisList.forEach((api) => {
-                newLine[api] = waitingOffer;
-            });
-            const newBOM = update(tableBOM, {
-                [row]: {$set: newLine}
-            });
-            setTable(newBOM);
-            callMpn(newMpn, onComp);
-        }
-    }
-    function deleteMPNOption(row, delMpn){
-        const newLine = {...tableBOM[row]};
-        const i = newLine.mpns.options.indexOf(delMpn);
-        const newMpn = i === 0 ? newLine.mpns.options[1] : newLine.mpns.options[i-1];
-        newLine.mpns.options.splice(i, 1)
-        changeMPNLine(row, newLine, newMpn);
-    }
-    */
     function requestOctopart(row, callback){
         //console.log('octopart');
         //console.log(row);
@@ -296,7 +243,6 @@ function BOMToolV3(props){
     }
     function searchMpns(searchTerm){
         setSearchTerm(searchTerm);
-        //console.log(searchMpnTableFilter(searchTerm));
     }
     const [showSaveModal, toggleSavedBomModal, saveBom] = useSaveBom(tableBOM, props.apiData, apisList, mpnList, 
         props.user, props.currency, props.store, props.loadData.bom_id);
