@@ -3,7 +3,7 @@ import update from 'immutability-helper';
 import Form from 'react-bootstrap/Form';
 import BootstrapSwitchButton from 'bootstrap-switch-button-react';
 
-import './../css/temp.css';
+import './../css/main.css';
 
 export function NumberInput(props){
     const [number, setNumber] = useState(props.value ? props.value : 1);
@@ -133,7 +133,7 @@ export function LabeledCheckbox(props){
         }
     }
     return(
-        <Form.Check className={props.className} 
+        <Form.Check className={props.className} type={'checkbox'} id={props.id}
         checked={props.checked} onChange={handleChange} label={props.label} disabled={props.disabled}/>
     );
 }
@@ -181,7 +181,7 @@ export function MultiSelectRadioButtons(props){
         {props.options.map((opt, i) => {
             const ch = props.control ? props.control[opt.id] : selected[opt.id];
             return(
-            <Form.Check key={i} type='checkbox' {...opt} 
+            <Form.Check key={i} className={props.className} type='checkbox' {...opt} 
             checked={ch} onChange={handleChange}/>
             );
         })}

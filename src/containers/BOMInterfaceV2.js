@@ -10,8 +10,10 @@ import BOMToolV3 from '../components/BOMToolV3';
 import {HoverOverlay} from '../components/Tooltips';
 import {UploadIcon, EditIcon, SheetIcon} from '../components/Icons';
 import {StoreCurrencyOptions} from '../components/Options';
+import BOMToolSettings from '../components/BOMToolSettings';
 
-import './../css/temp.css';
+//import './../css/temp.css';
+import './../css/bomtool.css';
 
 const interfaceStates = ['upload', 'edit', 'tool'];
 
@@ -44,6 +46,18 @@ const headerOrder = [
     {Header: 'Description', accessor: 'description'}, {Header: 'Reference Designator', accessor: 'reference'}
 ];
 
+const apiAttributes = [
+    {Header: 'Stock', accessor: 'available'},
+    {Header: 'MOQ', accessor: 'moq', longHeader: 'Minimum Order Quantity'},
+    {Header: 'SPQ', accessor: 'spq', longHeader: 'Standard Pack Quantity'},
+    {Header: 'Lead Time', accessor: 'leadtime'},
+    {Header: 'Price', accessor: 'prices'},
+    {Header: 'Exc. P', accessor: 'excessPrice', longHeader: 'Excess Price'},
+    {Header: 'Adj. Q', accessor: 'adjustedQuantity', longHeader: 'Adjusted Quantity'},
+    {Header: 'Exc. Q', accessor: 'excessQuantity', longHeader: 'Excess Quantity'},
+    {Header: 'Packaging', accessor: 'packaging'}
+]
+
 function BOMInterface(props){
     const [uploadedBOM, setUploadedBOM] = useState([]); // bom uploaded from file upload interface
     const [BOMData, setBOMData] = useState({bom: [], attrs: [], apis: apis});
@@ -51,6 +65,8 @@ function BOMInterface(props){
     const [interfaceState, setInterfaceState] = useState(0);
     const [initialBOMEdit, setInitialBOMEdit] = useState([]);
     const [apiData, setApiData] = useState(new Map());
+
+    const [settings, setSettings] = useState({apiAttributes: apiAttributes})
 
     function handleBOMUpload(bom, autoFind={found: false}){
         //assume first col is MPN
@@ -91,6 +107,12 @@ function BOMInterface(props){
     function getApiData(){
         return apiData.has(SCKey) ? apiData.get(SCKey) : new Map();
     }
+    function handleSaveSettings(apiAttrs){
+        //console.log(apiAttrs);
+        setSettings(update(settings, {
+            apiAttributes: {$set: apiAttrs}
+        }));
+    }
     //renders the body of interface depending on state
     function renderInterfaceState(){
         switch(interfaceStates[interfaceState]){
@@ -102,7 +124,7 @@ function BOMInterface(props){
                 tableHeaders={tableHeaders} headerOrder={headerOrder}/>
                 //return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 'tool':
-                return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} 
+                return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} apiAttrs={settings.apiAttributes}
                 updateApiDataMap={updateApiDataMap} apiData={getApiData()} user={props.user}
                 store={props.store} currency={props.currency} changeLock={props.changeLock}
                 loadData={loadData} bomType={BOMData.type}/>;
@@ -112,7 +134,8 @@ function BOMInterface(props){
     }
     return ( 
         <>
-            <Navigation interfaceState={interfaceState} onNavChange={changeState}/>
+            <Navigation interfaceState={interfaceState} settings={props.settings}
+             onNavChange={changeState} onSaveSettings={handleSaveSettings}/>
             {renderInterfaceState()}
         </>
     );
@@ -130,18 +153,27 @@ function Navigation(props){
     return(
         <div className='FlexNormal'>
             <div className='IconNav'>
+            <div className='MainSwitchIcon'>
             <HoverOverlay tooltip={'Upload'} placement='bottom'>
             <UploadIcon onClick={handleNavChange(0)} 
             selected={interfaceState===0} size={size}/>
             </HoverOverlay>
+            </div>
+            <div className='MainSwitchIcon'>
             <HoverOverlay tooltip={'Edit'} placement='bottom'>
             <EditIcon onClick={handleNavChange(1, [])} 
             selected={interfaceState===1} size={size}/>
             </HoverOverlay>
+            </div>
+            <div className='MainSwitchIcon'>
             <HoverOverlay tooltip={'BOMTool'} placement='bottom'>
             <SheetIcon onClick={handleNavChange(2)} 
             selected={interfaceState===2} size={size}/>
             </HoverOverlay>
+            </div>
+            <div className='SettingsIcon'>
+                <BOMToolSettings apiAttributes={apiAttributes} onSaveSettings={props.onSaveSettings}/>
+            </div>
             </div>
         </div>
     );

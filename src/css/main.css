@@ -4,6 +4,16 @@
     flex-basis: auto;
 }
 
+.Pointer{
+    cursor: pointer;
+}
+div.Pointer > input{
+    cursor: pointer;
+}
+div.Pointer > label{
+    cursor: pointer;
+}
+
 .AutoColumnButtons{
     display: flex;
     justify-content: center;
@@ -69,4 +79,9 @@
 .OctopartOffers{
     padding: 30px;
     max-width: none;
+}
+
+.SmallText{
+    width: 75px;
+    height: 34px;
 }

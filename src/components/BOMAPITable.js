@@ -8,7 +8,7 @@ import {useClientUrl} from './../hooks/Urls';
 
 import {SimplePopover, HoverOverlay} from './Tooltips';
 import {PricingTable} from './Tables';
-import {ModalController} from './Modals';
+import {ModalController, TemplateModal} from './Modals';
 import {MultiSelectRadioButtons, OutsideControlCheckbox, 
     AddRemoveEditSelectorForm,
     NumberInput, SelectorForm} from './Forms';
@@ -34,6 +34,8 @@ const renderers = {
     'prices': (p) => <PricesRenderer {...p}/>,
     'activeApis': (p) => <ActiveApisRenderer {...p}/>,
     'adjustedQuantity': (p) => <AdjustedQuantityRenderer {...p}/>,
+    'excessPrice': (p) => <ExcessRenderer {...p}/>,
+    'excessQuantity': (p) => <ExcessRenderer {...p}/>,
     'totalPrice': (p) => <TotalPriceRenderer {...p}/>,
     'octopart': (p) => <OctopartRenderer {...p}/>
 };
@@ -534,7 +536,11 @@ function QuantitiesRenderer(props){
 }
 
 function PricesRenderer(props){
-    const pt = props.value ? <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex[props.stockMode]}/> : <></>;
+    const pt = props.value ? 
+    <>
+    <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex[props.stockMode]}/>
+    <span>Total Price: {props.value.total_price[props.stockMode]}</span>
+    </> : <></>;
     return (
         <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
             <td {...props.cellProps}>{props.value && props.value.price[props.stockMode].toFixed(4)}</td>
@@ -555,10 +561,12 @@ function AdjustedQuantityRenderer(props){
 }
 
 function ExcessRenderer(props){
+    const display = props.value ? props.value[props.stockMode] : '-';
     return (
-        <td {...props.cellProps}>{props.value}</td>
-    )
+        <td {...props.cellProps}>{display}</td>
+    );
 }
+
 
 function ActiveApisRenderer(props){
     const apisActivator = (
@@ -574,10 +582,12 @@ function ActiveApisRenderer(props){
     const [showModal, setShowModal] = useState(0);
     const [activeApis, setActiveApis] = useState(init);
     function onChangeApi(newActiveApis){
+        //console.log(newActiveApis);
         setActiveApis(newActiveApis);
     }
     function onSubmit(){
         props.functions.submitNewApis(activeApis, props.rowNum);
+        console.log(activeApis);
         setShowModal(showModal+1);
     };
     const apisCheckboxes = (
@@ -656,13 +666,24 @@ function ActiveApisHeaderRenderer(props){
         return obj;
     }, {});
     const [showModal, setShowModal] = useState(0);
+    const [apiModal, setApiModal] = useState(false);
     const [activeApis, setActiveApis] = useState(init);
+    const [initActiveApis, setInitActiveApis]= useState(init); // onload
+    function handleOpenModal(){
+        setActiveApis(initActiveApis);
+        setApiModal(true);
+    }
+    function handleCloseModal(){
+        setApiModal(false);
+    }
     function onChangeApi(newActiveApis){
+        //console.log(newActiveApis);
         setActiveApis(newActiveApis);
     }
     function onSubmit(){
         props.functions.submitGlobalApis(activeApis);
-        setShowModal(showModal+1);
+        setInitActiveApis(activeApis);
+        //setShowModal(showModal+1);
     };
     const apisActivator = (
         <Button disabled={props.lock}>Apis</Button>
@@ -673,12 +694,14 @@ function ActiveApisHeaderRenderer(props){
     const footer = (
         <>
         <Button variant='primary' onClick={onSubmit}>Submit</Button>
-        <Button variant='secondary' onClick={() => setShowModal(showModal+1)}>Close</Button>
+        <Button variant='secondary' onClick={() => handleCloseModal()/*setShowModal(showModal+1)*/}>Close</Button>
         </>
     );
     return(
         <th {...props.headerProps}>
-            <ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' body={apisCheckboxes} footer={footer}/>
+            {/*<ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' body={apisCheckboxes} footer={footer}/>*/}
+            <Button disabled={props.lock} onClick={handleOpenModal}>Apis</Button>
+            <TemplateModal show={apiModal} title='Select APIs' body={apisCheckboxes} footer={footer} onClose={handleCloseModal}/>
         </th>
     );
 }

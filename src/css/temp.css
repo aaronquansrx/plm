@@ -32,20 +32,6 @@
     flex-basis: auto;
 }
 
-
-.IconNav {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-    padding:5px;
-}
-.IconNav2{
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    padding:5px;
-}
-
 .Radios{
     display: flex;
     align-items: center;

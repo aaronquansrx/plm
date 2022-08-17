@@ -81,7 +81,8 @@ function BOMToolV3(props){
         updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock, props.changeLock,
         searchTerm
     );
-    const apiAttrs = useApiAttributes();
+    //const apiAttrs = useApiAttributes();
+    const apiAttrs = props.apiAttrs;
     const [quantityMultiplier, adjustQuantity, handleMultiBlur] = useQuantityMultiplier(tableBOM, props.apiData, 
         apisList, runBOMAlgorithms, runBOMLineAlgorithms);
     function changeActiveApis(apis, row){
@@ -264,7 +265,7 @@ function BOMToolV3(props){
             options={highlightOptions}/>
             <BOMEval evaluation={bomEvaluation}/>
             <div>
-            <LabeledCheckbox label={'Show All APIs'} 
+            <LabeledCheckbox label={'Show All APIs'} id={'showallapis'} className='Pointer'
             checked={tableState === 'APIs'} onChange={handleTableSwitch} disabled={false}/>
             {/*<HoverOverlay tooltip={props.user ? 'Save BOM' : 'Requires Login'}>
             <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save BOM</Button>
@@ -328,7 +329,7 @@ function HighlightOptions(props){
     }
     return(
         <div>
-        <LabeledCheckbox label={'In Stock Only'} 
+        <LabeledCheckbox label={'In Stock Only'} id={'instockonly'} className='Pointer'
         checked={stockOnly} onChange={handleChangeStockOnly} disabled={props.disabled}/>
         <SelectSingleRadioButtons options={props.options}
         onChange={handleChange} disabled={props.disabled}/>

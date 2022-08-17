@@ -6,3 +6,52 @@
 .SmallPadding{
     padding: 3px;
 }
+
+.ToolNavbar{
+    display: flex;
+    flex-direction: row;
+}
+
+.Icon{
+    display: flex;
+    /*flex-direction: column;*/
+    cursor: pointer;
+    align-items: center;
+}
+
+.IconNav {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    margin: 2px;
+    border-bottom: 2px solid black;
+}
+
+.MainSwitchIcon{
+    flex-grow: 3;
+    border-right: 2px solid black;
+    padding: 1px;
+}
+
+.MainSwitchIconActive{
+    background-color: rgb(230, 236, 236);
+    flex-grow: 3;
+    border-right: 2px solid black;
+}
+
+.MainSwitchIcon:hover{
+    background-color: rgb(216, 210, 210);
+}
+
+.MainSwitchIconActive:hover{
+    background-color: rgb(216, 210, 210);
+}
+
+.SettingsIcon{
+    flex-grow: 1;
+    padding: 2px;
+}
+
+.SettingsIcon:hover{
+    background-color: rgb(216, 210, 210);
+}

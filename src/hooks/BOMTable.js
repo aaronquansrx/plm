@@ -255,11 +255,23 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                     stock: stockInfo[api][i].index,
                     noStock: noStockInfo[api][i].index
                 };
+                off.prices.total_price = {
+                    stock: stockInfo[api][i].total,
+                    noStock: noStockInfo[api][i].total
+                }
                 off.totalPrice = {
                     stock: stockInfo[api][i].total,
                     noStock: noStockInfo[api][i].total,
                 };
                 //off.prices.pricingIndex = algorithmsStockStructure(bestPrice.offer_info[api][i].index);
+                off.excessQuantity = {
+                    stock: stockInfo[api][i].excess_quantity,
+                    noStock: noStockInfo[api][i].excess_quantity,
+                };
+                off.excessPrice = {
+                    stock: stockInfo[api][i].excess_price,
+                    noStock: noStockInfo[api][i].excess_price,
+                }
             });
         });
 
@@ -337,6 +349,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     ];
 }
 
+/*
 export function useApiAttributes(){
     const initApiAttrs = [
         {Header: 'Stock', accessor: 'available'},
@@ -350,6 +363,7 @@ export function useApiAttributes(){
     const [apiAttrs, setApiAttrs] = useState(initApiAttrs);
     return apiAttrs;
 }
+*/
 
 
 export function useQuantityMultiplier(tableBOM, apiData, apisList, 
@@ -518,10 +532,13 @@ function evalApi(quantity, singleApiData){
         newOffer.prices = {
             price: algorithmsStockStructure(price),
             pricing: offer.pricing,
-            pricingIndex: algorithmsStockStructure(index)
+            pricingIndex: algorithmsStockStructure(index),
+            total_price: algorithmsStockStructure(price*quantity),
+            //excess: null
         }
         newOffer.adjustedQuantity = null;
-        newOffer.excess = null;
+        newOffer.excessQuantity = null;
+        newOffer.excessPrice = null;
         return newOffer;
     }); 
     return newOffers;

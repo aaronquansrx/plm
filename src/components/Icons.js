@@ -13,7 +13,11 @@ import {
 
 import { MdRefresh } from "react-icons/md";
 
-import './../css/icon.css';
+import {
+    BiCog
+} from "react-icons/bi"
+
+import './../css/bomtool.css';
 
 export function UploadIcon(props){
     const size = props.size;
@@ -69,6 +73,16 @@ export function ExportExcelIcon(props){
         <div className='Icon' onClick={props.onClick}>
         <span><BsFileEarmarkExcel size={size}/></span>
         <span>Export</span>
+        </div>
+    );
+}
+
+export function CogIcon(props){
+    const size = props.size;
+    return (
+        <div className='Icon'>
+        <span><BiCog size={size}/></span>
+        <span>Settings</span>
         </div>
     );
 }
