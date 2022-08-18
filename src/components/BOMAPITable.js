@@ -73,9 +73,10 @@ function smartAttr(type, funs, vars, rendererList){
 
 export function BOMAPITableV2(props){
     const bomAttrs = props.bomAttrs;
-    const apis = props.apis;
+    const apis = props.apis; //apis to display
+    const allApis = props.allApis; // all possible apis
     const apiAttrs = props.apiAttrs;
-    const apisToHeader = props.apis.reduce((obj, api) => {
+    const apisToHeader = allApis.reduce((obj, api) => {
         obj[api.accessor] = api.Header;
         return obj;
     }, {});
@@ -163,7 +164,7 @@ export function BOMAPITableV2(props){
         <Table>
             {
             <BOMAPITableHeader hasLineLocks={props.hasLineLocks} bomAttrs={bomAttrs} 
-            apis={apis} apiAttrs={apiAttrs} onLockAll={props.onLineLockAll} 
+            apis={apis} allApis={allApis} apiAttrs={apiAttrs} onLockAll={props.onLineLockAll} 
             functions={props.functions} tableState={props.tableState} extendedApiAttrs={extendedApiAttrs}/>
             }
             <tbody>
@@ -172,7 +173,7 @@ export function BOMAPITableV2(props){
                     data={line} hasLineLocks={props.hasLineLocks} mpn={line.mpns.current}
                     attributeOrder={attributeOrder} functionLock={props.functionLock}
                     onLineLock={props.onLineLock} bestAttributeOrder={bestAttributeOrder}
-                    tableState={tbs} apisToHeader={apisToHeader}/>
+                    tableState={tbs} apisToHeader={apisToHeader} apis={apis} allApis={allApis}/>
                 )}
             </tbody>
         </Table>
@@ -197,7 +198,7 @@ function BOMAPITableHeader(props){
         props.onLockAll(false);
     }
     const vars = {
-        'activeApis': {apis: props.apis}
+        'activeApis': {apis: props.apis, allApis: props.allApis}
     }
     /*
     function smartAttr(type){
@@ -279,7 +280,9 @@ function BOMRow(props){
     function changeShowOffers(){
         setShowAllOffers(!showAllOffers);
     }
-    const firstRowCellProps = showAllOffers && props.data.maxOffers > 0 && props.tableState ? {rowSpan: props.data.maxOffers} : {rowSpan: 1};
+    const maxOffers = getMaxOffers();
+    //console.log(maxOffers);
+    const firstRowCellProps = showAllOffers && maxOffers > 0 && props.tableState ? {rowSpan: maxOffers} : {rowSpan: 1};
     const numTableCols = props.attributeOrder.reduce((c, attr) => {
         if(attr.type == 'api'){
             return c+attr.subAttributes.length;
@@ -288,6 +291,14 @@ function BOMRow(props){
     }, 0) + (props.hasLineLocks ? 1 : 0);
     function handleLineLock(){
         props.onLineLock(!props.data.lineLock, props.rowNum);
+    }
+    function getMaxOffers(){
+        if(props.apis.length === props.allApis.length) return props.data.maxOffers;
+        //console.log('t');
+        return props.apis.reduce((max, api) => {
+            if(props.data[api.accessor].offers.length > max) return props.data[api.accessor].offers.length;
+            return max;
+        }, 0);
     }
     const lockTTip = props.data.lineLock ? 'Unlock Line' : 'Lock Line';
     const attributeOrder = props.tableState ? props.attributeOrder : props.functionLock ? props.attributeOrder : props.bestAttributeOrder;
@@ -316,8 +327,8 @@ function BOMRow(props){
             lock={props.data.lineLock} functionLock={props.functionLock} mpn={props.mpn}/>
             }
         </tr>
-        {props.data.maxOffers > 1 && showAllOffers && props.tableState && 
-        [...Array(props.data.maxOffers-1).keys()].map((i) => {
+        {maxOffers > 1 && showAllOffers && props.tableState && 
+        [...Array(maxOffers-1).keys()].map((i) => {
             const offerNum = i+1;
             return(
             <tr key={i}>       
@@ -326,7 +337,7 @@ function BOMRow(props){
             </tr>
             );
         })}
-        {props.data.maxOffers > 1 && props.tableState && 
+        {maxOffers > 1 && props.tableState && 
         <tr onClick={changeShowOffers}>
             <td colSpan={numTableCols} className='NoPadding'>
             <HoverOverlay placement='auto' 
@@ -549,7 +560,7 @@ function PricesRenderer(props){
 }
 
 function TotalPriceRenderer(props){
-    return <td {...props.cellProps}>{props.value && props.value[props.stockMode]}</td>
+    return <td {...props.cellProps}>{props.value && props.value[props.stockMode].toFixed(4)}</td>
 }
 
 function AdjustedQuantityRenderer(props){
@@ -579,31 +590,41 @@ function ActiveApisRenderer(props){
         obj[api.accessor] = api.active;
         return obj;
     }, {});
-    const [showModal, setShowModal] = useState(0);
+    const [apiModal, setApiModal] = useState(false);
     const [activeApis, setActiveApis] = useState(init);
+    const [initActiveApis, setInitActiveApis]= useState(init); // onload
     function onChangeApi(newActiveApis){
-        //console.log(newActiveApis);
         setActiveApis(newActiveApis);
+    }
+    function handleOpenModal(){
+        setActiveApis(initActiveApis);
+        setApiModal(true);
+    }
+    function handleCloseModal(){
+        setApiModal(false);
     }
     function onSubmit(){
         props.functions.submitNewApis(activeApis, props.rowNum);
         console.log(activeApis);
-        setShowModal(showModal+1);
+        setInitActiveApis()
+        //setShowModal(showModal+1);
+        handleCloseModal();
     };
     const apisCheckboxes = (
-        <div>
-        <MultiSelectRadioButtons init={init} options={apis} onChange={onChangeApi}/>
-        </div>
+        <MultiSelectRadioButtons className='Pointer' control={activeApis}  options={apis} onChange={onChangeApi}/>
     );
     const footer = (
         <>
         <Button onClick={onSubmit} disabled={props.lock}>Submit</Button>
-        <Button variant='secondary' onClick={() => setShowModal(showModal+1)}>Close</Button>
+        <Button variant='secondary' onClick={handleCloseModal}>Close</Button>
         </>
     );
     return (
         <td {...props.cellProps}>
-        <ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' body={apisCheckboxes} footer={footer}/>
+        <Button disabled={props.lock} onClick={handleOpenModal}>Apis</Button>
+        <TemplateModal show={apiModal} title='Select APIs' body={apisCheckboxes} footer={footer} onClose={handleCloseModal}/>
+        {/*<ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' 
+        body={apisCheckboxes} footer={footer}/>*/}
         </td>
     )
 }
@@ -658,14 +679,13 @@ function AdjustedQuantityHeaderRenderer(props){
 }
 
 function ActiveApisHeaderRenderer(props){
-    const apis = props.vars.apis.map((api) => {
+    const apis = props.vars.allApis.map((api) => {
         return {id: api.accessor, label: api.Header};
     });
-    const init = props.vars.apis.reduce((obj, api) => {
+    const init = props.vars.allApis.reduce((obj, api) => {
         obj[api.accessor] = true;
         return obj;
     }, {});
-    const [showModal, setShowModal] = useState(0);
     const [apiModal, setApiModal] = useState(false);
     const [activeApis, setActiveApis] = useState(init);
     const [initActiveApis, setInitActiveApis]= useState(init); // onload
@@ -683,23 +703,22 @@ function ActiveApisHeaderRenderer(props){
     function onSubmit(){
         props.functions.submitGlobalApis(activeApis);
         setInitActiveApis(activeApis);
-        //setShowModal(showModal+1);
+        handleCloseModal();
     };
     const apisActivator = (
         <Button disabled={props.lock}>Apis</Button>
     );
     const apisCheckboxes = (
-        <MultiSelectRadioButtons control={activeApis} options={apis} onChange={onChangeApi}/>
+        <MultiSelectRadioButtons className='Pointer' control={activeApis} options={apis} onChange={onChangeApi}/>
     );
     const footer = (
         <>
         <Button variant='primary' onClick={onSubmit}>Submit</Button>
-        <Button variant='secondary' onClick={() => handleCloseModal()/*setShowModal(showModal+1)*/}>Close</Button>
+        <Button variant='secondary' onClick={handleCloseModal}>Close</Button>
         </>
     );
     return(
         <th {...props.headerProps}>
-            {/*<ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' body={apisCheckboxes} footer={footer}/>*/}
             <Button disabled={props.lock} onClick={handleOpenModal}>Apis</Button>
             <TemplateModal show={apiModal} title='Select APIs' body={apisCheckboxes} footer={footer} onClose={handleCloseModal}/>
         </th>

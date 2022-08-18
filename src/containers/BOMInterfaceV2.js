@@ -52,6 +52,7 @@ const apiAttributes = [
     {Header: 'SPQ', accessor: 'spq', longHeader: 'Standard Pack Quantity'},
     {Header: 'Lead Time', accessor: 'leadtime'},
     {Header: 'Price', accessor: 'prices'},
+    {Header: 'T. P', accessor: 'totalPrice', longHeader: 'Total Price'},
     {Header: 'Exc. P', accessor: 'excessPrice', longHeader: 'Excess Price'},
     {Header: 'Adj. Q', accessor: 'adjustedQuantity', longHeader: 'Adjusted Quantity'},
     {Header: 'Exc. Q', accessor: 'excessQuantity', longHeader: 'Excess Quantity'},

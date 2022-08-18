@@ -52,14 +52,15 @@ function BOMToolV3(props){
         retry: false
     };
     const [searchTerm, setSearchTerm] = useState('');
-    const apisList = useMemo(() => props.apis.map((api => api.accessor)));
+    const [displayApis, setDisplayApis] = useState(props.apis);
+    const allApisList = useMemo(() => props.apis.map((api => api.accessor)));
     const mpnList = useMemo(() => props.bom.reduce((arr, line) => {
         line.mpnOptions.forEach(mpn => arr.push(mpn));
         return arr;
     }, []), [props.bom]);
     const isLoadedBom = props.bomType === 'saved' || props.bomType === 'saved_nodata';
     const [updateTableCall, setUpdateTableCall] = useState(0);
-    const [callApiRetry, callMpn, callApisRetry] = useApiData(mpnList, apisList, props.updateApiDataMap, 
+    const [callApiRetry, callMpn, callApisRetry] = useApiData(mpnList, allApisList, props.updateApiDataMap, 
          props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
         dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress] = useApiDataProgress(mpnList, props.apiData, 
@@ -84,7 +85,7 @@ function BOMToolV3(props){
     //const apiAttrs = useApiAttributes();
     const apiAttrs = props.apiAttrs;
     const [quantityMultiplier, adjustQuantity, handleMultiBlur] = useQuantityMultiplier(tableBOM, props.apiData, 
-        apisList, runBOMAlgorithms, runBOMLineAlgorithms);
+        allApisList, runBOMAlgorithms, runBOMLineAlgorithms);
     function changeActiveApis(apis, row){
         const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
             actApi.active = apis[actApi.accessor];
@@ -108,9 +109,16 @@ function BOMToolV3(props){
             }
             return line;
         });
+        const filteredApis = props.apis.reduce((arr, ap) => {
+            if(apis[ap.accessor]) arr.push(ap);
+            return arr;
+        }, []);
+        setDisplayApis(filteredApis);
+        //console.log(props.apis);
+        //console.log(filteredApis);
         runBOMAlgorithms(newTable);
     }
-    const [retryApi, retryAll] = useApiRetrys(props.apiData, apisList, mpnList, 
+    const [retryApi, retryAll] = useApiRetrys(props.apiData, allApisList, mpnList, 
         retryLine, waitingRowApi, callApiRetry, setDataProcessingLock,
         retryAllStart, callApisRetry, setMpnsInProgress);
     function changeMPNOption(row, newMPN){
@@ -119,7 +127,7 @@ function BOMToolV3(props){
         changeMPNLine(row, newLine, newMPN);
     }
     const [addMpnOption, editMpnOption, deleteMpnOption] = useMpnOptions(tableBOM, props.apiData,
-        apisList, setTable, runBOMLineAlgorithms, callMpn, changeMPNLine);
+        allApisList, setTable, runBOMLineAlgorithms, callMpn, changeMPNLine);
     function requestOctopart(row, callback){
         //console.log('octopart');
         //console.log(row);
@@ -128,7 +136,7 @@ function BOMToolV3(props){
         axios({
             method: 'GET',
             url: serverUrl+'api/octopart',
-            params: {search: mpn, currency: props.currency, store: props.store},
+            params: {search: mpn, quantity: quantity, currency: props.currency, store: props.store},
             //signal: controller.signal
         }).then(response => {
             console.log(response.data);
@@ -245,7 +253,7 @@ function BOMToolV3(props){
     function searchMpns(searchTerm){
         setSearchTerm(searchTerm);
     }
-    const [showSaveModal, toggleSavedBomModal, saveBom] = useSaveBom(tableBOM, props.apiData, apisList, mpnList, 
+    const [showSaveModal, toggleSavedBomModal, saveBom] = useSaveBom(tableBOM, props.apiData, allApisList, mpnList, 
         props.user, props.currency, props.store, props.loadData.bom_id);
     return(
         <>
@@ -287,7 +295,7 @@ function BOMToolV3(props){
         <BOMApiProgressBarV2 show={showProgress} numParts={numMpns}
         onHideBar={handleHideBar} numFinished={numMpns-mpnsInProgress.size}/>
         <BOMAPITableV2 data={filteredTableBOM} bomAttrs={tableColumns} 
-        apis={props.apis} apiAttrs={apiAttrs} functions={functions}
+        apis={displayApis} allApis={props.apis} apiAttrs={apiAttrs} functions={functions}
         highlightMode={highlightMode}  functionLock={tableLock}
         hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}
         tableState={tableState}/>
