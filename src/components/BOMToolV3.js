@@ -144,36 +144,36 @@ function BOMToolV3(props){
             const findMpnData = octoData.data.find((octo) => octo.mpn === mpn);
             if(findMpnData !== undefined){
                 const dists = findMpnData.data.map((d) => {
-                    const offers = d.Offers.reduce((arr, offer) => {
-                        if(Object.keys(offer.Pricing).length > 0){
-                            if(props.currency in offer.Pricing){
-                                const pricing = offer.Pricing[props.currency].map((pr) => {
+                    const offers = d.offers.reduce((arr, offer) => {
+                        if(Object.keys(offer.pricing).length > 0){
+                            if(props.currency in offer.pricing){
+                                const pricing = offer.pricing[props.currency].map((pr) => {
                                     return pr;
                                 });
-                                const {price, index} = findPriceBracket(pricing, 
-                                    quantity, offer.Quantity.MinimumOrder);
+                                //const {price, index} = findPriceBracket(pricing, 
+                                //    quantity, offer.quantities.MinimumOrder);
                                 const obj = {
-                                    available: offer.Quantity.Available,
-                                    moq: offer.Quantity.MinimumOrder,
-                                    leadtime: offer.LeadTime,
-                                    spq: offer.Quantity.OrderMulti,
+                                    available: offer.available,
+                                    moq: offer.moq,
+                                    leadtime: offer.leadtime,
+                                    spq: offer.spq,
                                     //pricing: pricing,
                                     prices: {
-                                        price: price,
+                                        price: offer.price,
                                         pricing: pricing,
-                                        pricingIndex: index,
+                                        pricingIndex: offer.price_index,
                                     },
-                                    packaging: offer.Packaging
+                                    packaging: offer.packaging
                                 }
                                 arr.push(obj);
                             }else{
-                                console.log(offer.Pricing);
+                                console.log(offer.pricing);
                             }
                         }
                         return arr;
                     }, []);
                     return {
-                        distributor: d.Company,
+                        distributor: d.company,
                         offers: offers
                     };
                 });
@@ -204,7 +204,16 @@ function BOMToolV3(props){
         },
         api: {
             retry: retryApi
+        },
+        offer: {
+            selectOffer: selectOffer
         }
+    }
+    function selectOffer(row, api, offerNum){
+        const newTable = update(tableBOM, {
+            [row]: {[api]: {offers: {[offerNum]: {selected: {$set: !tableBOM[row][api].offers[offerNum].selected}}}}}
+        });
+        setTable(newTable);
     }
     const highlightOptions = [
         {label: 'Best Price', id: 'price'}, 

@@ -8,6 +8,8 @@ import { findPriceBracket, sortPrice, sortLeadTime,
 import {useServerUrl} from '../hooks/Urls';
 import { BOMAPITable } from '../components/Tables';
 
+const buildtype = process.env.NODE_ENV;
+
 export function useTableBOM(bom, tableHeaders, apis, apiData, 
     testCall, ltco, store, currency, dataProcessingLock, appLock, searchMpn){
     const serverUrl = useServerUrl();
@@ -67,7 +69,10 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             mpn: 'mpns',
             quantity: 'quantities'
         };
-        const addedHeaders = [{Header: 'Apis', accessor: 'activeApis'}, {Header: 'Octopart', accessor: 'octopart'}];
+        const addedHeaders = [{Header: 'Apis', accessor: 'activeApis'}/*, {Header: 'Octopart', accessor: 'octopart'}*/];
+        if(buildtype !== 'production'){
+            addedHeaders.push({Header: 'Octopart', accessor: 'octopart'});
+        }
         const allHeaders = tableHeaders.concat(addedHeaders);
         return allHeaders.map((header) => {
             const newHeader = {...header};
@@ -539,6 +544,7 @@ function evalApi(quantity, singleApiData){
         newOffer.adjustedQuantity = null;
         newOffer.excessQuantity = null;
         newOffer.excessPrice = null;
+        newOffer.selected = false;
         return newOffer;
     }); 
     return newOffers;

@@ -19,6 +19,10 @@ td.HighlightedCell{
     background: rgb(101, 255, 87);
 }
 
+td.SelectedCell{
+    background: rgb(139, 164, 247);
+}
+
 .Lock:checked[type=checkbox]{
     background-image: url('../lock-128.png');
 }

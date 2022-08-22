@@ -34,8 +34,8 @@ const renderers = {
     'prices': (p) => <PricesRenderer {...p}/>,
     'activeApis': (p) => <ActiveApisRenderer {...p}/>,
     'adjustedQuantity': (p) => <AdjustedQuantityRenderer {...p}/>,
-    'excessPrice': (p) => <ExcessRenderer {...p}/>,
-    'excessQuantity': (p) => <ExcessRenderer {...p}/>,
+    'excessPrice': (p) => <ExcessPriceRenderer {...p}/>,
+    'excessQuantity': (p) => <AdjustedQuantityRenderer {...p}/>,
     'totalPrice': (p) => <TotalPriceRenderer {...p}/>,
     'octopart': (p) => <OctopartRenderer {...p}/>
 };
@@ -171,7 +171,7 @@ export function BOMAPITableV2(props){
                 {pageRows.map((line, i) => 
                     <BOMRow key={i} highlightMode={props.highlightMode} rowNum={line.rowNum} 
                     data={line} hasLineLocks={props.hasLineLocks} mpn={line.mpns.current}
-                    attributeOrder={attributeOrder} functionLock={props.functionLock}
+                    attributeOrder={attributeOrder} functionLock={props.functionLock} offerFunctions={props.offerFunctions}
                     onLineLock={props.onLineLock} bestAttributeOrder={bestAttributeOrder}
                     tableState={tbs} apisToHeader={apisToHeader} apis={apis} allApis={allApis}/>
                 )}
@@ -324,7 +324,7 @@ function BOMRow(props){
             {
             <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={attributeOrder} 
             data={data} cellProps={firstRowCellProps} highlightMode={props.highlightMode} 
-            lock={props.data.lineLock} functionLock={props.functionLock} mpn={props.mpn}/>
+            lock={props.data.lineLock} functionLock={props.functionLock} mpn={props.mpn} offerFunctions={props.offerFunctions}/>
             }
         </tr>
         {maxOffers > 1 && showAllOffers && props.tableState && 
@@ -333,7 +333,7 @@ function BOMRow(props){
             return(
             <tr key={i}>       
                 <BOMOffer offerNum={offerNum} rowNum={props.rowNum} attributeOrder={props.attributeOrder} 
-                data={props.data} highlightMode={props.highlightMode} mpn={props.mpn}/>
+                data={props.data} highlightMode={props.highlightMode} mpn={props.mpn} offerFunctions={props.offerFunctions}/>
             </tr>
             );
         })}
@@ -377,10 +377,13 @@ function BOMOffer(props){
             ? props.data[attr.attribute].offerOrder[stockMode][props.highlightMode.best][props.offerNum] 
             : props.offerNum;
             //offerNum is the sorted index order, offerIndex is the index of original data i.e. 0,1,2 etc.
+            {/*<BOMAttributeRenderer key={i} {...specAttrs} {...attr} cellProps={props.cellProps}
+                value={props.data[attr.attribute]} offerNum={offerNum} offerIndex={props.offerNum} rowNum={props.rowNum} 
+            lock={props.lock} stockMode={stockMode} functionLock={props.functionLock} mpn={props.mpn}/>*/}
             return (
                 <BOMAttributeRenderer key={i} {...specAttrs} {...attr} cellProps={props.cellProps}
                 value={props.data[attr.attribute]} offerNum={offerNum} offerIndex={props.offerNum} rowNum={props.rowNum} 
-                lock={props.lock} stockMode={stockMode} functionLock={props.functionLock} mpn={props.mpn}/> 
+                lock={props.lock} stockMode={stockMode} functionLock={props.functionLock} offerFunctions={props.offerFunctions} mpn={props.mpn}/>
             );
         })}
         </>
@@ -395,6 +398,25 @@ function BOMAttributeRenderer(props){
     );
 }
 
+function APIAttributeRenderer(props){
+    //console.log(props.custom);
+    function handleClick(){
+        props.functions.offer.selectOffer(props.rowNum, props.api, props.offerNum);
+    }
+    
+    return(
+        <td {...props.cellProps} onClick={handleClick}>
+            {props.custom ? props.custom({...props}) : <DefaultAPIAttributeRenderer {...props}/>}
+        </td>
+    );
+}
+
+function DefaultAPIAttributeRenderer(props){
+    return (<>{props.value}</>);
+}
+
+
+
 function APIRenderer(props){
     const hasHighlight = Object.entries(props.highlight).reduce((obj, [k, v]) => {
         if(v !== null){
@@ -402,9 +424,14 @@ function APIRenderer(props){
         }
         return obj;
     }, {});
-    const cn = (props.highlightMode in hasHighlight) 
+    let cn = (props.highlightMode in hasHighlight) 
     ? (hasHighlight[props.highlightMode] ? 'HighlightedCell' : 'NormalCell') 
     : 'NormalCell';
+    if(props.value && props.value.offers.length > 0 && props.offerNum < props.value.offers.length){
+        if(props.value.offers[props.offerNum].selected){
+            cn = 'SelectedCell';
+        }
+    }
     const cellProps = {
         className: cn
     };
@@ -416,10 +443,15 @@ function APIRenderer(props){
         {props.value 
         ? ((props.value.offers.length > 0 && props.offerNum < props.value.offers.length)
         ? props.subAttributes.map((attr, i) => {
-            return (
-                <BOMAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]}
+            /*
+            <BOMAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]}
                 custom={attr.custom} type='normal' rowNum={props.rowNum} cellProps={cellProps}
                 stockMode={props.stockMode} highlightMode={props.highlightMode}/>
+            */
+            return (
+                <APIAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]}
+                custom={attr.custom} type='apiAttr' offerNum={props.offerNum} rowNum={props.rowNum} cellProps={cellProps} api={props.api}
+                stockMode={props.stockMode} highlightMode={props.highlightMode} functions={props.offerFunctions}/>
             )
         })
         : <td colSpan={props.subAttributes.length}>
@@ -537,6 +569,8 @@ function QuantitiesRenderer(props){
             Single: {props.value.single}{' '}Multi: {props.value.multi}
         </div>
     );
+    //<td {...props.cellProps}>
+    //</td>
     return (
         <td {...props.cellProps}>
             <SimplePopover popoverBody={quantPop} trigger={['hover', 'focus']} placement='auto'>
@@ -546,38 +580,52 @@ function QuantitiesRenderer(props){
     );
 }
 
+function priceDisplay(price){
+    return parseFloat(price.toFixed(4));
+}
+
 function PricesRenderer(props){
     const pt = props.value ? 
     <>
     <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex[props.stockMode]}/>
-    <span>Total Price: {props.value.total_price[props.stockMode]}</span>
     </> : <></>;
+    //<SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'></SimplePopover>
     return (
-        <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
-            <td {...props.cellProps}>{props.value && props.value.price[props.stockMode].toFixed(4)}</td>
-        </SimplePopover>
+            <>
+            <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
+                <div>{props.value && priceDisplay(props.value.price[props.stockMode])}</div>
+            </SimplePopover>
+            </>
     );
 }
 
 function TotalPriceRenderer(props){
-    return <td {...props.cellProps}>{props.value && props.value[props.stockMode].toFixed(4)}</td>
+    return (
+    <>
+    {/*<td {...props.cellProps}>}*/}
+        {props.value && priceDisplay(props.value[props.stockMode])}
+    {/*</td>*/}
+    </>
+    );
 }
 
 function AdjustedQuantityRenderer(props){
     //console.log(props);
     const display = props.value ? props.value[props.stockMode] : '-';
+    //<td {...props.cellProps}></td>//
     return (
-        <td {...props.cellProps}>{display}</td>
+        <>
+        {display}
+        </>
     );
 }
 
-function ExcessRenderer(props){
-    const display = props.value ? props.value[props.stockMode] : '-';
+function ExcessPriceRenderer(props){
+    const display = props.value ? priceDisplay(props.value[props.stockMode]) : '-';
     return (
-        <td {...props.cellProps}>{display}</td>
+        <>{display}</>
     );
 }
-
 
 function ActiveApisRenderer(props){
     const apisActivator = (
@@ -630,6 +678,7 @@ function ActiveApisRenderer(props){
 }
 
 function OctopartRenderer(props){
+    //console.log(props.functions);
     const [showModal, setShowModal] = useState(0);
     const [octoRequested, setOctoRequested] = useState(false);
     const [modalOn, setModalOn] = useState(false);
@@ -823,10 +872,37 @@ function OctopartRow(props){
 }
 
 function OctoPricesRenderer(props){
-    const pt = props.value ? <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex}/> : <></>;
+    const pt = props.value ? <NewPricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex}/> : <></>;
     return (
         <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
             <td {...props.cellProps}>{props.value && props.value.price}</td>
         </SimplePopover>
     );
+}
+
+function NewPricingTable(props){
+    return(
+        <>
+        {props.pricing &&
+        <Table bordered hover className='PricingTable'>
+            <thead>
+            <tr>
+            <th>Break Quantity</th><th>Price</th>
+            </tr>
+            </thead>
+            <tbody>
+            {props.pricing.map((bracket, i) => {
+                const cn = props.highlight == i ? 'PricingCell HighlightedCell' : 'PricingCell'; 
+                return(
+                <tr key={i}>
+                    <td className={cn}>{bracket.break_quantity}</td>
+                    <td className={cn}>{bracket.unit_price}</td>
+                </tr>
+                )}
+            )}
+            </tbody>
+        </Table>
+        }
+        </>
+        );
 }
