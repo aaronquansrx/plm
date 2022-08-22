@@ -171,7 +171,7 @@ export function BOMAPITableV2(props){
                 {pageRows.map((line, i) => 
                     <BOMRow key={i} highlightMode={props.highlightMode} rowNum={line.rowNum} 
                     data={line} hasLineLocks={props.hasLineLocks} mpn={line.mpns.current}
-                    attributeOrder={attributeOrder} functionLock={props.functionLock} offerFunctions={props.offerFunctions}
+                    attributeOrder={attributeOrder} functionLock={props.functionLock} offerFunctions={props.functions.offer}
                     onLineLock={props.onLineLock} bestAttributeOrder={bestAttributeOrder}
                     tableState={tbs} apisToHeader={apisToHeader} apis={apis} allApis={allApis}/>
                 )}
@@ -400,8 +400,9 @@ function BOMAttributeRenderer(props){
 
 function APIAttributeRenderer(props){
     //console.log(props.custom);
+    //console.log(props.functions);
     function handleClick(){
-        props.functions.offer.selectOffer(props.rowNum, props.api, props.offerNum);
+        props.functions.selectOffer(props.rowNum, props.api, props.offerNum);
     }
     
     return(
