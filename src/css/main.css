@@ -19,6 +19,14 @@ div.Pointer > label{
     justify-content: center;
 }
 
+.TextCursor{
+    cursor: text;
+    o-user-select: text;
+    -moz-user-select: text;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
 .ProgressBar{
     height: 15px;
 }

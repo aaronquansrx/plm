@@ -14,8 +14,10 @@ import {MultiSelectRadioButtons, OutsideControlCheckbox,
     NumberInput, SelectorForm} from './Forms';
 import {PageInterface} from './Pagination';
 import {usePaging} from './../hooks/Paging';
+import { MPNDropdown } from './Dropdown';
 
-import {stockString} from './../scripts/AlgorithmVariable';
+//import {stockString} from './../scripts/AlgorithmVariable';
+import {getStockModeString} from './../scripts/BomTool'
 
 import { slice } from 'lodash';
 
@@ -33,10 +35,10 @@ const renderers = {
     'quantities': (p) => <QuantitiesRenderer {...p}/>,
     'prices': (p) => <PricesRenderer {...p}/>,
     'activeApis': (p) => <ActiveApisRenderer {...p}/>,
-    'adjustedQuantity': (p) => <AdjustedQuantityRenderer {...p}/>,
-    'excessPrice': (p) => <ExcessPriceRenderer {...p}/>,
-    'excessQuantity': (p) => <AdjustedQuantityRenderer {...p}/>,
-    'totalPrice': (p) => <TotalPriceRenderer {...p}/>,
+    'adjusted_quantity': (p) => <AdjustedQuantityRenderer {...p}/>,
+    'excess_price': (p) => <ExcessPriceRenderer {...p}/>,
+    'excess_quantity': (p) => <AdjustedQuantityRenderer {...p}/>,
+    'total_price': (p) => <TotalPriceRenderer {...p}/>,
     'octopart': (p) => <OctopartRenderer {...p}/>
 };
 
@@ -48,7 +50,7 @@ const octoRenderers = {
 const headerRenderers = {
     'activeApis': (p) => <ActiveApisHeaderRenderer {...p}/>,
     'leadtime': (p) => <LeadTimeHeaderRenderer {...p}/>,
-    'adjustedQuantity': (p) => <AdjustedQuantityHeaderRenderer {...p}/>
+    'adjusted_quantity': (p) => <AdjustedQuantityHeaderRenderer {...p}/>
 };
 
 const defaultRenderer = (p) => <DefaultRenderer/>
@@ -293,7 +295,7 @@ function BOMRow(props){
         props.onLineLock(!props.data.lineLock, props.rowNum);
     }
     function getMaxOffers(){
-        if(props.apis.length === props.allApis.length) return props.data.maxOffers;
+        if(props.apis.length === props.allApis.length) return props.data.max_offers;
         //console.log('t');
         return props.apis.reduce((max, api) => {
             if(props.data[api.accessor].offers.length > max) return props.data[api.accessor].offers.length;
@@ -302,7 +304,7 @@ function BOMRow(props){
     }
     const lockTTip = props.data.lineLock ? 'Unlock Line' : 'Lock Line';
     const attributeOrder = props.tableState ? props.attributeOrder : props.functionLock ? props.attributeOrder : props.bestAttributeOrder;
-    const stockMode = stockString(props.highlightMode.stock);
+    const stockMode = getStockModeString(props.highlightMode.stock);
     const hl = props.data.highlights[stockMode][props.highlightMode.best];
     const bestOffer = hl ? props.data[hl.api].offers[hl.offerNum] : null;
     const data = props.tableState ? props.data : {
@@ -363,7 +365,7 @@ function BOMOffer(props){
     return (
         <>
         {attrOrder.map((attr, i) => {
-            const stockMode = props.highlightMode.stock ? 'stock' : 'noStock';
+            const stockMode = getStockModeString(props.highlightMode.stock);
             const specAttrs = attr.type === 'api' 
             ? {
                 highlight: props.data.highlights[stockMode],
@@ -373,8 +375,9 @@ function BOMOffer(props){
             } 
             : {};
             //console.log(props.data.highlights[stockMode]);
+            //if(props.data[attr.attribute]) console.log(props.data[attr.attribute].offer_order);
             const offerNum = attr.type === 'api' && props.data[attr.attribute]
-            ? props.data[attr.attribute].offerOrder[stockMode][props.highlightMode.best][props.offerNum] 
+            ? props.data[attr.attribute].offer_order[stockMode][props.highlightMode.best][props.offerNum] 
             : props.offerNum;
             //offerNum is the sorted index order, offerIndex is the index of original data i.e. 0,1,2 etc.
             {/*<BOMAttributeRenderer key={i} {...specAttrs} {...attr} cellProps={props.cellProps}
@@ -421,7 +424,7 @@ function DefaultAPIAttributeRenderer(props){
 function APIRenderer(props){
     const hasHighlight = Object.entries(props.highlight).reduce((obj, [k, v]) => {
         if(v !== null){
-            obj[k] = v.offerNum === props.offerNum && v.api === props.api;
+            obj[k] = v.offer_num === props.offer_num && v.api === props.api;
         }
         return obj;
     }, {});
@@ -551,10 +554,12 @@ function MPNsRenderer(props){
         <div className='Select' onClick={handleMPNClick}>
             {/*showSelector
             ? <AddRemoveEditSelectorForm onSelect={handleBlurMpn} options={props.value.options}/> 
-            : mpn
+            : mpn AddRemoveEditSelectorForm
             */}
-            <AddRemoveEditSelectorForm edit={editSelector} onSelect={handleBlurMpn} 
-            options={props.value.options} selected={mpn} onEdit={handleEditMpn} disabled={props.lock || props.functionLock}/> 
+            {<MPNDropdown edit={editSelector} onSelect={handleBlurMpn} 
+            options={props.value.options} selected={mpn} onEdit={handleEditMpn} 
+        disabled={props.lock || props.functionLock}/> }
+            
         </div>
         </HoverOverlay>
     </td> 
@@ -588,7 +593,7 @@ function priceDisplay(price){
 function PricesRenderer(props){
     const pt = props.value ? 
     <>
-    <PricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex[props.stockMode]}/>
+    <NewPricingTable pricing={props.value.pricing} highlight={props.value.pricing_index[props.stockMode]}/>
     </> : <></>;
     //<SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'></SimplePopover>
     return (

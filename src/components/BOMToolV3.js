@@ -42,15 +42,6 @@ function BOMToolV3(props){
     //console.log(props.tableHeaders);
     //console.log(props.bom);
     const serverUrl = useServerUrl();
-    const waitingOffer = {
-        offers: [],
-        offerOrder: {
-            stock: {price: [], leadTime: []},
-            noStock: {price: [], leadTime: []}
-        },
-        message: 'Waiting...',
-        retry: false
-    };
     const [searchTerm, setSearchTerm] = useState('');
     const [displayApis, setDisplayApis] = useState(props.apis);
     const allApisList = useMemo(() => props.apis.map((api => api.accessor)));
@@ -58,10 +49,15 @@ function BOMToolV3(props){
         line.mpnOptions.forEach(mpn => arr.push(mpn));
         return arr;
     }, []), [props.bom]);
+    const mpnListWithQuantity = useMemo(() => props.bom.reduce((arr, line) => {
+        //console.log(line);
+        line.mpnOptions.forEach(mpn => arr.push({mpn: mpn, quantity: line.quantity}));
+        return arr;
+    }, []), [props.bom])
     const isLoadedBom = props.bomType === 'saved' || props.bomType === 'saved_nodata';
     const [updateTableCall, setUpdateTableCall] = useState(0);
-    const [callApiRetry, callMpn, callApisRetry] = useApiData(mpnList, allApisList, props.updateApiDataMap, 
-         props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock);
+    const [callApiRetry, callMpn, callApisRetry] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
+        props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
         dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress] = useApiDataProgress(mpnList, props.apiData, 
         props.store, props.currency);
@@ -217,7 +213,7 @@ function BOMToolV3(props){
     }
     const highlightOptions = [
         {label: 'Best Price', id: 'price'}, 
-        {label: 'Best Lead Time', id: 'leadTime'}
+        {label: 'Best Lead Time', id: 'leadtime'}
     ];
     const [highlightMode, setHighlightMode] = useState({best: highlightOptions[0].id, stock: false});
     function handleChangeHighlight(hlMode){
@@ -231,7 +227,8 @@ function BOMToolV3(props){
         }))
     }
     function handleTest(){
-        console.log(props.apiData);
+        runBOMAlgorithms();
+        //console.log(props.apiData);
         ///runBOMAlgorithms(tableBOM);
     }
     function exportTableJson(){

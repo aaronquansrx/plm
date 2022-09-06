@@ -5,7 +5,9 @@ import axios from 'axios';
 
 import {useServerUrl} from './../hooks/Urls';
 
-export function useApiData(mpnList, apisList, updateApiDataMap, 
+import {algorithmsInitialStructure} from './../scripts/AlgorithmVariable';
+
+export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiDataMap, 
     store, currency, apiData, bomType, loadData, appLock){
     //const [dataProcessing, setDataProcessing] = useState([]);
     const serverUrl = useServerUrl();
@@ -18,11 +20,12 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
             //console.log(store);
             //const controller = new AbortController();
             const apiDataMap = new Map();
-            function apiCallback(mpn, data, maxOffers){
+            function apiCallback(mpn, apiData, maxOffers, apis, bests){
                 const now = Date.now();
                 const da = {
-                    apis: data,
-                    maxOffers: maxOffers
+                    apis: apiData,
+                    bests: bests,
+                    max_offers: maxOffers
                 };
                 apiDataMap.set(mpn, {data:da, date: now});
                 updateApiDataMap(apiDataMap);
@@ -34,12 +37,14 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
                     obj[api] = {
                         offers: [],
                         message: 'Server Error',
+                        offer_order: algorithmsInitialStructure(),
                         retry: false
                     }
                     return obj;
                 }, {});
                 const da = {
                     apis: errorApiData,
+                    bests: algorithmsInitialStructure(),
                     maxOffers: 0
                 }
                 apiDataMap.set(mpn, {data: da, date: now});
@@ -47,6 +52,7 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
             }
             const dt = Date.now();
             //setDataProcessing(mpnList);
+            /*
             mpnList.forEach(mpn => {
                 if(apiData.has(mpn)){
                     if(dt > apiData.get(mpn).date + expireTime){
@@ -55,6 +61,18 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
                     }
                 }else{
                     callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency);
+                }
+            });*/
+            mpnListWithQuantity.forEach((mq) => {
+                const mpn = mq.mpn;
+                const quantity = mq.quantity;
+                if(apiData.has(mpn)){
+                    if(dt > apiData.get(mpn).date + expireTime){
+                        //console.log('recall');
+                        callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency, quantity);
+                    }
+                }else{
+                    callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency, quantity);
                 }
             });
         }else{
@@ -97,7 +115,7 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
                     apis: {
                         [api]: {$set: data[api]}
                     },
-                    maxOffers: {$set: mo}
+                    max_offers: {$set: mo}
                 });
                 const nm = new Map();
                 nm.set(mpn, {data:newDa, date: mpnDt.date});
@@ -142,7 +160,7 @@ export function useApiData(mpnList, apisList, updateApiDataMap,
             const apiDataMap = new Map();
             const da = {
                 apis: data,
-                maxOffers: maxOffers
+                max_offers: maxOffers
             };
             apiDataMap.set(mpn, {data:da, date: now});
             updateApiDataMap(apiDataMap);
@@ -294,14 +312,17 @@ export function useApiDataProgress(mpnList, apiData, store, currency){
     }
     return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress];
 }
-function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency){
+function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency, quantity=null){
     const apiStr = apis.join(',');
+    const params = {part: mpn, api:apiStr, store: store, currency: currency};
+    if(quantity !== null) params.quantity = quantity;
     axios({
         method: 'GET',
         url: serverUrl+'api/part',
-        params: {part: mpn, api:apiStr, store: store, currency: currency},
+        params: params,
         signal: controller.signal
     }).then(response => {
+        console.log(response.data);
         if(typeof response.data !== 'object'){
             console.log(mpn); //catch problematic mpns
             errorCallback(mpn);
@@ -312,8 +333,10 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
                 signal: controller.signal
             });
         }else{
-            const formattedApiData = formatApiData(response.data.apis);
-            callback(mpn, formattedApiData, response.data.maxOffers, apis);
+            const resp = response.data;
+            const formattedApiData = formatApiData(resp.apis);
+            const bests = resp.bests;
+            callback(mpn, formattedApiData, resp.max_offers, apis, bests);
         }
     });
 }
@@ -324,20 +347,32 @@ function formatApiData(rawApiData){
         const offers = success 
         ? v.offers.map((offer) => {
             return {
-                available: offer.Quantity.Available,
-                moq: offer.Quantity.MinimumOrder,
-                spq: offer.Quantity.OrderMulti,
-                leadtime: offer.LeadTimeWeeks,
-                //leadtimedays: offer.LeadTimeDays,
-                pricing: offer.Pricing,
-                //currency: offer.Currency,
-                packaging: offer.Packaging
+                available: offer.available,
+                moq: offer.moq,
+                spq: offer.spq,
+                leadtime: offer.leadtime,
+                //pricing: offer.pricing,
+                packaging: offer.packaging,
+                /*prices: {
+                    price: offer.best_price.price_per,
+                    pricing: offer.pricing,
+                    pricing_index: offer.best_price.index,
+                    total_price: offer.best_price.total
+                },*/
+                prices: offer.prices,
+                adjusted_quantity: offer.adjusted_quantity,
+                excess_quantity: offer.excess_quantity,
+                excess_price: offer.excess_price,
+                total_price: offer.total_price,
+                selected: null,
+                best: false
             }
         }) : [];
         obj[k] = {
             offers: offers,
             message: v.message,
-            retry: v.retry
+            retry: v.retry,
+            offer_order: v.offer_order
         };
         return obj;
     }, {});

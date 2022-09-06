@@ -8,6 +8,8 @@ import { findPriceBracket, sortPrice, sortLeadTime,
 import {useServerUrl} from '../hooks/Urls';
 import { BOMAPITable } from '../components/Tables';
 
+import {algorithmsInitialStructure, algorithmsStockStructure} from './../scripts/AlgorithmVariable';
+
 const buildtype = process.env.NODE_ENV;
 
 export function useTableBOM(bom, tableHeaders, apis, apiData, 
@@ -42,6 +44,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             }*/
             line.highlights = algorithmsInitialStructure();
             //have offer evaluation for best price and lead time
+            
             line.offerEvaluation = {
                 price: {
                     offers: [],
@@ -56,6 +59,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                     fully_evaluated: 0 >= line.quantities.multi
                 }
             }
+            
             line.lineLock = false;
             return line;
         });
@@ -97,10 +101,13 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 const mpn = newLine.mpns.current;
                 if(lineNumsToEvaluate.has(i)){
                     if(apiData.has(mpn)){
+                        const ad = apiData.get(mpn).data;
+                        console.log(ad);
                         newMpns.push(i);
-                        const ea = evalApis(newLine.quantities.multi, apiData.get(mpn).data, apisList);
+                        const ea = evalApisV2(ad, apisList);
                         Object.assign(newLine, ea);
-                        newLine.maxOffers = apiData.get(mpn).data.maxOffers;
+                        newLine.max_offers = ad.max_offers;
+                        newLine.highlights = ad.bests;
                     }
                 }
                 return newLine;
@@ -139,15 +146,19 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         if(!dataProcessingLock){
             const newTable = [...tableBOM].map((newLine, i) => {
                 const mpn = newLine.mpns.current;
+                const ad = apiData.get(mpn).data;
                 //console.log(apiData.get(mpn).data);
-                const ea = evalApis(newLine.quantities.multi, apiData.get(mpn).data, apisList);
+                //const ea = evalApis(newLine.quantities.multi, apiData.get(mpn).data, apisList);
+                const ea = evalApisV2(ad, apisList);
                 Object.assign(newLine, ea);
-                newLine.maxOffers = apiData.get(mpn).data.maxOffers;
+                newLine.max_offers = ad.max_offers;
+                newLine.highlights = ad.bests;
                 return newLine;
             });
             console.log(newTable);
-            runBOMAlgorithms(newTable);
-            console.log('run algos');
+            changeLocks(false);
+            //runBOMAlgorithms(newTable);
+            //console.log('run algos');
         }else{
             //setTableLock(true);
             changeLocks(true);
@@ -282,7 +293,8 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
 
         return line;
     }
-    function runBOMAlgorithms(bom, lt=null){
+    function runBOMAlgorithms(b=null, lt=null){
+        const bom = b === null ? tableBOM : b;
         const newLeadtimeCutOff = lt == null ? ltco : lt;
         const hasInStock = true;
         axios({
@@ -295,15 +307,19 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 lead_time_cut_off: newLeadtimeCutOff
             }
         }).then(response => {
+            //console.log(response);
             console.log(response.data);
-            const algos = response.data.data;
+            //const algos = response.data.data;
+            /*
             const newTableBOM = [...bom].map((line,i) => {
                 const newLine = lineAlgorithmsModifyFull({...line}, algos[i]);
                 return newLine;
             });
             setTable(newTableBOM);
+            */
             //setTableLock(false);
-            changeLocks(false);
+            //changeLocks(false);
+            
         });
     }
     function runBOMLineAlgorithms(row, b=null){
@@ -320,11 +336,13 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             }
         }).then(response => {
             console.log(response.data);
+            /*
             const algos = response.data.data;
             const newLine = lineAlgorithmsModifyFull({...bom[row]}, algos);
             setTable(update(bom, {
                 [row]: {$set: newLine}
             }));
+            */
         });
     }
     function waitingRowApi(row, api){
@@ -468,10 +486,7 @@ export function useMpnOptions(tableBOM, apiData, apisList, setTable, runBOMLineA
     callMpn, changeMPNLine){
     const waitingOffer = {
         offers: [],
-        offerOrder: {
-            stock: {price: [], leadTime: []},
-            noStock: {price: [], leadTime: []}
-        },
+        offer_order: algorithmsInitialStructure([]),
         message: 'Waiting...',
         retry: false
     };
@@ -556,7 +571,7 @@ function evalApis(quantity, multiApiData, apisList){
         const order = [...Array(data[api].offers.length).keys()];
         obj[api] = {
             offers: evalApi(quantity, data[api]),
-            offerOrder: algorithmsInitialStructure(order),
+            offer_order: algorithmsInitialStructure(order),
             message: data[api].message,
             retry: data[api].retry
         }
@@ -569,24 +584,69 @@ function evalApis(quantity, multiApiData, apisList){
     return evaledApis;
 }
 
+function evalApisV2(multiApiData, apisList){
+    //console.log(multiApiData);
+    const data = multiApiData.apis
+    const evaledApis = apisList.reduce((obj, api) => {
+        //const order = [...Array(data[api].offers.length).keys()];
+        obj[api] = {
+            offers: evalApiV2(data[api]),
+            offer_order: data[api].offer_order,
+            message: data[api].message,
+            retry: data[api].retry
+        }
+        /*
+        obj[api].offers = evalApi(quantity, multiApiData.apis[api]);
+        obj[api].message = multiApiData[api].message;
+        obj[api].retry = multiApiData[api].retry;*/
+        return obj;
+    }, {});
+    return evaledApis;
+}
+
+function evalApiV2(singleApiData){
+    const newOffers = singleApiData.offers.map((offer) => {
+        const newOffer = {...offer};
+        //console.log(newOffer);
+        /*
+        newOffer.price = price;
+        newOffer.prices = {
+            price: algorithmsStockStructure(price),
+            pricing: offer.pricing,
+            pricingIndex: algorithmsStockStructure(index),
+            total_price: algorithmsStockStructure(price*quantity),
+            //excess: null
+        }
+        newOffer.adjustedQuantity = null;
+        newOffer.excessQuantity = null;
+        newOffer.excessPrice = null;
+        newOffer.selected = false;
+        */
+        return newOffer;
+    }); 
+    return newOffers;
+}
+
+/*
 function algorithmsInitialStructure(value=null){
     return {
-        stock: {
+        in_stock: {
             price: value,
-            leadTime: value
+            leadtime: value
         },
-        noStock: {
+        no_stock: {
             price: value,
-            leadTime: value
+            leadtime: value
         }
     }
 }
 function algorithmsStockStructure(value=null){
     return {
-        stock: value,
-        noStock: value
+        in_stock: value,
+        no_stock: value
     }
 }
+*/
 
 //unused overtaken by offerorder
 function sortAlgorithm(sort, offers){

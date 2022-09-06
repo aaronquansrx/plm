@@ -12,21 +12,21 @@ export const nullOfferStructure = {
     }
 };
 
-function algorithmsInitialStructure(value=null){
+export function algorithmsInitialStructure(value=null){
     return {
-        stock: {
+        in_stock: {
             price: value,
-            leadTime: value
+            leadtime: value
         },
-        noStock: {
+        no_stock: {
             price: value,
-            leadTime: value
+            leadtime: value
         }
     }
 }
-function algorithmsStockStructure(value=null){
+export function algorithmsStockStructure(value=null){
     return {
-        stock: value,
-        noStock: value
+        in_stock: value,
+        no_stock: value
     }
 }
