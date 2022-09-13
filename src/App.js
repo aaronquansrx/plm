@@ -124,8 +124,7 @@ const versions = [
       <div>
           <h3>Version 1.2</h3>
           <p>Excess Quantity and Price Evaluation</p>
-          <p>Internal algorithm changes and structural overhaul (may be unstable)</p>
-          <p>Old version<a href='http://srxapp07.corp.startronics.com.au/PLMTest/'>http://srxapp07.corp.startronics.com.au/PLMTest/</a></p>
+          <p>Internal algorithm changes and structural overhaul (bugs to be fixed)</p>
       </div>
   },
   {
