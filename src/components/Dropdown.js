@@ -46,38 +46,32 @@ export function BomDropdown(props){
 }
 
 export function MPNDropdown(props){
-    const [selectValue, setSelectValue] = useState('');
-    function handleBlur(e){
-        if(props.onBlur) props.onBlur(e);
-    }
-    function handleChange(e){
-        console.log(e);
-        if(props.onSelect) props.onSelect(e);
-        setSelectValue(e.target.value);
-    }
-    function handleEdit(e){
-        if(props.onEdit) props.onEdit(e);
-        setSelectValue(e);
+    function handleEditAddInput(e){
+        if(props.isAdd){
+            if(props.onAdd) props.onAdd(e);
+        }else{
+            if(props.onEdit) props.onEdit(e);
+        }
     }
     function handleClick(e){
         return function(){
-            console.log(e);
+            if(props.onSelect) props.onSelect(e);
         }
     }
     return(
         <div>
-        {props.edit ? <TextInput focus onBlur={handleEdit} value={props.selected}/>
+        {props.edit ? <TextInput focus onBlur={handleEditAddInput} value={props.isAdd ? '' : props.selected}/>
         :
             <Dropdown>
-                <Dropdown.Toggle variant="success" id="dropdown-basic">
+                <Dropdown.Toggle variant='primary' id="dropdown-basic">
                     <span className='TextCursor'>{props.selected}</span>
                 </Dropdown.Toggle>
 
-                <Dropdown.Menu autoFocus={true} onBlur={handleBlur} onChange={handleChange}>
+                <Dropdown.Menu>
                     {props.options.map((item, i) => 
                         <Dropdown.Item key={i} onClick={handleClick(item)}>{item}</Dropdown.Item>
                     )}
-                    <Dropdown.Item value='addNew' onClick={handleClick('addNew')}>Add New</Dropdown.Item>
+                    <Dropdown.Item className='AddNewItem' value='addNew'  onClick={handleClick('addNew')}>Add New</Dropdown.Item>
                 </Dropdown.Menu>
             </Dropdown>
         }

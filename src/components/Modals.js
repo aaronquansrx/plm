@@ -314,6 +314,16 @@ export function VersionModal(props){
     const handleClose = () => props.hideAction();
     const versions = [
         {
+            name: '1.2',
+            content:
+            <div>
+                <h3>Version 1.2</h3>
+                <p>Excess Quantity and Price Evaluation</p>
+                <p>Internal algorithm changes and structural overhaul (may be unstable)</p>
+                <p>Old program reference <a>http://srxapp07.corp.startronics.com.au/PLMTest/</a></p>
+            </div>
+        },
+        {
             name: '1.1',
             content: 
             <div>
@@ -366,7 +376,7 @@ export function VersionModal(props){
                 <Modal.Title>Version Details</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <TabPages tabs={versions}/>
+                <TabPages tabs={props.versions}/>
             </Modal.Body>
         </Modal>
     );

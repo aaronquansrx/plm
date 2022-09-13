@@ -1,5 +1,6 @@
 import {useState, useEffect, useMemo} from 'react';
 
+import update from 'immutability-helper';
 
 export function useBOMEvaluation(bomTable, apiDataFinished){
     const [bomEvaluation, setBomEvaluation] = useState({
@@ -53,4 +54,60 @@ export function useBOMEvaluation(bomTable, apiDataFinished){
         }
     }, [bomTable, apiDataFinished]);
     return [bomEvaluation]
+}
+
+export function useBOMEvaluationV2(bom){
+    const [bomEvaluation, setBomEvaluation] = useState({
+        numLines: bom.length,
+        evaluation:
+        {
+            in_stock : {
+                price : {
+                    num_quoted: 0,
+                    quoted_percent: 0,
+                    unquoted_percent: 100,
+                    total_price: 0,
+                    total_excess_quantity: 0,
+                    total_excess_price: 0
+                },
+                leadtime : {
+                    num_quoted: 0,
+                    quoted_percent: 0,
+                    unquoted_percent: 100,
+                    total_price: 0,
+                    total_excess_quantity: 0,
+                    total_excess_price: 0
+                }
+            },
+            no_stock : {
+                price : {
+                    num_quoted: 0,
+                    quoted_percent: 0,
+                    unquoted_percent: 100,
+                    total_price: 0,
+                    total_excess_quantity: 0,
+                    total_excess_price: 0
+                },
+                leadtime : {
+                    num_quoted: 0,
+                    quoted_percent: 0,
+                    unquoted_percent: 100,
+                    total_price: 0,
+                    total_excess_quantity: 0,
+                    total_excess_price: 0
+                }
+            }
+        }
+    });
+    function changeEvaluation(evals){
+        //console.log(evals);
+        setBomEvaluation(update(bomEvaluation, {
+            evaluation: {$set: evals}
+        }));
+    }
+    function adjustLineEvaluation(adjust){
+        
+        console.log(adjust);
+    }   
+    return [bomEvaluation, changeEvaluation, adjustLineEvaluation];
 }

@@ -7,7 +7,7 @@ import {stockString} from './../scripts/AlgorithmVariable';
 import XLSX from 'xlsx';
 import { forEach } from 'lodash';
 
-const restrictedBomAttrs = ['activeApis'];
+const restrictedBomAttrs = ['activeApis', 'octopart'];
 
 function BOMExporterV2(props){
     const accessorToHeaders = props.bomAttrs.reduce((obj,attr)=>{
@@ -43,7 +43,6 @@ function BOMExporterV2(props){
         const opt = optionStructure(options);
         const base = baseTableFormat(trimmedBomAttrs);
         const bod = bestOfferData();
-        console.log(bod);
         base.forEach((b, i) =>{
             Object.assign(b, bod[i]);
         });
@@ -53,7 +52,7 @@ function BOMExporterV2(props){
                 Object.assign(b, aaod[i]);
             });
         }
-        
+        console.log(base);
         const sheet = XLSX.utils.json_to_sheet(base, {header: headers});
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, sheet, 'BOMData');
@@ -62,13 +61,13 @@ function BOMExporterV2(props){
             const s2 = XLSX.utils.json_to_sheet(evalFormat);
             XLSX.utils.book_append_sheet(wb, s2, 'Evaluation')
         }
-        XLSX.writeFile(wb, fileName+'.xlsx');
+        //XLSX.writeFile(wb, fileName+'.xlsx');
     }
     function apiAttrDecode(offer, acc, stockStr, best){
         switch(acc){
             case 'prices':
                 return offer[acc].price[stockStr];
-            case 'adjustedQuantity':
+            case 'adjusted_quantity':
                 return offer[acc][stockStr];
             default:
                 return offer[acc];
@@ -80,26 +79,11 @@ function BOMExporterV2(props){
             const apis = props.apis.reduce((obj, api) => {
                 if(api.accessor in line && line[api.accessor].offers.length > 0){
                     const apiData = line[api.accessor];
-                    const offer = apiData.offers[apiData.offerOrder[stockStr][props.algorithm.best][0]];
+                    const offer = apiData.offers[apiData.offer_order[stockStr][props.algorithm.best][0]];
                     props.apiAttrs.forEach((heading) => {
                         const key = api.Header+'_'+heading.accessor;
-                        /*
-                        switch(heading.accessor){
-                            case 'prices':
-                                obj[key] = offer[heading.accessor].price;
-                                break;
-                            case 'adjustedQuantity':
-                                obj[key] = offer[heading.accessor][stockStr][props.algorithm.best];
-                                break;
-                            default:
-                                obj[key] = offer[heading.accessor];
-                                break;
-                        }
-                        */
-                       obj[key] = apiAttrDecode(offer, heading.accessor, stockStr, props.algorithm.best);
+                        obj[key] = apiAttrDecode(offer, heading.accessor, stockStr, props.algorithm.best);
                     });
-                    //obj['Total Price'] = offer.totalPrice[stockStr];
-                    //offer.prices.price * offer.adjustedQuantity[stockStr];
                 }
                 return obj;
             }, {});
@@ -110,27 +94,22 @@ function BOMExporterV2(props){
     function bestOfferData(){
         const stockStr = stockString(props.algorithm.stock);
         const formatted = props.data.map((line, i) => {
-            const hl = line.highlights[stockStr][props.algorithm.best];
+            const hl = line.best[stockStr][props.algorithm.best];
+            //console.log(line.best);
             //const bl = bestList[i];
             if(hl){
-                const best = line[hl.api].offers[hl.offerNum];
+                const best = line[hl.api].offers[hl.offer_num];
+                console.log(best);
                 const apiHeader = apiAccessorToHeader[hl.api];
                 const offerData = props.apiAttrs.reduce((obj, attr) => {
-                    //const key = attr.accessor;
-                    /*
-                    switch(attr){
-                        case 'prices':
-                            obj[key] = best[attr.accessor].price;
-                            break;
-                        default:
-                            obj[key] = best[attr.accessor];
-                            break;
+                    if('longHeader' in attr){
+                        obj[attr.longHeader] = apiAttrDecode(best, attr.accessor, stockStr, props.algorithm.best);
+                    }else{
+                        obj[attr.Header] = apiAttrDecode(best, attr.accessor, stockStr, props.algorithm.best);
                     }
-                    */
-                    obj[attr.Header] = apiAttrDecode(best, attr.accessor, stockStr, props.algorithm.best)
                     return obj;
                 }, {});
-                offerData['Total Price'] = best.totalPrice[stockStr];
+                offerData['Total Price'] = best.total_price[stockStr];
                 //best.prices.price * best.adjustedQuantity[stockStr];
                 offerData.Distributor = apiHeader;
                 return offerData;

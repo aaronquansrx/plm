@@ -12,6 +12,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
     //const [dataProcessing, setDataProcessing] = useState([]);
     const serverUrl = useServerUrl();
     const expireTime = 1000000;
+    const [multiRetryData, setMultiRetryData] = useState(new Map()); // a subset of apiData in real time (required due to delays in setState)
     useEffect(() => {
         const controller = new AbortController();
         console.log(currency);
@@ -52,7 +53,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             }
             const dt = Date.now();
             //setDataProcessing(mpnList);
-            /*
+            
             mpnList.forEach(mpn => {
                 if(apiData.has(mpn)){
                     if(dt > apiData.get(mpn).date + expireTime){
@@ -62,7 +63,8 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                 }else{
                     callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency);
                 }
-            });*/
+            });
+            /*
             mpnListWithQuantity.forEach((mq) => {
                 const mpn = mq.mpn;
                 const quantity = mq.quantity;
@@ -75,6 +77,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                     callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency, quantity);
                 }
             });
+            */
         }else{
             //check keys of loaddata
             console.log('load data');
@@ -127,7 +130,9 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
         callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, () => {}, store, currency);
     }
     function callApisRetry(mpnRetrys, onComplete=null){
+        setMultiRetryData(new Map());
         const apiRetryDataMap = new Map();
+        const mpnsComplete = new Set();
         const controller = new AbortController();
         function apiCallbackMulti(mpn, data, maxOffers, apis){
             if(apiData.has(mpn)){
@@ -137,15 +142,17 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                     obj[api] = {$set: data[api]};
                     return obj;
                 }, {});
-                console.log(apisUpdate);
+                //console.log(apisUpdate);
                 const newDa = update(mpnDt.data, {
                     apis: apisUpdate,
-                    maxOffers: {$set: mo}
+                    max_offers: {$set: mo}
                 });
                 //const nm = new Map();
                 apiRetryDataMap.set(mpn, {data:newDa, date: mpnDt.date});
                 updateApiDataMap(apiRetryDataMap);
-                onComplete(mpn);
+                mpnsComplete.add(mpn);
+                setMultiRetryData(apiRetryDataMap);
+                onComplete(mpn, mpnsComplete, apiRetryDataMap);
             }
         }
         mpnRetrys.forEach((mr) => {
@@ -170,10 +177,10 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             callApi(cmpn, serverUrl, controller, apisList, apiCallbackSingle , () => {}, store, currency);
         }
     }
-    return [callApiRetry, callMpn, callApisRetry];
+    return [callApiRetry, callMpn, callApisRetry, multiRetryData];
 }
 
-export function useApiDataProgress(mpnList, apiData, store, currency){
+export function useApiDataProgress(mpnList, apisList, apiData, callApisRetry, store, currency){
     const [progress, setProgress] = useState({
         finished: false,
         mpnsNotEvaluated: new Set(
@@ -193,7 +200,10 @@ export function useApiDataProgress(mpnList, apiData, store, currency){
     const [numMpns, setNumMpns] = useState(mpnList.length);
     const [initialDataFlag, setInitialDataFlag] = useState(true); // run initial data bom collection first time
     const [dataProcessingLock, setDataProcessingLock] = useState(true);
-    const [retryMpns, setRetryMpns] = useState(new Set()); 
+    //const [fullRetryMpns, setFullRetryMpns] = useState([]); //for full retry
+    const [retryMpns, setRetryMpns] = useState([]); 
+    const [retryLock, setRetryLock] = useState(false); //testing
+    const [retryDataComplete, setRetryDataComplete] = useState(new Set());
     //const [mpnsToDo, setMpnsToDo] = useState(new Set([...mpnList]));
     useEffect(() => {
         /*
@@ -216,13 +226,6 @@ export function useApiDataProgress(mpnList, apiData, store, currency){
         }));*/
         //console.log(apiData);
         if(initialDataFlag){
-            /*
-            const leftMpns = [...progress.mpnsNotEvaluated].reduce((arr, mpn) => {
-                if(apiData.has(mpn)){
-                    arr.push(mpn);
-                }
-                return arr;
-            }, []);*/
             const remMpns = [...mpnsInProgress].reduce((arr, mpn) => {
                 if(apiData.has(mpn)){
                     arr.push(mpn);
@@ -231,37 +234,51 @@ export function useApiDataProgress(mpnList, apiData, store, currency){
             }, []);
             //change to mpnsinprogress
             const fin = mpnsInProgress.size - remMpns.length === 0;
-            /*
-            const newProgress = update(progress, {
-                finished: {$set: fin},
-                mpnsNotEvaluated: {$remove: leftMpns}
-            });*/
             setMpnsInProgress(update(mpnsInProgress, {
                 $remove: remMpns
             }));
-            //console.log(newProgress);
-            //setProgress(newProgress);
             if(fin){
-                console.log('end');
                 setInitialDataFlag(false);
                 setDataProcessingLock(false);
+                const mpnRetrys = mpnList.reduce((arr, mpn) => {
+                    if(apiData.has(mpn)){
+                        const mpnApisData = apiData.get(mpn).data.apis;
+                        const retryApis = apisList.reduce((arrApi, api)=> {
+                            if(mpnApisData[api].retry) arrApi.push(api);
+                            return arrApi;
+                        }, []);
+                        if(retryApis.length > 0){
+                            arr.push({mpn: mpn, apis: retryApis});
+                        }
+                        return arr;
+                    }
+                }, []);
+                setRetryMpns(mpnRetrys);
             }
+        }else if(retryLock){
+            /*
+            if(mpnsInProgress.size === 0){
+                setDataProcessingLock(false);
+                const mpnRetrys = mpnList.reduce((arr, mpn) => {
+                    if(apiData.has(mpn)){
+                        const mpnApisData = apiData.get(mpn).data.apis;
+                        const retryApis = apisList.reduce((arrApi, api)=> {
+                            if(mpnApisData[api].retry) arrApi.push(api);
+                            return arrApi;
+                        }, []);
+                        if(retryApis.length > 0){
+                            arr.push({mpn: mpn, apis: retryApis});
+                        }
+                        return arr;
+                    }
+                }, []);
+                console.log(mpnRetrys);
+                setRetryMpns(mpnRetrys);
+            }*/
         }
     }, [apiData]);
     useEffect(() => {
         if(!dataProcessingLock){
-            const retMpns = new Set();
-            apiData.forEach((val, mpn) => {
-                const hasRetry = Object.entries(val.data.apis).reduce((b, [api, v]) => {
-                    if(v.retry) return true;
-                    return b;
-                }, false);
-                if(hasRetry){
-                    retMpns.add(mpn);
-                }
-            });
-            //console.log(retMpns);
-            setRetryMpns(new Set(retMpns));
         }
     }, [dataProcessingLock]);
     useEffect(() => {
@@ -278,31 +295,39 @@ export function useApiDataProgress(mpnList, apiData, store, currency){
         }
         setMpnsInProgress(mpnsEvaled);
     }, [store, currency]);
-    useEffect(() => {
-        if(mpnsInProgress.size === 0){
-            setDataProcessingLock(false);
-            //may not have apiData updated 
-            /*
-            console.log(apiData);
-            const retMpns = [];
-            apiData.forEach((val, mpn) => {
-                const hasRetry = Object.entries(val.data.apis).reduce((b, [api, v]) => {
-                    if(v.retry) return true;
-                    return b;
-                }, false);
-                if(hasRetry){
-                    retMpns.push(mpn);
-                }
-            });
-            console.log(retMpns);
-            setRetryMpns(new Set(retMpns));
-            */
+    function retrySingle(){
+        //todo
+    }
+    function retryAll(){
+        console.log('start retry');
+        setNumMpns(retryMpns.length);
+        const retMpns = new Set(retryMpns.map((ret) => ret.mpn));
+        console.log(retMpns);
+        setMpnsInProgress(retMpns);
+        //const mpnProgress = retMpns;
+        function onComplete(mpn, mpns, apiDataFull){
+            const newMpnsInProgress = new Set([...retMpns].filter(m => !mpns.has(m)));
+            setMpnsInProgress(newMpnsInProgress);
+            setRetryDataComplete(mpns);
+            if(newMpnsInProgress.size === 0){
+                setDataProcessingLock(false);
+                const retrys = [...apiDataFull.entries()].reduce((arr, [mpn, val]) => {
+                    const apis = Object.entries(val.data.apis).reduce((a, [k,v]) => {
+                        if(v.retry) a.push(k);
+                        return a;
+                    }, []);
+                    if(apis.length > 0){
+                        arr.push({mpn: mpn, apis: apis});
+                    }
+                    return arr;
+                }, []);
+                console.log(retrys);
+                setRetryMpns(retrys);
+            }
         }
-    }, [mpnsInProgress])
-    function retryAllStart(retrySet){
-        setNumMpns(retrySet.size);
-        setMpnsInProgress(retrySet);
-        if(retrySet.size > 0){ 
+        if(retryMpns.length > 0){
+            callApisRetry(retryMpns, onComplete);
+            setRetryLock(true);
             setDataProcessingLock(true);
             setShowProgress(true);
         }
@@ -310,19 +335,20 @@ export function useApiDataProgress(mpnList, apiData, store, currency){
     function handleHideBar(){
         setShowProgress(false);
     }
-    return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress];
+    return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retryAll, setDataProcessingLock, setMpnsInProgress, 
+        {get:retryLock, set:setRetryLock}, {get:retryDataComplete, set:setRetryDataComplete}];
 }
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency, quantity=null){
     const apiStr = apis.join(',');
     const params = {part: mpn, api:apiStr, store: store, currency: currency};
-    if(quantity !== null) params.quantity = quantity;
+    //if(quantity !== null) params.quantity = quantity;
     axios({
         method: 'GET',
         url: serverUrl+'api/part',
         params: params,
         signal: controller.signal
     }).then(response => {
-        console.log(response.data);
+        //console.log(response.data);
         if(typeof response.data !== 'object'){
             console.log(mpn); //catch problematic mpns
             errorCallback(mpn);
@@ -333,6 +359,7 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
                 signal: controller.signal
             });
         }else{
+            //console.log(mpn);
             const resp = response.data;
             const formattedApiData = formatApiData(resp.apis);
             const bests = resp.bests;
@@ -351,7 +378,7 @@ function formatApiData(rawApiData){
                 moq: offer.moq,
                 spq: offer.spq,
                 leadtime: offer.leadtime,
-                //pricing: offer.pricing,
+                pricing: offer.pricing,
                 packaging: offer.packaging,
                 /*prices: {
                     price: offer.best_price.price_per,
@@ -364,7 +391,7 @@ function formatApiData(rawApiData){
                 excess_quantity: offer.excess_quantity,
                 excess_price: offer.excess_price,
                 total_price: offer.total_price,
-                selected: null,
+                selected: false,
                 best: false
             }
         }) : [];

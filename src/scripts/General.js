@@ -28,12 +28,17 @@ export function reverseStringMap(m){
 }
 
 export function trimObjects(data, fields){
-    return data.map((line) => {
-        return fields.reduce((obj, f) => {
-            obj[f] = line[f];
-            return obj;
-        }, {});
+    return data.map((obj) => {
+        return trimObject(obj, fields);
     });
+}
+
+export function trimObject(obj, fields){
+    if(obj === null) return null;
+    return fields.reduce((o, f) => {
+        if(f in obj) o[f] = obj[f];
+        return o;
+    }, {});
 }
 
 export function decodeStringBoolean(s){

@@ -1,6 +1,6 @@
 
 export function stockString(inStock){
-    return inStock ? 'stock' : 'noStock';
+    return inStock ? 'in_stock' : 'no_stock';
 }
 
 export const nullOfferStructure = {

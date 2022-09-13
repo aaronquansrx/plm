@@ -118,7 +118,7 @@ export function MainNavbar(props){
                 stores={props.stores} currencies={props.currencies}
                 dataProcessLock={props.dataProcessLock}/>
             </Nav>
-            <Nav><Version className='nav-link' onClick={props.onVersionClick}>V1.1</Version></Nav>
+            <Nav><Version className='nav-link' onClick={props.onVersionClick}>V{versions[0].name}</Version></Nav>
             <div>
             {/*<a href={path("login")}>Login</a><a href={path('login')} onClick={props.onLogout}>Logout</a>*/}
             {!props.username ? <span className='NavClickable' onClick={toggleLoginModal}>Login</span> : 
@@ -136,3 +136,62 @@ export function MainNavbar(props){
         </div>
     );
 }
+
+const versions = [
+    {
+        name: '1.2',
+        content:
+        <div>
+            <h3>Version 1.2</h3>
+            <p>Excess Quantity and Price Evaluation</p>
+            <p>Internal algorithm changes and structural overhaul (may be unstable)</p>
+            <p>Old program reference <a>http://srxapp07.corp.startronics.com.au/PLMTest/</a></p>
+        </div>
+    },
+    {
+        name: '1.1',
+        content: 
+        <div>
+            <h3>Version 1.1</h3>
+            <p>
+                New CBOM exporter - drag and drop a CBOM file with completed master file and export with a filled CBOM
+            </p>
+            <p>
+                Login system
+            </p>
+            
+        </div>
+    },
+    {
+        name: '1.0',
+        content: 
+        <div>
+            <h3>Version 1.0</h3>
+            <p>
+                Full stable release of BOM Tool
+            </p>
+            <p>
+                Introducing user options - quantity multiplier, in stock only, API filtering, line locking, and MPN options
+            </p>
+            <p>
+                Exporting of offer data into an excel file
+            </p>
+            <p>
+                Improved reliability of input files and data
+            </p>
+            <p>
+                Choosing of region and currency options
+            </p>
+        </div>
+    },
+    {
+        name: '0.0',
+        content: 
+        <div>
+            <h3>Version 0.0</h3>
+            <p>
+                Demo version of BOM Tool - import a excel file and search MPNs for offers from APIs 
+            </p>
+        </div>
+    }
+]

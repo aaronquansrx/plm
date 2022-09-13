@@ -171,7 +171,7 @@ export function BOMAPITableV2(props){
             }
             <tbody>
                 {pageRows.map((line, i) => 
-                    <BOMRow key={i} highlightMode={props.highlightMode} rowNum={line.rowNum} 
+                    <BOMRow key={i} algorithmMode={props.algorithmMode} rowNum={line.rowNum} 
                     data={line} hasLineLocks={props.hasLineLocks} mpn={line.mpns.current}
                     attributeOrder={attributeOrder} functionLock={props.functionLock} offerFunctions={props.functions.offer}
                     onLineLock={props.onLineLock} bestAttributeOrder={bestAttributeOrder}
@@ -304,8 +304,8 @@ function BOMRow(props){
     }
     const lockTTip = props.data.lineLock ? 'Unlock Line' : 'Lock Line';
     const attributeOrder = props.tableState ? props.attributeOrder : props.functionLock ? props.attributeOrder : props.bestAttributeOrder;
-    const stockMode = getStockModeString(props.highlightMode.stock);
-    const hl = props.data.highlights[stockMode][props.highlightMode.best];
+    const stockMode = getStockModeString(props.algorithmMode.stock);
+    const hl = props.data.highlights[stockMode][props.algorithmMode.best];
     const bestOffer = hl ? props.data[hl.api].offers[hl.offerNum] : null;
     const data = props.tableState ? props.data : {
         ...props.data,
@@ -325,7 +325,7 @@ function BOMRow(props){
             }
             {
             <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={attributeOrder} 
-            data={data} cellProps={firstRowCellProps} highlightMode={props.highlightMode} 
+            data={data} cellProps={firstRowCellProps} algorithmMode={props.algorithmMode} 
             lock={props.data.lineLock} functionLock={props.functionLock} mpn={props.mpn} offerFunctions={props.offerFunctions}/>
             }
         </tr>
@@ -335,7 +335,7 @@ function BOMRow(props){
             return(
             <tr key={i}>       
                 <BOMOffer offerNum={offerNum} rowNum={props.rowNum} attributeOrder={props.attributeOrder} 
-                data={props.data} highlightMode={props.highlightMode} mpn={props.mpn} offerFunctions={props.offerFunctions}/>
+                data={props.data} algorithmMode={props.algorithmMode} mpn={props.mpn} offerFunctions={props.offerFunctions}/>
             </tr>
             );
         })}
@@ -365,19 +365,19 @@ function BOMOffer(props){
     return (
         <>
         {attrOrder.map((attr, i) => {
-            const stockMode = getStockModeString(props.highlightMode.stock);
+            const stockMode = getStockModeString(props.algorithmMode.stock);
             const specAttrs = attr.type === 'api' 
             ? {
-                highlight: props.data.highlights[stockMode],
+                //highlight: props.data.highlights[stockMode],
                 api: attr.attribute,
-                highlightMode: props.highlightMode.best,
+                algorithmMode: props.algorithmMode.best,
                 mpns: props.data.mpns
             } 
             : {};
             //console.log(props.data.highlights[stockMode]);
             //if(props.data[attr.attribute]) console.log(props.data[attr.attribute].offer_order);
             const offerNum = attr.type === 'api' && props.data[attr.attribute]
-            ? props.data[attr.attribute].offer_order[stockMode][props.highlightMode.best][props.offerNum] 
+            ? props.data[attr.attribute].offer_order[stockMode][props.algorithmMode.best][props.offerNum] 
             : props.offerNum;
             //offerNum is the sorted index order, offerIndex is the index of original data i.e. 0,1,2 etc.
             {/*<BOMAttributeRenderer key={i} {...specAttrs} {...attr} cellProps={props.cellProps}
@@ -422,20 +422,30 @@ function DefaultAPIAttributeRenderer(props){
 
 
 function APIRenderer(props){
+    /*
     const hasHighlight = Object.entries(props.highlight).reduce((obj, [k, v]) => {
         if(v !== null){
             obj[k] = v.offer_num === props.offer_num && v.api === props.api;
         }
         return obj;
-    }, {});
-    let cn = (props.highlightMode in hasHighlight) 
-    ? (hasHighlight[props.highlightMode] ? 'HighlightedCell' : 'NormalCell') 
+    }, {});*/
+    let cn = 'NormalCell';
+    if(props.value && props.value.offers.length > 0 && props.offerNum < props.value.offers.length){
+        if(props.value.offers[props.offerNum].best){
+            cn = 'HighlightedCell';
+        }
+        if(props.value.offers[props.offerNum].selected){
+            cn = 'SelectedCell';
+        }
+    }
+    /*let cn = (props.algorithmMode in hasHighlight) 
+    ? (hasHighlight[props.algorithmMode] ? 'HighlightedCell' : 'NormalCell') 
     : 'NormalCell';
     if(props.value && props.value.offers.length > 0 && props.offerNum < props.value.offers.length){
         if(props.value.offers[props.offerNum].selected){
             cn = 'SelectedCell';
         }
-    }
+    }*/
     const cellProps = {
         className: cn
     };
@@ -450,12 +460,12 @@ function APIRenderer(props){
             /*
             <BOMAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]}
                 custom={attr.custom} type='normal' rowNum={props.rowNum} cellProps={cellProps}
-                stockMode={props.stockMode} highlightMode={props.highlightMode}/>
+                stockMode={props.stockMode} algorithmMode={props.algorithmMode}/>
             */
             return (
                 <APIAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]}
                 custom={attr.custom} type='apiAttr' offerNum={props.offerNum} rowNum={props.rowNum} cellProps={cellProps} api={props.api}
-                stockMode={props.stockMode} highlightMode={props.highlightMode} functions={props.offerFunctions}/>
+                stockMode={props.stockMode} algorithmMode={props.algorithmMode} functions={props.offerFunctions}/>
             )
         })
         : <td colSpan={props.subAttributes.length}>
@@ -508,6 +518,8 @@ function MPNRenderer(props){
 
 function MPNsRenderer(props){
     const [editSelector, setEditSelector] = useState(false);
+    const [isAdd, setIsAdd] = useState(true);
+    const [selectedMPN, setSelectedMPN] = useState(props.value.current);
     const clientUrl = useClientUrl();
     const mpn = props.value.current;
     function handleMPNClick(e){
@@ -525,24 +537,28 @@ function MPNsRenderer(props){
             }
         }
     }
-    function handleSelectMpn(e){
-
+    function handleAddMpn(newMpn){
+        setIsAdd(false);
+        setEditSelector(false);
+        props.functions.addOption(props.rowNum, newMpn);
     }
     function handleEditMpn(newMpn){
         setEditSelector(false);
         //console.log(mpn+' : '+newMpn);
         props.functions.editOption(props.rowNum, mpn, newMpn);
     }
-    function handleBlurMpn(e){
-        console.log(props.functionLock);
+    function handleBlurMpn(v){
+        //console.log(props.functionLock);
         if(!props.lock && !props.functionLock){
-            if(e.target.value === 'addNew'){
+            if(v === 'addNew'){
                 //props.functions
-                props.functions.addOption(props.rowNum);
+                //props.functions.addOption(props.rowNum);
                 setEditSelector(true);
+                setIsAdd(true);
+                console.log('n');
                 //props.functions.changeOption(props.rowNum, '');
             }else{
-                props.functions.changeOption(props.rowNum, e.target.value);
+                props.functions.changeOption(props.rowNum, v);
             }
     }
     }
@@ -556,9 +572,10 @@ function MPNsRenderer(props){
             ? <AddRemoveEditSelectorForm onSelect={handleBlurMpn} options={props.value.options}/> 
             : mpn AddRemoveEditSelectorForm
             */}
-            {<MPNDropdown edit={editSelector} onSelect={handleBlurMpn} 
-            options={props.value.options} selected={mpn} onEdit={handleEditMpn} 
-        disabled={props.lock || props.functionLock}/> }
+            {<MPNDropdown edit={editSelector} isAdd={isAdd} onSelect={handleBlurMpn} 
+            options={props.value.options} selected={mpn} 
+            onEdit={handleEditMpn} onAdd={handleAddMpn}
+            disabled={props.lock || props.functionLock}/> }
             
         </div>
         </HoverOverlay>
@@ -591,34 +608,30 @@ function priceDisplay(price){
 }
 
 function PricesRenderer(props){
-    const pt = props.value ? 
+    const pt = props.value && props.value.index ? 
     <>
-    <NewPricingTable pricing={props.value.pricing} highlight={props.value.pricing_index[props.stockMode]}/>
+    <NewPricingTable pricing={props.value.pricing} highlight={props.value.index[props.stockMode]}/>
     </> : <></>;
     //<SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'></SimplePopover>
     return (
-            <>
-            <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
-                <div>{props.value && priceDisplay(props.value.price[props.stockMode])}</div>
-            </SimplePopover>
-            </>
+        <>
+        <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
+            <div>{props.value && props.value.price && priceDisplay(props.value.price[props.stockMode])}</div>
+        </SimplePopover>
+        </>
     );
 }
 
 function TotalPriceRenderer(props){
     return (
     <>
-    {/*<td {...props.cellProps}>}*/}
         {props.value && priceDisplay(props.value[props.stockMode])}
-    {/*</td>*/}
     </>
     );
 }
 
 function AdjustedQuantityRenderer(props){
-    //console.log(props);
     const display = props.value ? props.value[props.stockMode] : '-';
-    //<td {...props.cellProps}></td>//
     return (
         <>
         {display}
@@ -728,7 +741,7 @@ function OctopartRenderer(props){
 function AdjustedQuantityHeaderRenderer(props){
     return (
         <th {...props.headerProps}>
-            <HoverOverlay tooltip='Adjusted Quantity' placement='auto'>{props.header}</HoverOverlay>
+            <HoverOverlay tooltip={props.longHeader} placement='auto'>{props.header}</HoverOverlay>
         </th>
     );
 }

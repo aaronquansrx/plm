@@ -10,10 +10,10 @@ import Form from 'react-bootstrap/Form';
 import {
     useTableBOM, useApiAttributes, 
     useQuantityMultiplier, useApiRetrys,
-    useMpnOptions
+    useMpnOptions, useQuantityMultiplierV2
 } from './../hooks/BOMTable';
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
-import {useBOMEvaluation} from './../hooks/BOMEvaluation';
+import {useBOMEvaluation, useBOMEvaluationV2} from './../hooks/BOMEvaluation';
 import {useSaveBom} from './../hooks/BOMToolButtons';
 
 import {BOMAPITableV2} from './BOMAPITable';
@@ -27,6 +27,8 @@ import BOMExporterV2 from './BOMExporterV2';
 import {SaveBom} from './Modals';
 import {BOMApiProgressBarV2} from './Progress';
 import {HoverOverlay} from './Tooltips';
+
+import { stockString } from '../scripts/AlgorithmVariable';
 import { findPriceBracket } from '../scripts/Offer';
 
 import {downloadFile} from './../scripts/General';
@@ -56,11 +58,19 @@ function BOMToolV3(props){
     }, []), [props.bom])
     const isLoadedBom = props.bomType === 'saved' || props.bomType === 'saved_nodata';
     const [updateTableCall, setUpdateTableCall] = useState(0);
-    const [callApiRetry, callMpn, callApisRetry] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
+
+    const highlightOptions = [
+        {label: 'Price', id: 'price'}, 
+        {label: 'Lead Time', id: 'leadtime'}
+    ];
+    const [algorithmMode, setAlgorithmMode] = useState({best: highlightOptions[0].id, stock: false});
+    const [quantityMultiplier, handleChangeMulti] = useQuantityMultiplierV2();
+    const [callApiRetry, callMpn, callApisRetry, multiRetryData] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
         props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
-        dataProcessingLock, retryAllStart, setDataProcessingLock, setMpnsInProgress] = useApiDataProgress(mpnList, props.apiData, 
-        props.store, props.currency);
+        dataProcessingLock, retryAll, setDataProcessingLock, 
+        setMpnsInProgress, retryLock, retrysToDo] = useApiDataProgress(mpnList, allApisList, props.apiData, 
+            callApisRetry, props.store, props.currency);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
     function handleLeadtimeCutOff(newLTC){
         if(newLTC === ''){
@@ -70,18 +80,19 @@ function BOMToolV3(props){
         }
         runBOMAlgorithms(tableBOM, newLTC);
     }
+    const [bomEvaluation, changeEvaluation, adjustLineEvaluation] = useBOMEvaluationV2(props.bom);
     const [tableBOM, filteredTableBOM, setTable, tableColumns, 
-        runBOMAlgorithms, runBOMLineAlgorithms, retryLine, waitingRowApi,
-        changeMPNLine, evalMpn, tableLock] = useTableBOM(
+        runBOMAlgorithms, runBOMLineAlgorithms, retryForApis, waitingRowApi,
+        changeMPNLine, changeQuantityLine, changeTableActiveApisGlobal, evalMpn, tableLock] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, 
         updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock, props.changeLock,
-        searchTerm
+        searchTerm, changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData
     );
     //const apiAttrs = useApiAttributes();
     const apiAttrs = props.apiAttrs;
-    const [quantityMultiplier, adjustQuantity, handleMultiBlur] = useQuantityMultiplier(tableBOM, props.apiData, 
-        allApisList, runBOMAlgorithms, runBOMLineAlgorithms);
+    //const [quantityMultiplier, adjustQuantity, handleMultiBlur] = useQuantityMultiplier(tableBOM, props.apiData, 
+    //    allApisList, runBOMAlgorithms, runBOMLineAlgorithms);
     function changeActiveApis(apis, row){
         const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
             actApi.active = apis[actApi.accessor];
@@ -93,36 +104,23 @@ function BOMToolV3(props){
             }
         });
         //console.log(newActiveApis);
-        runBOMLineAlgorithms(row, newTable);
+        setTable(newTable);
+        runBOMAlgorithms(newTable);
     }
+    
     function changeActiveApisGlobal(apis){
-        const newTable = [...tableBOM].map((line) => {
-            if(!line.lineLock){
-                line.activeApis = line.activeApis.map((actApi) => {
-                    actApi.active = apis[actApi.accessor];
-                    return actApi;
-                });
-            }
-            return line;
-        });
         const filteredApis = props.apis.reduce((arr, ap) => {
             if(apis[ap.accessor]) arr.push(ap);
             return arr;
         }, []);
         setDisplayApis(filteredApis);
-        //console.log(props.apis);
-        //console.log(filteredApis);
-        runBOMAlgorithms(newTable);
+        changeTableActiveApisGlobal(apis);
     }
-    const [retryApi, retryAll] = useApiRetrys(props.apiData, allApisList, mpnList, 
-        retryLine, waitingRowApi, callApiRetry, setDataProcessingLock,
-        retryAllStart, callApisRetry, setMpnsInProgress);
-    function changeMPNOption(row, newMPN){
-        //console.log(row+' '+newMPN);
-        const newLine = {...tableBOM[row]};
-        changeMPNLine(row, newLine, newMPN);
-    }
-    const [addMpnOption, editMpnOption, deleteMpnOption] = useMpnOptions(tableBOM, props.apiData,
+    
+    const [retryApi/*, retryAll*/] = useApiRetrys(props.apiData, allApisList, mpnList, 
+        retryForApis, waitingRowApi, callApiRetry, setDataProcessingLock,
+        retryAll, callApisRetry, setMpnsInProgress, retryMpns);
+    const [addMpnOption, editMpnOption, deleteMpnOption, changeMpnOption] = useMpnOptions(tableBOM, props.apiData,
         allApisList, setTable, runBOMLineAlgorithms, callMpn, changeMPNLine);
     function requestOctopart(row, callback){
         //console.log('octopart');
@@ -181,12 +179,16 @@ function BOMToolV3(props){
         });
         
     }
+    function adjustQuantity(newQuantity, row){
+        console.log(newQuantity+' '+row);
+        changeQuantityLine(row, newQuantity);
+    }
     const functions = {
         mpns: {
-            changeOption: changeMPNOption,
+            changeOption: changeMpnOption,
             addOption: addMpnOption,
             editOption: editMpnOption,
-            deleteOption: deleteMpnOption
+            deleteOption: deleteMpnOption,
         },
         quantities: {
             adjustQuantity: adjustQuantity
@@ -211,18 +213,13 @@ function BOMToolV3(props){
         });
         setTable(newTable);
     }
-    const highlightOptions = [
-        {label: 'Best Price', id: 'price'}, 
-        {label: 'Best Lead Time', id: 'leadtime'}
-    ];
-    const [highlightMode, setHighlightMode] = useState({best: highlightOptions[0].id, stock: false});
     function handleChangeHighlight(hlMode){
-        setHighlightMode(update(highlightMode, {
+        setAlgorithmMode(update(algorithmMode, {
             best: {$set: hlMode}
         }));
     }
     function handleChangeStock(inStock){
-        setHighlightMode(update(highlightMode, {
+        setAlgorithmMode(update(algorithmMode, {
             stock: {$set: inStock}
         }))
     }
@@ -249,7 +246,7 @@ function BOMToolV3(props){
         });
         setTable(newTable);
     }
-    const [bomEvaluation] = useBOMEvaluation(tableBOM, tableLock);
+    //const [bomEvaluation] = useBOMEvaluation(tableBOM, tableLock);
     
     const [tableState, setTableState] = useState('APIs');
     function handleTableSwitch(state){
@@ -266,25 +263,25 @@ function BOMToolV3(props){
         <div className='FlexNormal'>
             <div className='Hori'>
             <div>
-            <NumberInput label={'Multi'} value={quantityMultiplier} onBlur={handleMultiBlur} 
+            <NumberInput label={'Multi'} value={quantityMultiplier} onBlur={handleChangeMulti} 
             disabled={tableLock}/>
             <NumberInput label={'Leadtime Cut Off'} value={leadtimeCutOff} onBlur={handleLeadtimeCutOff} 
             disabled={tableLock}/>
             <Search search={searchMpns} on/>
             </div>
             {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
-            apiAttrs={apiAttrs} evaluation={bomEvaluation} algorithm={highlightMode}/>}
+            apiAttrs={apiAttrs} evaluation={bomEvaluation} algorithm={algorithmMode}/>}
             <HighlightOptions disabled={tableLock} onChangeHighlight={handleChangeHighlight}
             onChangeStock={handleChangeStock}
             options={highlightOptions}/>
-            <BOMEval evaluation={bomEvaluation}/>
+            <BOMEval evaluation={bomEvaluation} algorithmMode={algorithmMode}/>
             <div>
             <LabeledCheckbox label={'Show All APIs'} id={'showallapis'} className='Pointer'
             checked={tableState === 'APIs'} onChange={handleTableSwitch} disabled={false}/>
             {/*<HoverOverlay tooltip={props.user ? 'Save BOM' : 'Requires Login'}>
             <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save BOM</Button>
             </HoverOverlay>*/}
-            <Button onClick={retryAll} disabled={tableLock || retryMpns.size === 0}>Retry {retryMpns.size} MPN(s)</Button>
+            <Button onClick={retryAll} disabled={tableLock || retryMpns.length === 0}>Retry {retryMpns.length} MPN(s)</Button>
             </div>
             { buildtype !== 'production' &&
             <div>
@@ -302,7 +299,7 @@ function BOMToolV3(props){
         onHideBar={handleHideBar} numFinished={numMpns-mpnsInProgress.size}/>
         <BOMAPITableV2 data={filteredTableBOM} bomAttrs={tableColumns} 
         apis={displayApis} allApis={props.apis} apiAttrs={apiAttrs} functions={functions}
-        highlightMode={highlightMode}  functionLock={tableLock}
+        algorithmMode={algorithmMode}  functionLock={tableLock}
         hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}
         tableState={tableState}/>
         </>
@@ -310,23 +307,31 @@ function BOMToolV3(props){
 }
 
 function BOMEval(props){
+    const ss = stockString(props.algorithmMode.stock);
+    const ev = props.evaluation.evaluation;
     return(
         <div>
             <div>BOM Evaluation</div>
             <div>Number Of Lines: {props.evaluation.numLines}</div>
             <div className='Hori'>
                 <div className='SmallPadding'>
-                    <div>Best Price</div>
-                    <div>Quoted: {props.evaluation.price.quotedPercent.toFixed(2)}%</div>
-                    <div>Unquoted: {props.evaluation.price.unquotedPercent.toFixed(2)}%</div>
-                    <div>Total Price: {props.evaluation.price.total_price.toFixed(2)}</div>
+                    <div>Quoted: {ev[ss][props.algorithmMode.best].quoted_percent.toFixed(2)}%</div>
+                    <div>Unquoted: {ev[ss][props.algorithmMode.best].unquoted_percent.toFixed(2)}%</div>
+                    <div>Total Price: {ev[ss][props.algorithmMode.best].total_price.toFixed(2)}</div>
                 </div>
                 <div className='SmallPadding'>
-                    <div>Lead Time</div>
-                    <div>Quoted: {props.evaluation.leadtime.quotedPercent.toFixed(2)}%</div>
-                    <div>Unquoted: {props.evaluation.leadtime.unquotedPercent.toFixed(2)}%</div>
-                    <div>Total Price: {props.evaluation.leadtime.total_price.toFixed(2)}</div>
+                    <div>Excess Quantity: {ev[ss][props.algorithmMode.best].total_excess_quantity}</div>
+                    <div>Excess Price: {ev[ss][props.algorithmMode.best].total_excess_price.toFixed(2)}</div>
                 </div>
+                {/*
+                <div className='SmallPadding'>
+                    <div>Lead Time</div>
+                    <div>Quoted: {ev.in_stock.leadtime.quoted_percent.toFixed(2)}%</div>
+                    <div>Unquoted: {ev.in_stock.leadtime.unquoted_percent.toFixed(2)}%</div>
+                    <div>Total Price: {ev.in_stock.leadtime.total_price.toFixed(2)}</div>
+                    <div>Excess Quantity: </div>
+                </div>
+                */}
             </div>
         </div>
     );
