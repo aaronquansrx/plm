@@ -118,7 +118,7 @@ export function MainNavbar(props){
                 stores={props.stores} currencies={props.currencies}
                 dataProcessLock={props.dataProcessLock}/>
             </Nav>
-            <Nav><Version className='nav-link' onClick={props.onVersionClick}>V{versions[0].name}</Version></Nav>
+            <Nav><Version className='nav-link' onClick={props.onVersionClick}>V{props.version}</Version></Nav>
             <div>
             {/*<a href={path("login")}>Login</a><a href={path('login')} onClick={props.onLogout}>Logout</a>*/}
             {!props.username ? <span className='NavClickable' onClick={toggleLoginModal}>Login</span> : 

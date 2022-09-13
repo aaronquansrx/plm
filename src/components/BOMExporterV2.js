@@ -61,13 +61,17 @@ function BOMExporterV2(props){
             const s2 = XLSX.utils.json_to_sheet(evalFormat);
             XLSX.utils.book_append_sheet(wb, s2, 'Evaluation')
         }
-        //XLSX.writeFile(wb, fileName+'.xlsx');
+        XLSX.writeFile(wb, fileName+'.xlsx');
     }
     function apiAttrDecode(offer, acc, stockStr, best){
         switch(acc){
             case 'prices':
                 return offer[acc].price[stockStr];
             case 'adjusted_quantity':
+                return offer[acc][stockStr];
+            case 'excess_quantity':
+                return offer[acc][stockStr];
+            case 'excess_price':
                 return offer[acc][stockStr];
             default:
                 return offer[acc];
@@ -147,10 +151,12 @@ function BOMExporterV2(props){
                 value: value
             }
         }
+        const ev = props.evaluation.evaluation;
+        const ss = stockString(props.algorithm.stock);
         formatted.push(evalLine('In Stock', props.algorithm.stock));
         formatted.push(evalLine('Algorithm Sort', props.algorithm.best));
-        formatted.push(evalLine('Price Total', props.evaluation[props.algorithm.best].total_price));
-        formatted.push(evalLine('Quoted %', props.evaluation[props.algorithm.best].quotedPercent));
+        formatted.push(evalLine('Price Total', ev[ss][props.algorithm.best].total_price));
+        formatted.push(evalLine('Quoted %', ev[ss][props.algorithm.best].quoted_percent));
         formatted.push(evalLine('Number of Lines', props.data.length));
         return formatted;
     }

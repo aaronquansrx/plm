@@ -518,7 +518,7 @@ function MPNRenderer(props){
 
 function MPNsRenderer(props){
     const [editSelector, setEditSelector] = useState(false);
-    const [isAdd, setIsAdd] = useState(true);
+    const [isAdd, setIsAdd] = useState(false);
     const [selectedMPN, setSelectedMPN] = useState(props.value.current);
     const clientUrl = useClientUrl();
     const mpn = props.value.current;
@@ -551,12 +551,8 @@ function MPNsRenderer(props){
         //console.log(props.functionLock);
         if(!props.lock && !props.functionLock){
             if(v === 'addNew'){
-                //props.functions
-                //props.functions.addOption(props.rowNum);
                 setEditSelector(true);
                 setIsAdd(true);
-                console.log('n');
-                //props.functions.changeOption(props.rowNum, '');
             }else{
                 props.functions.changeOption(props.rowNum, v);
             }

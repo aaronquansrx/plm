@@ -780,6 +780,7 @@ export function useMpnOptions(tableBOM, apiData, apisList, setTable, runBOMLineA
         retry: false
     };
     function addMpnOption(row, newMpn){
+        if(newMpn === '') return;
         const newLine = {...tableBOM[row]};
         const ni = newLine.mpns.options.indexOf(newMpn);
         if(ni === -1){

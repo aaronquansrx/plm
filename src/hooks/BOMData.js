@@ -203,7 +203,6 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApisRetry, st
     //const [fullRetryMpns, setFullRetryMpns] = useState([]); //for full retry
     const [retryMpns, setRetryMpns] = useState([]); 
     const [retryLock, setRetryLock] = useState(false); //testing
-    const [retryDataComplete, setRetryDataComplete] = useState(new Set());
     //const [mpnsToDo, setMpnsToDo] = useState(new Set([...mpnList]));
     useEffect(() => {
         /*
@@ -308,7 +307,6 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApisRetry, st
         function onComplete(mpn, mpns, apiDataFull){
             const newMpnsInProgress = new Set([...retMpns].filter(m => !mpns.has(m)));
             setMpnsInProgress(newMpnsInProgress);
-            setRetryDataComplete(mpns);
             if(newMpnsInProgress.size === 0){
                 setDataProcessingLock(false);
                 const retrys = [...apiDataFull.entries()].reduce((arr, [mpn, val]) => {
@@ -336,7 +334,7 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApisRetry, st
         setShowProgress(false);
     }
     return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retryAll, setDataProcessingLock, setMpnsInProgress, 
-        {get:retryLock, set:setRetryLock}, {get:retryDataComplete, set:setRetryDataComplete}];
+        {get:retryLock, set:setRetryLock}];
 }
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency, quantity=null){
     const apiStr = apis.join(',');

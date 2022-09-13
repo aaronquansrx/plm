@@ -69,7 +69,7 @@ function BOMToolV3(props){
         props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
         dataProcessingLock, retryAll, setDataProcessingLock, 
-        setMpnsInProgress, retryLock, retrysToDo] = useApiDataProgress(mpnList, allApisList, props.apiData, 
+        setMpnsInProgress, retryLock] = useApiDataProgress(mpnList, allApisList, props.apiData, 
             callApisRetry, props.store, props.currency);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
     function handleLeadtimeCutOff(newLTC){
@@ -83,7 +83,7 @@ function BOMToolV3(props){
     const [bomEvaluation, changeEvaluation, adjustLineEvaluation] = useBOMEvaluationV2(props.bom);
     const [tableBOM, filteredTableBOM, setTable, tableColumns, 
         runBOMAlgorithms, runBOMLineAlgorithms, retryForApis, waitingRowApi,
-        changeMPNLine, changeQuantityLine, changeTableActiveApisGlobal, evalMpn, tableLock] = useTableBOM(
+        changeMPNLine, changeQuantityLine, changeActiveApis, changeTableActiveApisGlobal, evalMpn, tableLock] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, 
         updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock, props.changeLock,
@@ -93,6 +93,7 @@ function BOMToolV3(props){
     const apiAttrs = props.apiAttrs;
     //const [quantityMultiplier, adjustQuantity, handleMultiBlur] = useQuantityMultiplier(tableBOM, props.apiData, 
     //    allApisList, runBOMAlgorithms, runBOMLineAlgorithms);
+    /*
     function changeActiveApis(apis, row){
         const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
             actApi.active = apis[actApi.accessor];
@@ -106,7 +107,7 @@ function BOMToolV3(props){
         //console.log(newActiveApis);
         setTable(newTable);
         runBOMAlgorithms(newTable);
-    }
+    }*/
     
     function changeActiveApisGlobal(apis){
         const filteredApis = props.apis.reduce((arr, ap) => {
