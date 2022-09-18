@@ -78,10 +78,10 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             mpn: 'mpns',
             quantity: 'quantities'
         };
-        const addedHeaders = [{Header: 'Apis', accessor: 'activeApis'}/*, {Header: 'Octopart', accessor: 'octopart'}*/];
-        if(buildtype !== 'production'){
+        const addedHeaders = [{Header: 'Apis', accessor: 'activeApis'}, {Header: 'Octopart', accessor: 'octopart'}];
+        /*if(buildtype !== 'production'){
             addedHeaders.push({Header: 'Octopart', accessor: 'octopart'});
-        }
+        }*/
         const allHeaders = tableHeaders.concat(addedHeaders);
         return allHeaders.map((header) => {
             const newHeader = {...header};
