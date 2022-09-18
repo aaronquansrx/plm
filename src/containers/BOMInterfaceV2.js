@@ -66,6 +66,7 @@ function BOMInterface(props){
     const [interfaceState, setInterfaceState] = useState(0);
     const [initialBOMEdit, setInitialBOMEdit] = useState([]);
     const [apiData, setApiData] = useState(new Map());
+    const [octopartData, setOctopartData] = useState(new Map());
 
     const [settings, setSettings] = useState({apiAttributes: apiAttributes})
 
@@ -101,12 +102,26 @@ function BOMInterface(props){
     function updateApiDataMap(joinMap){
         const addToData = getApiData();
         const newApiData = new Map([...addToData, ...joinMap]);
-        setApiData(update(apiData, {
+        const dataMap = update(apiData, {
             $add: [[SCKey, newApiData]]
-        }));
+        });
+        setApiData(dataMap);
+        return dataMap.get(SCKey);
     }
     function getApiData(){
         return apiData.has(SCKey) ? apiData.get(SCKey) : new Map();
+    }
+    function updateOctopartDataMap(joinMap){
+        const addToData = getApiData();
+        const newOctopartData = new Map([...addToData, ...joinMap]);
+        const dataMap = update(octopartData, {
+            $add: [[SCKey, newOctopartData]]
+        });
+        setOctopartData(dataMap);
+        return octopartData.has(SCKey);
+    }
+    function getOctopartData(){
+        return octopartData.has(SCKey) ? octopartData.get(SCKey) : new Map();
     }
     function handleSaveSettings(apiAttrs){
         //console.log(apiAttrs);
@@ -126,7 +141,8 @@ function BOMInterface(props){
                 //return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 'tool':
                 return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} apiAttrs={settings.apiAttributes}
-                updateApiDataMap={updateApiDataMap} apiData={getApiData()} user={props.user}
+                updateApiDataMap={updateApiDataMap} apiData={getApiData()} 
+                updateOctopartDataMap={updateOctopartDataMap} octopartData={getOctopartData()} user={props.user}
                 store={props.store} currency={props.currency} changeLock={props.changeLock}
                 loadData={loadData} bomType={BOMData.type}/>;
             default:

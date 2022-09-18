@@ -17,14 +17,14 @@ const buildtype = process.env.NODE_ENV;
 
 export function useTableBOM(bom, tableHeaders, apis, apiData, 
     testCall, ltco, store, currency, dataProcessingLock, appLock, searchMpn, 
-    changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData){
+    changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData){
     const serverUrl = useServerUrl();
     const lenBOM = bom.length;
     const initTableBOM = useMemo(() => {
         return bom.map((line, i) => {
             line.rowNum = i;
             line.selectedOffers = [];
-            //line.octopart = line.mpn;
+            line.octopart = {requested: false, data: null};
             line.mpns = {
                 current: line.mpn,
                 options: line.mpnOptions
@@ -95,100 +95,12 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     const [lineNumsToEvaluate, setLineNumsToEvaluate] = useState(new Set([...Array(lenBOM).keys()]));
     //const linesComplete = lenBOM - lineNumsToEvaluate.size;
     useEffect(() => {
-        /*
-        const updateTimeout = lineNumsToEvaluate.size !== 0
-        ? setTimeout(() => setUpdateTable(updateTable+1), 1000)
-        : null;*/
         let updateTimeout = null;
         if(retryLock.get){
-            const evaledLines = [];
-            const retrysDone = [];
-            console.log(lineNumsToEvaluate);
-            console.log(multiRetryData);
-            const newTable = [...tableBOM].map((line, i) => {
-                if(lineNumsToEvaluate.has(i)){
-                    const mpn = line.mpns.current;
-                    if(multiRetryData.has(mpn)){
-                        //console.log(mpn);
-                        const ad = multiRetryData.get(mpn).data;
-                        const newLine = processBomLine({...line}, ad);
-                        retrysDone.push(mpn);
-                        evaledLines.push(i);
-                        return newLine;
-                    }
-                }
-                return line;
-            });
-            setTableBOM(newTable);
-            const newLineNumsEval = update(lineNumsToEvaluate, {
-                $remove: evaledLines
-            });
-            
-            if(newLineNumsEval.size === 0){
-                runBOMAlgorithmsV2(newTable);
-                retryLock.set(false)
-                changeLocks(false);
-            }else{
-                updateTimeout = setTimeout(() => setUpdateTable(updateTable+1), 1000);
-            }
-            
-            //changeLocks(false);
-            //retryLock.set(false);
+            updateTimeout = retryAllProcess(lineNumsToEvaluate);
         }else if(tableLock){
-            const evaledLines = [];
-            const newTable = [...tableBOM].map((line, i) => {
-                const newLine = {...line};
-                const mpn = newLine.mpns.current;
-                if(lineNumsToEvaluate.has(i)){
-                    if(apiData.has(mpn)){
-                        const ad = apiData.get(mpn).data;
-                        const quantity = newLine.quantities.multi;
-                        const ea = evalApisV2(ad, apisList, quantity);
-                        Object.assign(newLine, ea);
-                        const best = findBestOffer(newLine);
-                        changeBestOffer(newLine, best, algorithmMode);
-                        newLine.max_offers = ad.max_offers;
-                        newLine.evaluated = true;
-                        evaledLines.push(i);
-                        /*
-                        axios({
-                            method: 'POST',
-                            url: serverUrl+'api/algorithms',
-                            data: {offers: ad, quantity: line.quantities.multi},
-                        }).then(response => {
-                            //console.log(i);
-                            //console.log(response.data);
-                            const data = response.data.data;
-                            const newOfferLine = lineOfferEvaluation(newLine, data.offers_evaluation);
-                            changeBestOffer(newOfferLine, data.best, false, 'price');
-                            newTable[i] = newOfferLine;
-                            setTable(newTable);
-                            toEval.delete(i);
-                            setLineNumsToEvaluate(toEval);
-                            if(toEval.size === 0){
-                                runBOMAlgorithmsV2(newTable);
-                                changeLocks(false);
-                            }
-                        });
-                        */
-                    }
-                }
-                return newLine;
-            });
-            setTableBOM(newTable);
-            const newLineNumsEval = update(lineNumsToEvaluate, {
-                $remove: evaledLines
-            });
-            setLineNumsToEvaluate(newLineNumsEval);
-            if(newLineNumsEval.size === 0){
-                runBOMAlgorithmsV2(newTable);
-                changeLocks(false);
-            }else{
-                updateTimeout = setTimeout(() => setUpdateTable(updateTable+1), 1000);
-            }
+            updateTimeout = newBomProcess(lineNumsToEvaluate);
         }else{
-            //for dev
-            //redoa
             console.log('devchange');
             if(process.env.NODE_ENV === 'development'){
                 const newTable = [...tableBOM].map((line) => {
@@ -212,78 +124,68 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
 
     }, [tableBOM, searchMpn]);
     useEffect(() => {
-        setLineNumsToEvaluate(new Set([...Array(lenBOM)].keys()));
-        setTimeout(() => setUpdateTable(updateTable+1), 200);
+        const lnte = new Set([...Array(lenBOM)].keys());
+        setLineNumsToEvaluate(lnte);
+        const updateTimeout = newBomProcess(lnte);
         setTableBOM(initTableBOM);
+        return () => {
+            if(updateTimeout !== null) clearTimeout(updateTimeout);
+        }
     }, [store, currency]);
     useEffect(() => {
         //runBOMAlgorithms(tableBOM);
     }, [testCall]);
-    
+    useEffect(() => {
+        if(singleRetryData !== null){
+            const newLine = processBomLine({...tableBOM[singleRetryData.row]}, 
+                singleRetryData.data, [singleRetryData.api]);
+            const newTable = update(tableBOM, {
+                [singleRetryData.row]: {$set: newLine}
+            });
+            setTable(newTable);
+            runBomAlgorithms(newTable);
+            changeLocks(false);
+        }
+    }, [singleRetryData]);
     useEffect(() => {
         if(!dataProcessingLock){
-            console.log('dplock table process');
-            /*
-            const newTable = [...tableBOM].map((newLine, i) => {
-                const mpn = newLine.mpns.current;
-                const ad = apiData.get(mpn).data;
-                //console.log(apiData.get(mpn).data);
-                //const ea = evalApis(newLine.quantities.multi, apiData.get(mpn).data, apisList);
-                //console.log(ad);
-                axios({
-                    method: 'POST',
-                    url: serverUrl+'api/algorithms',
-                    data: {offers: ad, quantity: newLine.quantities.multi},
-                }).then(response => {
-                    //console.log(response.data);
-                    //const newOfferLine = lineOfferEvaluation(newLine, response.data.offers);
-                    //console.log(newOfferLine);
-                    
-                    const algos = response.data.data;
-                    const newLine = lineAlgorithmsModifyFull({...bom[row]}, algos);
-                    setTable(update(bom, {
-                        [row]: {$set: newLine}
-                    }));
-                    
-                });
-                const ea = evalApisV2(ad, apisList);
-                Object.assign(newLine, ea);
-                newLine.max_offers = ad.max_offers;
-                //newLine.highlights = ad.bests;
-                return newLine;
-            });
-            //console.log(newTable);
-            */
-            //changeLocks(false);
-            //runBOMAlgorithms(newTable);
-            //console.log('run algos');
-            //runBOMAlgorithmsV2(tableBOM);
-            
+            console.log('dp false');
         }else{
-            //setTableLock(true);
+            console.log('dp true');
             changeLocks(true);
         }
     }, [dataProcessingLock]);
     useEffect(() => {
         //console.log(lineNumsToEvaluate);
         //if(lineNumsToEvaluate.size === 0){
-            //runBOMAlgorithmsV2(newTable);
+            //runBomAlgorithms(newTable);
             //retryLock.set(false)
             //changeLocks(false);
         //}
     }, [lineNumsToEvaluate]);
     useEffect(() => {
+        let updateTimeout = null;
         if(retryLock.get){
             const retryLines = new Set();
             const retryMpnSet = new Set(retryMpns.map((ret) => ret.mpn));
-            tableBOM.forEach((line, i) => {
+            const mpnToApis = retryMpns.reduce((obj, retMpn) => {
+                obj[retMpn.mpn] = retMpn.apis;
+                return obj;
+            }, {})
+            const newBOM = [...tableBOM].map((line, i) => {
                 if(retryMpnSet.has(line.mpns.current)){
+                    const newLine = waitingLineApi(line, mpnToApis[line.mpns.current]);
                     retryLines.add(i);
+                    return newLine;
                 }
+                return line;
             });
-            //console.log(retryLines);
+            setTableBOM(newBOM);
             setLineNumsToEvaluate(retryLines);
-            setTimeout(() => setUpdateTable(updateTable+1), 200);
+            updateTimeout = retryAllProcess(retryLines);
+        }
+        return () => {
+            if(updateTimeout !== null) clearTimeout(updateTimeout);
         }
     }, [retryLock.get]);
     useEffect(() => {
@@ -322,9 +224,72 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 return newLine;
             });
             setTable(newTable);
-            runBOMAlgorithmsV2(newTable);
+            runBomAlgorithms(newTable);
         }
     }, [quantityMultiplier]);
+    function newBomProcess(lnte){
+        let timeout = null;
+        const evaledLines = [];
+        const newTable = [...tableBOM].map((line, i) => {
+            const newLine = {...line};
+            const mpn = newLine.mpns.current;
+            if(lnte.has(i)){
+                if(apiData.has(mpn)){
+                    const ad = apiData.get(mpn).data;
+                    const quantity = newLine.quantities.multi;
+                    const ea = evalApisV2(ad, apisList, quantity);
+                    Object.assign(newLine, ea);
+                    const best = findBestOffer(newLine);
+                    changeBestOffer(newLine, best, algorithmMode);
+                    newLine.max_offers = ad.max_offers;
+                    newLine.evaluated = true;
+                    evaledLines.push(i);
+                }
+            }
+            return newLine;
+        });
+        setTableBOM(newTable);
+        const newLineNumsEval = update(lnte, {
+            $remove: evaledLines
+        });
+        setLineNumsToEvaluate(newLineNumsEval);
+        if(newLineNumsEval.size === 0){
+            runBomAlgorithms(newTable);
+            changeLocks(false);
+        }else{
+            timeout = setTimeout(() => setUpdateTable(updateTable+1), 1000);
+        }
+        return timeout;
+    }
+    function retryAllProcess(lnte){
+        const evaledLines = [];
+        const retrysDone = [];
+        const newTable = [...tableBOM].map((line, i) => {
+            if(lnte.has(i)){
+                const mpn = line.mpns.current;
+                if(multiRetryData.has(mpn)){
+                    const ad = multiRetryData.get(mpn).data;
+                    const newLine = processBomLine({...line}, ad);
+                    retrysDone.push(mpn);
+                    evaledLines.push(i);
+                    return newLine;
+                }
+            }
+            return line;
+        });
+        setTableBOM(newTable);
+        const newLineNumsEval = update(lnte, {
+            $remove: evaledLines
+        });
+        
+        if(newLineNumsEval.size === 0){
+            runBomAlgorithms(newTable);
+            retryLock.set(false)
+            changeLocks(false);
+        }else{
+            setTimeout(() => setUpdateTable(updateTable+1), 1000);
+        }
+    }
     function changeLocks(bool){
         setTableLock(bool);
         appLock(bool);
@@ -351,14 +316,14 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         }
         return newLine;
     }
-    function retryForApis(row, apis, newRowData){
+    function retryApis(row, apis, newRowData){
         const newLine = processBomLine({...tableBOM[row]}, newRowData, apis);
         //console.log(newLine);
         const newBOM = update(tableBOM, {
             [row]: {$set: newLine}
         });
         setTableBOM(newBOM);
-        runBOMAlgorithmsV2(newBOM);
+        runBomAlgorithms(newBOM);
         changeLocks(false);
     }
     function changeMPNLine(row, line, mpn, data=null){
@@ -369,7 +334,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 [row]: {$set: newLine}
             });
             setTableBOM(newBOM);
-            runBOMAlgorithmsV2(newBOM);
+            runBomAlgorithms(newBOM);
         }
     }
     function changeQuantityLine(row, quantity){
@@ -381,7 +346,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             [row]: {$set: newLine}
         });
         setTableBOM(newBOM);
-        runBOMAlgorithmsV2(newBOM);
+        runBomAlgorithms(newBOM);
     }
     function changeActiveApis(apis, row){
         const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
@@ -396,7 +361,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         });
         //console.log(newActiveApis);
         setTable(newTable);
-        runBOMAlgorithms(newTable);
+        runBomAlgorithms(newTable);
     }
     function changeActiveApisGlobal(apis){
         const newTable = [...tableBOM].map((line) => {
@@ -410,27 +375,9 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             return newLine;
         });
         setTable(newTable);
-        runBOMAlgorithms(newTable);
+        runBomAlgorithms(newTable);
     }
-    function evalMpn(newLine, newData){
-        return evalApis(newLine.quantities.multi, newData, apisList);
-    }
-    function lineOfferEvaluation(line, algoData){
-        const retLine = {...line};
-        apisList.forEach((api) => {
-            retLine[api].offers.forEach((off, i) => {
-                off.adjusted_quantity = algoData[api][i].adjusted_quantity;
-                off.excess_quantity = algoData[api][i].excess_quantity;
-                off.excess_price = algoData[api][i].excess_price;
-                off.total_price = algoData[api][i].total_price;
-                off.prices.price = algoData[api][i].price_per;
-                off.prices.index = algoData[api][i].index;
-                off.prices.total = algoData[api][i].total_price;
-            });
-        });
-        return retLine;
-    }
-    function runBOMAlgorithmsV2(b=null, lt=null){
+    function runBomAlgorithms(b=null, lt=null){
         const bom = b === null ? tableBOM : b;
         const newLeadtimeCutOff = lt == null ? ltco : lt;
         axios({
@@ -480,160 +427,21 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             line[bApi].offers[bOffer].best = true;
         }
     }
-    function lineAlgorithmsModifyFull(line, algoData){
-        const stockOnly = algoData.in_stock_only;
-        const notStockOnly = algoData.not_stock_only;
-
-        //best price
-        const bestPrice = stockOnly.bestpricefull;
-        const bestPriceNoStock = notStockOnly.bestpricefull;
-        const priceHL = bestPrice.best ? {api: bestPrice.best.api, offerNum: bestPrice.best.offerNum} : null;
-        const priceNoStockHL = bestPriceNoStock.best ? 
-        {api: bestPriceNoStock.best.api, offerNum: bestPriceNoStock.best.offerNum} : null;
-
-        //lead time
-        const leadTime = stockOnly.bestleadtimefull;
-        const leadTimeNoStock = notStockOnly.bestleadtimefull;
-        const leadtimeHL = leadTime.best ? 
-            {api: leadTime.best.api, offerNum: leadTime.best.offerNum} : null;
-        const leadtimeNoStockHL = leadTimeNoStock.best ? 
-            {api: leadTimeNoStock.best.api, offerNum: leadTimeNoStock.best.offerNum} : null;
-
-        line.highlights.stock.price = priceHL;
-        line.highlights.noStock.price = priceNoStockHL;
-        line.highlights.stock.leadTime = leadtimeHL;
-        line.highlights.noStock.leadTime = leadtimeNoStockHL;
-        if(bestPrice.best){
-            line.offerEvaluation.price = {
-                offers: [bestPrice.best],
-                quantity_found: bestPrice.best.quantity,
-                total_price: bestPrice.best.total,
-                fully_evaluated: bestPrice.best.quantity >= line.quantities.multi
-            }
-        }else{
-            line.offerEvaluation.price = {
-                offers: [],
-                quantity_found: 0,
-                total_price: 0,
-                fully_evaluated: false
-            }
-        }
-        if(leadTime.best){
-            line.offerEvaluation.leadtime = {
-                offers: [leadTime.best],
-                quantity_found: leadTime.best.quantity,
-                total_price: leadTime.best.total,
-                fully_evaluated: leadTime.best.quantity >= line.quantities.multi
-            }
-        }else{
-            line.offerEvaluation.leadtime = {
-                offers: [],
-                quantity_found: 0,
-                total_price: 0,
-                fully_evaluated: false
-            }
-        }
-        const stockInfo = stockOnly.offerinfoquantityprices;
-        const noStockInfo = notStockOnly.offerinfoquantityprices;
-        apisList.forEach((api) => {
-            line[api].offerOrder.stock.price = bestPrice.sort[api];
-            line[api].offerOrder.noStock.price = bestPriceNoStock.sort[api];
-            line[api].offerOrder.stock.leadTime = leadTime.sort[api];
-            line[api].offerOrder.noStock.leadTime = leadTimeNoStock.sort[api];
-
-            line[api].offers.forEach((off, i) => {
-                //if(!stockInfo[api][i] || !noStockInfo[api][i]) return;
-                off.adjustedQuantity = {
-                    stock: stockInfo[api][i].quantity,
-                    noStock: noStockInfo[api][i].quantity
-                };
-
-                off.prices.price = {
-                    stock: stockInfo[api][i].price_per,
-                    noStock: noStockInfo[api][i].price_per,
-                };
-                off.prices.pricingIndex = {
-                    stock: stockInfo[api][i].index,
-                    noStock: noStockInfo[api][i].index
-                };
-                off.prices.total_price = {
-                    stock: stockInfo[api][i].total,
-                    noStock: noStockInfo[api][i].total
-                }
-                off.totalPrice = {
-                    stock: stockInfo[api][i].total,
-                    noStock: noStockInfo[api][i].total,
-                };
-                //off.prices.pricingIndex = algorithmsStockStructure(bestPrice.offer_info[api][i].index);
-                off.excessQuantity = {
-                    stock: stockInfo[api][i].excess_quantity,
-                    noStock: noStockInfo[api][i].excess_quantity,
-                };
-                off.excessPrice = {
-                    stock: stockInfo[api][i].excess_price,
-                    noStock: noStockInfo[api][i].excess_price,
-                }
-            });
+    function waitingLineApi(line, apis){
+        const newLine = {...line};
+        apis.forEach((api) => {
+            newLine[api].retry = false;
+            newLine[api].message = 'Waiting...';
         });
-
-        return line;
-    }
-    function runBOMAlgorithms(b=null, lt=null){
-        const bom = b === null ? tableBOM : b;
-        const newLeadtimeCutOff = lt == null ? ltco : lt;
-        const hasInStock = true;
-        axios({
-            method: 'POST',
-            url: serverUrl+'api/algorithms',
-            data: {
-                bom: bom,
-                algorithms: ['bestpricefull', 'bestleadtimefull', 'offerinfoquantityprices'],
-                in_stock: hasInStock,
-                lead_time_cut_off: newLeadtimeCutOff
-            }
-        }).then(response => {
-            //console.log(response);
-            console.log(response.data);
-            //const algos = response.data.data;
-            /*
-            const newTableBOM = [...bom].map((line,i) => {
-                const newLine = lineAlgorithmsModifyFull({...line}, algos[i]);
-                return newLine;
-            });
-            setTable(newTableBOM);
-            */
-            //setTableLock(false);
-            //changeLocks(false);
-            
+        return newLine;
+        /*
+        const newBOM = update(tableBOM, {
+            [row]: {$set: newLine}
         });
+        setTable(newBOM);*/
     }
-    function runBOMLineAlgorithms(row, b=null){
-        const bom = b === null ? tableBOM : b;
-        const hasInStock = true;
-        axios({
-            method: 'POST',
-            url: serverUrl+'api/algorithms',
-            data: {
-                line: bom[row],
-                algorithms: ['bestpricefull', 'bestleadtimefull', 'offerinfoquantityprices'],
-                in_stock: hasInStock,
-                lead_time_cut_off: ltco
-            }
-        }).then(response => {
-            console.log(response.data);
-            /*
-            const algos = response.data.data;
-            const newLine = lineAlgorithmsModifyFull({...bom[row]}, algos);
-            setTable(update(bom, {
-                [row]: {$set: newLine}
-            }));
-            */
-        });
-    }
-    function waitingRowApi(row, api){
-        const newLine = {...tableBOM[row]};
-        newLine[api].retry = false;
-        newLine[api].message = 'Waiting...';
+    function changeWaitingRowApi(row, apis){
+        const newLine = waitingLineApi(tableBOM[row], apis);
         const newBOM = update(tableBOM, {
             [row]: {$set: newLine}
         });
@@ -650,17 +458,31 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         setFilteredTableBOM(filtered);
         return filtered;
     }
-    return [tableBOM, filteredTableBOM, setTable, headers, runBOMAlgorithmsV2, 
-        runBOMLineAlgorithmsV2,
-        retryForApis,
-        waitingRowApi, changeMPNLine, changeQuantityLine, changeActiveApis,
-        changeActiveApisGlobal, evalMpn, tableLock
+    function octopartLineChange(octoData, row){
+        console.log(octoData);
+        const tableLine = {...tableBOM[row]};
+        const newOcto = octoData.sellers.map((seller) => {
+            //const newOffers = evalApiV2(seller, tableLine.quantities.multi);
+            seller.offers = evalApiV2(seller, tableLine.quantities.multi);
+            return seller;
+        });
+        console.log(newOcto);
+        tableLine.octopart = newOcto;
+        setTable(update(tableBOM, {
+            [row]: {$set: tableLine}
+        }));
+    }
+    return [tableBOM, filteredTableBOM, setTable, headers, runBomAlgorithms, 
+        runBOMLineAlgorithmsV2, //retryApis, 
+        changeMPNLine, changeQuantityLine, changeActiveApis,
+        changeActiveApisGlobal, changeWaitingRowApi, tableLock,
+        octopartLineChange
     ];
 }
 
 
 export function useQuantityMultiplier(tableBOM, apiData, apisList, 
-    runBOMAlgorithms, runBOMLineAlgorithms){
+    runBomAlgorithms, runBOMLineAlgorithms){
     const [multiplier, setMultiplier] = useState(1);
     function newLineChangeQuantity(line, single, multi){
         const newLine = {...line};
@@ -689,7 +511,7 @@ export function useQuantityMultiplier(tableBOM, apiData, apisList,
                     line.quantities.initial*newMulti);
                 return newLine;
             });
-            runBOMAlgorithms(newTable);
+            runBomAlgorithms(newTable);
             setMultiplier(newMulti);
         }
         return newMulti;

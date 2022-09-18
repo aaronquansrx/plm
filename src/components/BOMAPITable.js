@@ -44,13 +44,20 @@ const renderers = {
 
 
 const octoRenderers = {
-    'prices': (p) => <OctoPricesRenderer {...p}/>,
+    'prices': (p) => <PricesRenderer {...p}/>,
+    'adjusted_quantity': (p) => <AdjustedQuantityRenderer {...p}/>,
+    'excess_price': (p) => <ExcessPriceRenderer {...p}/>,
+    'excess_quantity': (p) => <AdjustedQuantityRenderer {...p}/>,
+    'total_price': (p) => <TotalPriceRenderer {...p}/>,
 }
 
 const headerRenderers = {
     'activeApis': (p) => <ActiveApisHeaderRenderer {...p}/>,
     'leadtime': (p) => <LeadTimeHeaderRenderer {...p}/>,
-    'adjusted_quantity': (p) => <AdjustedQuantityHeaderRenderer {...p}/>
+    'adjusted_quantity': (p) => <LongHeaderTooltipRenderer {...p}/>,
+    'total_price': (p) => <LongHeaderTooltipRenderer {...p}/>,
+    'excess_quantity': (p) => <LongHeaderTooltipRenderer {...p}/>,
+    'excess_price': (p) => <LongHeaderTooltipRenderer {...p}/>
 };
 
 const defaultRenderer = (p) => <DefaultRenderer/>
@@ -62,9 +69,11 @@ function smartAttr(type, funs, vars, rendererList){
         const functions = (attr.accessor in funs)
         ? funs[attr.accessor] : null;
         const vr = (attr.accessor in vars) ? vars[attr.accessor] : {};
+        const lh = ('longHeader' in attr) ? attr.longHeader : null;
         return {
             attribute: attr.accessor,
             header: attr.Header,
+            longHeader: lh,
             type: type,
             custom: custom, // custom renderer for cell?
             vars: vr,
@@ -82,8 +91,7 @@ export function BOMAPITableV2(props){
         obj[api.accessor] = api.Header;
         return obj;
     }, {});
-    const normalAttributes = bomAttrs.map(smartAttr('normal', props.functions, {}, renderers));
-    
+    const normalAttributes = bomAttrs.map(smartAttr('normal', props.functions, {octopart: {apiAttrs: props.apiAttrs}}, renderers));
     /*const normalAttributes = props.bomAttrs.map((attr) => {
         const custom = (attr.accessor in renderers)
         ? renderers[attr.accessor] : null;
@@ -405,7 +413,9 @@ function APIAttributeRenderer(props){
     //console.log(props.custom);
     //console.log(props.functions);
     function handleClick(){
-        props.functions.selectOffer(props.rowNum, props.api, props.offerNum);
+        if(!props.octopart){
+            props.functions.selectOffer(props.rowNum, props.api, props.offerNum);
+        }
     }
     
     return(
@@ -695,7 +705,7 @@ function ActiveApisRenderer(props){
 function OctopartRenderer(props){
     //console.log(props.functions);
     const [showModal, setShowModal] = useState(0);
-    const [octoRequested, setOctoRequested] = useState(false);
+    //const [octoRequested, setOctoRequested] = useState(false);
     const [modalOn, setModalOn] = useState(false);
     const activator = (
         <Button onClick={() => setModalOn(true)} disabled={props.lock}>Request</Button>
@@ -704,16 +714,16 @@ function OctopartRenderer(props){
         setShowModal(showModal+1);
         setModalOn(false)
     };
-    const [octoData, setOctoData] = useState([]);
+    //const [octoData, setOctoData] = useState([]);
     useEffect(() => {
-        if(modalOn && !octoRequested){
+        if(modalOn /*&& !octoRequested*/){
             props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
             console.log('req octo');
-            setOctoRequested(true);
+            //setOctoRequested(true);
         }
     }, [modalOn]);
     function callbackOctoRequest(od){
-        setOctoData(od);
+        //setOctoData(od);
     }
     /*
     function onOctopart(){
@@ -723,7 +733,7 @@ function OctopartRenderer(props){
     const body = (
         <>
         {/*!isProduction && <Button onClick={onOctopart}>Octopart</Button>*/}
-        {octoData.length > 0 && !isProduction && <OctopartTable data={octoData}/>}
+        {props.value.length > 0 && !isProduction && <OctopartTable data={props.value} stockMode={props.stockMode} apiAttrs={props.vars.apiAttrs}/>}
         </>
     );
     const footer = <Button variant='secondary' onClick={onClose}>Close</Button>
@@ -734,7 +744,7 @@ function OctopartRenderer(props){
     );
 }
 
-function AdjustedQuantityHeaderRenderer(props){
+function LongHeaderTooltipRenderer(props){
     return (
         <th {...props.headerProps}>
             <HoverOverlay tooltip={props.longHeader} placement='auto'>{props.header}</HoverOverlay>
@@ -807,14 +817,15 @@ function DefaultRenderer(props){
 
 function OctopartTable(props){
     const octoHeaders = [{Header: 'Distributor', accessor: 'distributor'}];
-    const offerHeaders = [
+    const offerHeaders = props.apiAttrs;
+    /*[
         {Header: 'Stock', accessor: 'available'},
         {Header: 'MOQ', accessor: 'moq'},
         {Header: 'Lead Time', accessor: 'leadtime'},
         {Header: 'Price', accessor: 'prices'},
         {Header: 'SPQ', accessor: 'spq'},
         {Header: 'Packaging', accessor: 'packaging'}
-    ];
+    ];*/
     const headers = octoHeaders.concat(offerHeaders);
     const octoAttributes = octoHeaders.map(smartAttr('octopart', {}, {}, octoRenderers));
     const offerAttributes = offerHeaders.map(smartAttr('subattr', {}, {}, octoRenderers));
@@ -833,7 +844,7 @@ function OctopartTable(props){
             {props.data.map((dataObj, i) => {
                 //console.log(dataObj);
                 return (
-                    <OctopartRow key={i} data={dataObj} octoAttrs={octoAttributes} offerAttrs={offerAttributes}/>
+                    <OctopartRow key={i} data={dataObj} octoAttrs={octoAttributes} offerAttrs={offerAttributes} stockMode={props.stockMode}/>
                 );
             })}
         </tbody>
@@ -855,10 +866,11 @@ function OctopartRow(props){
         <>
         <tr>
         {props.data.offers.length > 0 && props.octoAttrs.map((attr, i) => {
-            return <BOMAttributeRenderer key={i} value={props.data[attr.attribute]} custom={attr.custom} cellProps={octoCellProps}/>;
+            return <BOMAttributeRenderer key={i} value={props.data[attr.attribute]} custom={attr.custom} cellProps={octoCellProps} stockMode={props.stockMode}/>;
         })}
         {props.data.offers.length > 0 && props.offerAttrs.map((attr, i) => {
-            return <BOMAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom}/>
+            return <APIAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom} 
+            stockMode={props.stockMode} octopart/>
         })}
         </tr>
         {props.data.offers.length > 1 && showAllOffers && 
@@ -867,7 +879,8 @@ function OctopartRow(props){
             return(
             <tr key={i}>
                 {props.offerAttrs.map((attr, j) => {
-                    return <BOMAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom}/>
+                    return <APIAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom} 
+                    stockMode={props.stockMode} octopart/>
                 })}
             </tr>
             );
@@ -887,10 +900,10 @@ function OctopartRow(props){
 }
 
 function OctoPricesRenderer(props){
-    const pt = props.value ? <NewPricingTable pricing={props.value.pricing} highlight={props.value.pricingIndex}/> : <></>;
+    const pt = props.value && props.value.index ? <NewPricingTable pricing={props.value.pricing} highlight={props.value.index[props.stockMode]}/> : <></>;
     return (
         <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
-            <td {...props.cellProps}>{props.value && props.value.price}</td>
+            <td {...props.cellProps}>{props.value && props.value.price[props.stockMode]}</td>
         </SimplePopover>
     );
 }

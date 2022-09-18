@@ -96,7 +96,7 @@ function App() {
   }
   return (
     <div className="App">
-      <MainNavbar username={username} version={versions[0].name}
+      <MainNavbar username={username} version={versions[0].current}
       onVersionClick={handleVersionClick}
       store={options.store} currency={options.currency} 
       onOptionChange={handleOptionChange}
@@ -119,12 +119,15 @@ function App() {
 
 const versions = [
   {
+      current: '1.2.1',
       name: '1.2',
       content:
       <div>
-          <h3>Version 1.2</h3>
-          <p>Excess Quantity and Price Evaluation</p>
-          <p>Internal algorithm changes and structural overhaul (bugs to be fixed)</p>
+          <h3>Version 1.2.0</h3>
+          <p>Excess quantity and price evaluation</p>
+          <p>Internal algorithm changes and structural overhaul</p>
+          <h5>1.2.1</h5>
+          <p>Octopart request</p>
       </div>
   },
   {

@@ -8,11 +8,12 @@ import {useServerUrl} from './../hooks/Urls';
 import {algorithmsInitialStructure} from './../scripts/AlgorithmVariable';
 
 export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiDataMap, 
-    store, currency, apiData, bomType, loadData, appLock){
+    store, currency, apiData, bomType, loadData, appLock, octopartData, updateOctopartDataMap){
     //const [dataProcessing, setDataProcessing] = useState([]);
     const serverUrl = useServerUrl();
     const expireTime = 1000000;
     const [multiRetryData, setMultiRetryData] = useState(new Map()); // a subset of apiData in real time (required due to delays in setState)
+    const [singleRetryData, setSingleRetryData] = useState(null);
     useEffect(() => {
         const controller = new AbortController();
         console.log(currency);
@@ -107,13 +108,13 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             controller.abort();
         }
     }, [store, currency]);
-    function callApiRetry(cmpn, api, onComplete){
+    function callApiRetry(cmpn, api, rowNum, onComplete){
         const controller = new AbortController();
         function apiCallbackSingle(mpn, data, maxOffers){
             const now = Date.now();
             if(apiData.has(mpn)){
                 const mpnDt = apiData.get(mpn);
-                const mo = Math.max(mpnDt.data.maxOffers, maxOffers);
+                const mo = Math.max(mpnDt.data.max_offers, maxOffers);
                 const newDa = update(mpnDt.data, {
                     apis: {
                         [api]: {$set: data[api]}
@@ -122,8 +123,11 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                 });
                 const nm = new Map();
                 nm.set(mpn, {data:newDa, date: mpnDt.date});
-                updateApiDataMap(nm);
-                onComplete({apis: {[api]: data[api]}, maxOffers: mo});
+                const newData = updateApiDataMap(nm);
+                const singData = {apis: {[api]: data[api]}, max_offers: mo};
+                //console.log(singData);
+                setSingleRetryData({data: singData, api: api, row: rowNum});
+                onComplete(newData);
             }
 
         }
@@ -170,17 +174,74 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                 max_offers: maxOffers
             };
             apiDataMap.set(mpn, {data:da, date: now});
-            updateApiDataMap(apiDataMap);
-            onComplete(da);
+            const newData = updateApiDataMap(apiDataMap);
+            onComplete(newData);
         }
         if(!apiData.has(cmpn)){
             callApi(cmpn, serverUrl, controller, apisList, apiCallbackSingle , () => {}, store, currency);
         }
     }
-    return [callApiRetry, callMpn, callApisRetry, multiRetryData];
+    function callOctopart(mpn, row, octopartLineChange){
+        if(!octopartData.has(mpn)){
+            const octoTempMap = new Map();
+            axios({
+                method: 'GET',
+                url: serverUrl+'api/octopart',
+                params: {part:mpn, currency: currency, store: store},
+                //signal: controller.signal
+            }).then(response => {
+                console.log(response.data);
+                const octoData = response.data.data;
+                octoTempMap.set(mpn, octoData);
+                updateOctopartDataMap(octoTempMap);
+                octopartLineChange(octoData, row);
+            });
+        }
+            /*
+            const octoData = response.data;
+            const findMpnData = octoData.data.find((octo) => octo.mpn === mpn);
+            if(findMpnData !== undefined){
+                const dists = findMpnData.data.map((d) => {
+                    const offers = d.offers.reduce((arr, offer) => {
+                        if(Object.keys(offer.pricing).length > 0){
+                            if(props.currency in offer.pricing){
+                                const pricing = offer.pricing[props.currency].map((pr) => {
+                                    return pr;
+                                });
+                                const obj = {
+                                    available: offer.available,
+                                    moq: offer.moq,
+                                    leadtime: offer.leadtime,
+                                    spq: offer.spq,
+                                    //pricing: pricing,
+                                    prices: {
+                                        price: offer.price,
+                                        pricing: pricing,
+                                        pricingIndex: offer.price_index,
+                                    },
+                                    packaging: offer.packaging
+                                }
+                                arr.push(obj);
+                            }else{
+                                console.log(offer.pricing);
+                            }
+                        }
+                        return arr;
+                    }, []);
+                    return {
+                        distributor: d.company,
+                        offers: offers
+                    };
+                });
+                console.log(dists);
+                callback(dists);
+            }*/
+    }
+
+    return [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart];
 }
 
-export function useApiDataProgress(mpnList, apisList, apiData, callApisRetry, store, currency){
+export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, callApisRetry, store, currency){
     const [progress, setProgress] = useState({
         finished: false,
         mpnsNotEvaluated: new Set(
@@ -239,19 +300,7 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApisRetry, st
             if(fin){
                 setInitialDataFlag(false);
                 setDataProcessingLock(false);
-                const mpnRetrys = mpnList.reduce((arr, mpn) => {
-                    if(apiData.has(mpn)){
-                        const mpnApisData = apiData.get(mpn).data.apis;
-                        const retryApis = apisList.reduce((arrApi, api)=> {
-                            if(mpnApisData[api].retry) arrApi.push(api);
-                            return arrApi;
-                        }, []);
-                        if(retryApis.length > 0){
-                            arr.push({mpn: mpn, apis: retryApis});
-                        }
-                        return arr;
-                    }
-                }, []);
+                const mpnRetrys = findMpnRetrys();
                 setRetryMpns(mpnRetrys);
             }
         }else if(retryLock){
@@ -294,8 +343,35 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApisRetry, st
         }
         setMpnsInProgress(mpnsEvaled);
     }, [store, currency]);
-    function retrySingle(){
-        //todo
+    function retrySingle(mpn, api, row){
+        setDataProcessingLock(true);
+        setShowProgress(true);
+        setMpnsInProgress(new Set([mpn]));
+        function onComplete(newData){
+            console.log(newData);
+            setMpnsInProgress(new Set());
+            setDataProcessingLock(false);
+            setRetryMpns(findMpnRetrys(newData));
+            //setTimeout(() => {setRetryMpns(findMpnRetrys(newData))}, 200); //find better solution for these timeouts
+        }
+        callApiRetry(mpn, api, row, onComplete);
+    }
+    //function 
+    function findMpnRetrys(apDt=null){
+        const ad = apDt !== null ? apDt : apiData;
+        return mpnList.reduce((arr, mpn) => {
+            if(ad.has(mpn)){
+                const mpnApisData = ad.get(mpn).data.apis;
+                const retryApis = apisList.reduce((arrApi, api)=> {
+                    if(mpnApisData[api].retry) arrApi.push(api);
+                    return arrApi;
+                }, []);
+                if(retryApis.length > 0){
+                    arr.push({mpn: mpn, apis: retryApis});
+                }
+                return arr;
+            }
+        }, []);
     }
     function retryAll(){
         console.log('start retry');
@@ -333,13 +409,15 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApisRetry, st
     function handleHideBar(){
         setShowProgress(false);
     }
-    return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retryAll, setDataProcessingLock, setMpnsInProgress, 
+    return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retrySingle, 
+        retryAll, setDataProcessingLock, setMpnsInProgress, 
         {get:retryLock, set:setRetryLock}];
 }
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency, quantity=null){
     const apiStr = apis.join(',');
     const params = {part: mpn, api:apiStr, store: store, currency: currency};
     //if(quantity !== null) params.quantity = quantity;
+    //console.log('calling '+mpn);
     axios({
         method: 'GET',
         url: serverUrl+'api/part',

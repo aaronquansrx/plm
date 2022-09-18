@@ -65,11 +65,11 @@ function BOMToolV3(props){
     ];
     const [algorithmMode, setAlgorithmMode] = useState({best: highlightOptions[0].id, stock: false});
     const [quantityMultiplier, handleChangeMulti] = useQuantityMultiplierV2();
-    const [callApiRetry, callMpn, callApisRetry, multiRetryData] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
-        props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock);
+    const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
+        props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock, props.octopartData, props.updateOctopartDataMap);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
-        dataProcessingLock, retryAll, setDataProcessingLock, 
-        setMpnsInProgress, retryLock] = useApiDataProgress(mpnList, allApisList, props.apiData, 
+        dataProcessingLock, retrySingle, retryAll, setDataProcessingLock, 
+        setMpnsInProgress, retryLock] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
             callApisRetry, props.store, props.currency);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
     function handleLeadtimeCutOff(newLTC){
@@ -82,12 +82,13 @@ function BOMToolV3(props){
     }
     const [bomEvaluation, changeEvaluation, adjustLineEvaluation] = useBOMEvaluationV2(props.bom);
     const [tableBOM, filteredTableBOM, setTable, tableColumns, 
-        runBOMAlgorithms, runBOMLineAlgorithms, retryForApis, waitingRowApi,
-        changeMPNLine, changeQuantityLine, changeActiveApis, changeTableActiveApisGlobal, evalMpn, tableLock] = useTableBOM(
+        runBOMAlgorithms, runBOMLineAlgorithms, /*retryApis,*/
+        changeMPNLine, changeQuantityLine, changeActiveApis, 
+        changeTableActiveApisGlobal, changeWaitingRowApi, tableLock, octopartLineChange] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, 
         updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock, props.changeLock,
-        searchTerm, changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData
+        searchTerm, changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData
     );
     //const apiAttrs = useApiAttributes();
     const apiAttrs = props.apiAttrs;
@@ -108,7 +109,16 @@ function BOMToolV3(props){
         setTable(newTable);
         runBOMAlgorithms(newTable);
     }*/
-    
+    function requestOctopart(row){
+        const mpn = tableBOM[row].mpns.current;
+        if(!props.octopartData.has(mpn)){
+            console.log('no resdsq');
+            callOctopart(mpn, row, octopartLineChange);
+        }else{
+            console.log('no req');
+            octopartLineChange(props.octopartData.get(mpn).data, row);
+        }
+    }
     function changeActiveApisGlobal(apis){
         const filteredApis = props.apis.reduce((arr, ap) => {
             if(apis[ap.accessor]) arr.push(ap);
@@ -117,69 +127,18 @@ function BOMToolV3(props){
         setDisplayApis(filteredApis);
         changeTableActiveApisGlobal(apis);
     }
-    
-    const [retryApi/*, retryAll*/] = useApiRetrys(props.apiData, allApisList, mpnList, 
+    function retryApi(mpn, api, row){
+        changeWaitingRowApi(row, [api]);
+        retrySingle(mpn, api, row);
+    }
+    /*
+    const [retryApi, retryAll] = useApiRetrys(props.apiData, allApisList, mpnList, 
         retryForApis, waitingRowApi, callApiRetry, setDataProcessingLock,
         retryAll, callApisRetry, setMpnsInProgress, retryMpns);
+        */
     const [addMpnOption, editMpnOption, deleteMpnOption, changeMpnOption] = useMpnOptions(tableBOM, props.apiData,
         allApisList, setTable, runBOMLineAlgorithms, callMpn, changeMPNLine);
-    function requestOctopart(row, callback){
-        //console.log('octopart');
-        //console.log(row);
-        const mpn = tableBOM[row].mpns.current;
-        const quantity = tableBOM[row].quantities.multi;
-        axios({
-            method: 'GET',
-            url: serverUrl+'api/octopart',
-            params: {search: mpn, quantity: quantity, currency: props.currency, store: props.store},
-            //signal: controller.signal
-        }).then(response => {
-            console.log(response.data);
-            const octoData = response.data;
-            const findMpnData = octoData.data.find((octo) => octo.mpn === mpn);
-            if(findMpnData !== undefined){
-                const dists = findMpnData.data.map((d) => {
-                    const offers = d.offers.reduce((arr, offer) => {
-                        if(Object.keys(offer.pricing).length > 0){
-                            if(props.currency in offer.pricing){
-                                const pricing = offer.pricing[props.currency].map((pr) => {
-                                    return pr;
-                                });
-                                //const {price, index} = findPriceBracket(pricing, 
-                                //    quantity, offer.quantities.MinimumOrder);
-                                const obj = {
-                                    available: offer.available,
-                                    moq: offer.moq,
-                                    leadtime: offer.leadtime,
-                                    spq: offer.spq,
-                                    //pricing: pricing,
-                                    prices: {
-                                        price: offer.price,
-                                        pricing: pricing,
-                                        pricingIndex: offer.price_index,
-                                    },
-                                    packaging: offer.packaging
-                                }
-                                arr.push(obj);
-                            }else{
-                                console.log(offer.pricing);
-                            }
-                        }
-                        return arr;
-                    }, []);
-                    return {
-                        distributor: d.company,
-                        offers: offers
-                    };
-                });
-                console.log(dists);
-                callback(dists);
-            }
-            //console.log(response.data);
-            //callback(mpn, response.data, props.currency);
-        });
-        
-    }
+
     function adjustQuantity(newQuantity, row){
         console.log(newQuantity+' '+row);
         changeQuantityLine(row, newQuantity);

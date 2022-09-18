@@ -22,11 +22,13 @@ export function offerEvaluation(offer, min_quantity){
 }
 
 function best_price_finder_offer(offer, min_quantity, include_available=true){
+    //console.log(offer);
     const ret = best_price_finder_full(offer.pricing, offer.moq, offer.spq, min_quantity, offer.available, include_available);
     return ret;
 }
 
 function best_price_finder_full(pricing, moq, spq, min_quantity, available, include_available=true){
+    //if(pricing.length === 0) return price_return(0, 0, 0, null);
     if(isNaN(spq) || spq <= 0){
         spq = 1;
     }
