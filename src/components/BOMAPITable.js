@@ -733,7 +733,7 @@ function OctopartRenderer(props){
     const body = (
         <>
         {/*!isProduction && <Button onClick={onOctopart}>Octopart</Button>*/}
-        {props.value.length > 0 && !isProduction && <OctopartTable data={props.value} stockMode={props.stockMode} apiAttrs={props.vars.apiAttrs}/>}
+        {props.value.length > 0 && <OctopartTable data={props.value} stockMode={props.stockMode} apiAttrs={props.vars.apiAttrs}/>}
         </>
     );
     const footer = <Button variant='secondary' onClick={onClose}>Close</Button>
@@ -816,6 +816,7 @@ function DefaultRenderer(props){
 }
 
 function OctopartTable(props){
+    //console.log(props.data);
     const octoHeaders = [{Header: 'Distributor', accessor: 'distributor'}];
     const offerHeaders = props.apiAttrs;
     /*[
