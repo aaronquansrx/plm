@@ -93,9 +93,9 @@ export function MainNavbar(props){
                 style={{ maxHeight: '100px' }}
                 navbarScroll
             >
-                <Nav.Link href={path("bomtool")}>BOM Tool</Nav.Link>
-                <Nav.Link href={path("cbom")}>CBOM Exporter</Nav.Link>
-                <Nav.Link href={path("partsearch")}>Part Search</Nav.Link>
+                {props.pages.map((page, i) => {
+                    return <Nav.Link key={i} href={path(page.path)}>{page.title}</Nav.Link>
+                })}
             </Nav>
             {/*
             <Form className="d-flex">

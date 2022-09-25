@@ -14,6 +14,7 @@ import Index from './pages/Index';
 import BOMMain from './pages/BOMMain';
 import Excel from './pages/Excel';
 import CBom from './pages/CBom';
+import BOMScrub from './pages/BOMScrub';
 import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
 import useUsername from './hooks/useUsername';
@@ -28,6 +29,14 @@ const currencies = [
   {id: 'USD', label: 'USD'},
   {id: 'AUD', label: 'AUD'},
   {id: 'MYR', label: 'MYR'}
+];
+
+//use this
+const pages = [
+  {path: 'bomtool', title: 'BOM Tool', element: (o,l,u) => <BOMMain options={o} changeLock={l} user={u}/>},
+  {path: 'cbom', title: 'CBOM Exporter', element: () => <CBom/>},
+  {path: 'partsearch', title: 'Part Search', element: () => <PartSearch/>},
+  {path: 'bomscrub', title: 'BOM Scrub', element: () => <BOMScrub/>}
 ];
 
 const inProduction = process.env.NODE_ENV === 'production';
@@ -96,7 +105,7 @@ function App() {
   }
   return (
     <div className="App">
-      <MainNavbar username={username} version={versions[0].current}
+      <MainNavbar username={username} version={versions[0].current} pages={pages}
       onVersionClick={handleVersionClick}
       store={options.store} currency={options.currency} 
       onOptionChange={handleOptionChange}
@@ -105,12 +114,18 @@ function App() {
       {showVersionModal && <VersionModal show={showVersionModal} versions={versions} hideAction={handleHideVersion}/>}
       <Routes>
         <Route path={path('')} element={<Index/>}/>
+        {/*
         <Route path={path('bomtool')} element={<BOMMain options={options} changeLock={handleLock} user={username}/>}/>
-        <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
+        <Route path={path('cbom')} element={<CBom/>}/>
         <Route path={path('partsearch')} element={<PartSearch/>}/>
+        <Route path={path('bomscrub')} element={<BOMScrub/>}/>
+        */}
+        {pages.map((page, i) => {
+          return <Route key={i} path={path(page.path)} element={page.element(options, handleLock, username)} />
+        })}
+        <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
         <Route path={path('excel')} element={<Excel/>}/>
-        <Route path={path('cbom')} element={<CBom/>}/>
         {!inProduction && <Route path={path('circular')} element={<CircularBufferTest/>}/>}
       </Routes>
     </div>

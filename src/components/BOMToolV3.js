@@ -8,8 +8,7 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
 import {
-    useTableBOM, useApiAttributes, 
-    useQuantityMultiplier, useApiRetrys,
+    useTableBOM, useApiRetrys,
     useMpnOptions, useQuantityMultiplierV2
 } from './../hooks/BOMTable';
 import {useApiData, useApiDataProgress} from './../hooks/BOMData';
@@ -68,8 +67,7 @@ function BOMToolV3(props){
     const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
         props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock, props.octopartData, props.updateOctopartDataMap);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
-        dataProcessingLock, retrySingle, retryAll, setDataProcessingLock, 
-        setMpnsInProgress, retryLock] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
+        dataProcessingLock, retrySingle, retryAll, retryLock] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
             callApisRetry, props.store, props.currency);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
     function handleLeadtimeCutOff(newLTC){
@@ -81,7 +79,7 @@ function BOMToolV3(props){
         runBOMAlgorithms(tableBOM, newLTC);
     }
     const [bomEvaluation, changeEvaluation, adjustLineEvaluation] = useBOMEvaluationV2(props.bom);
-    const [tableBOM, filteredTableBOM, setTable, tableColumns, 
+    const [tableBOM, filteredTableBOM, setTable, tableHeaders, 
         runBOMAlgorithms, runBOMLineAlgorithms, /*retryApis,*/
         changeMPNLine, changeQuantityLine, changeActiveApis, 
         changeTableActiveApisGlobal, changeWaitingRowApi, tableLock, octopartLineChange] = useTableBOM(
@@ -90,25 +88,7 @@ function BOMToolV3(props){
         updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock, props.changeLock,
         searchTerm, changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData
     );
-    //const apiAttrs = useApiAttributes();
     const apiAttrs = props.apiAttrs;
-    //const [quantityMultiplier, adjustQuantity, handleMultiBlur] = useQuantityMultiplier(tableBOM, props.apiData, 
-    //    allApisList, runBOMAlgorithms, runBOMLineAlgorithms);
-    /*
-    function changeActiveApis(apis, row){
-        const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
-            actApi.active = apis[actApi.accessor];
-            return actApi;
-        });
-        const newTable = update(tableBOM, {
-            [row]: {
-                activeApis: {$set: newActiveApis}
-            }
-        });
-        //console.log(newActiveApis);
-        setTable(newTable);
-        runBOMAlgorithms(newTable);
-    }*/
     function requestOctopart(row){
         const mpn = tableBOM[row].mpns.current;
         if(!props.octopartData.has(mpn)){
@@ -131,18 +111,10 @@ function BOMToolV3(props){
         changeWaitingRowApi(row, [api]);
         retrySingle(mpn, api, row);
     }
-    /*
-    const [retryApi, retryAll] = useApiRetrys(props.apiData, allApisList, mpnList, 
-        retryForApis, waitingRowApi, callApiRetry, setDataProcessingLock,
-        retryAll, callApisRetry, setMpnsInProgress, retryMpns);
-        */
-    const [addMpnOption, editMpnOption, deleteMpnOption, changeMpnOption] = useMpnOptions(tableBOM, props.apiData,
-        allApisList, setTable, runBOMLineAlgorithms, callMpn, changeMPNLine);
 
-    function adjustQuantity(newQuantity, row){
-        console.log(newQuantity+' '+row);
-        changeQuantityLine(row, newQuantity);
-    }
+    const [addMpnOption, editMpnOption, deleteMpnOption, changeMpnOption] = useMpnOptions(tableBOM, props.apiData,
+        allApisList, setTable, callMpn, changeMPNLine);
+
     const functions = {
         mpns: {
             changeOption: changeMpnOption,
@@ -151,7 +123,7 @@ function BOMToolV3(props){
             deleteOption: deleteMpnOption,
         },
         quantities: {
-            adjustQuantity: adjustQuantity
+            adjustQuantity: changeQuantityLine
         },
         activeApis: {
             submitNewApis: changeActiveApis,
@@ -229,8 +201,8 @@ function BOMToolV3(props){
             disabled={tableLock}/>
             <Search search={searchMpns} on/>
             </div>
-            {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableColumns} 
-            apiAttrs={apiAttrs} evaluation={bomEvaluation} algorithm={algorithmMode}/>}
+            {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableHeaders} 
+            apiAttrs={apiAttrs} allApiAttrs={props.allApiAttrs} evaluation={bomEvaluation} algorithm={algorithmMode}/>}
             <HighlightOptions disabled={tableLock} onChangeHighlight={handleChangeHighlight}
             onChangeStock={handleChangeStock}
             options={highlightOptions}/>
@@ -257,7 +229,7 @@ function BOMToolV3(props){
         <SaveBom show={showSaveModal} save={saveBom} showOverwrite={isLoadedBom} hideAction={toggleSavedBomModal}/>
         <BOMApiProgressBarV2 show={showProgress} numParts={numMpns}
         onHideBar={handleHideBar} numFinished={numMpns-mpnsInProgress.size}/>
-        <BOMAPITableV2 data={filteredTableBOM} bomAttrs={tableColumns} 
+        <BOMAPITableV2 data={filteredTableBOM} bomAttrs={tableHeaders} 
         apis={displayApis} allApis={props.apis} apiAttrs={apiAttrs} functions={functions}
         algorithmMode={algorithmMode}  functionLock={tableLock}
         hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}

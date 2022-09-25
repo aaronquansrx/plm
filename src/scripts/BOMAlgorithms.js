@@ -6,7 +6,22 @@ const all_apis = ['futureelectronics', 'digikey', 'mouser', 'element14', 'verica
 export function offerEvaluation(offer, min_quantity){
     const is = best_price_finder_offer(offer, min_quantity, true);
     const ns = best_price_finder_offer(offer, min_quantity, false);
-    return {
+    function both_stock(i, n){
+        return {in_stock:i, no_stock:n};
+    }
+    const out_obj = Object.entries(is).reduce((obj, [key, value]) => {
+        obj[key] = {in_stock: value, no_stock: ns[key]}
+        return obj;
+    }, {});
+    out_obj.prices = {
+        price: both_stock(is.price_per, ns.price_per),
+        pricing: offer.pricing,
+        index: both_stock(is.index, ns.index),
+        total_price: both_stock(is.total_price, ns.total_price)
+    };
+    //console.log(out_obj);
+    return out_obj;
+    /*{
         total_price: {in_stock: is.total_price, no_stock: ns.total_price},
         price_per: {in_stock: is.price_per, no_stock: ns.price_per},
         adjusted_quantity: {in_stock: is.adjusted_quantity, no_stock: ns.adjusted_quantity},
@@ -16,18 +31,19 @@ export function offerEvaluation(offer, min_quantity){
             index: {in_stock: is.index, no_stock: ns.index},
             total_price: {in_stock: is.total_price, no_stock: ns.total_price}
         },
+        display_total_price: 0,
         excess_quantity: {in_stock: is.excess_quantity, no_stock: ns.excess_quantity},
         excess_price: {in_stock: is.excess_price, no_stock: ns.excess_price},
-    };  
+    };  */
 }
 
 function best_price_finder_offer(offer, min_quantity, include_available=true){
     //console.log(offer);
-    const ret = best_price_finder_full(offer.pricing, offer.moq, offer.spq, min_quantity, offer.available, include_available);
+    const ret = best_price_finder_full(offer.pricing, offer.moq, offer.spq, min_quantity, offer.available, offer.fees ? offer.fees.total : 0, include_available);
     return ret;
 }
 
-function best_price_finder_full(pricing, moq, spq, min_quantity, available, include_available=true){
+function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_total, include_available=true){
     //if(pricing.length === 0) return price_return(0, 0, 0, null);
     if(isNaN(spq) || spq <= 0){
         spq = 1;
@@ -51,7 +67,7 @@ function best_price_finder_full(pricing, moq, spq, min_quantity, available, incl
     };
     const bracket_index = get_pricing_bracket_index(pricing, quantity);
     let price_per = pricing[bracket_index].unit_price;
-    let ret = price_return(price_per, quantity, min_quantity, bracket_index);
+    let ret = price_return(price_per, quantity, min_quantity, bracket_index, fee_total);
     if(quantity !== pricing[bracket_index].break_quantity && bracket_index+1 < pricing.length){
         price_per = pricing[bracket_index+1].unit_price;
         quantity = pricing[bracket_index+1].break_quantity;
@@ -59,7 +75,7 @@ function best_price_finder_full(pricing, moq, spq, min_quantity, available, incl
         if(p2 < ret.total_price){
             price_per = pricing[bracket_index+1].unit_price;
             quantity = pricing[bracket_index+1].break_quantity;
-            ret = price_return(price_per, quantity, min_quantity, bracket_index+1);
+            ret = price_return(price_per, quantity, min_quantity, bracket_index+1, fee_total);
         } 
     }
     return ret;
@@ -73,14 +89,27 @@ function get_pricing_bracket_index(pricing, quantity){
     return n;
 }
 
-function price_return(price_per, quantity, min_quantity, bracket_index){
+function price_return(price_per, quantity, min_quantity, bracket_index, fee_total){
     const price = price_per * quantity;
     const excess_quantity = quantity - min_quantity > 0 ? quantity - min_quantity : 0;
     const excess_price = price_per * excess_quantity;
+    const total_price = price + fee_total;
     return {
         adjusted_quantity:quantity, 
         price_per:price_per,
-        total_price:price,
+        total_price: total_price,
+        /*
+        total_price: {
+            prices: {
+                part_price: price,
+                fees: fee_total,
+            },
+            total: price + fee_total,
+        },*/
+        display_total_price: {
+            prices: [{name: 'Part Price', value: price}, {name: 'Fees', value: fee_total}],
+            total: total_price,
+        },
         index:bracket_index,
         excess_quantity:excess_quantity,
         excess_price:excess_price

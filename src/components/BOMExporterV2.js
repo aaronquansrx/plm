@@ -35,19 +35,21 @@ function BOMExporterV2(props){
         const best = {price: options.bestprice, leadtime: options.bestleadtime};
         const api = best.price ? 'price' : best.leadtime ? 'leadtime' : 'all'; //api: api (unused)
         const eva = options.evaluation;
-        return { api: api, evaluation: eva, best: options.bestoffer };
+        return { api: api, evaluation: eva, best: options.bestoffer, filteredApiAttrs: options.filteredApiAttrs };
     }
     function handleExport(fn, options={}){
         const fileName = fn === '' ? 'f' : fn;
         const headers = [];
         const opt = optionStructure(options);
         const base = baseTableFormat(trimmedBomAttrs);
-        const bod = bestOfferData();
+        const apiAttrs = opt.filteredApiAttrs ? props.apiAttrs : props.allApiAttrs;
+        console.log(props.allApiAttrs);
+        const bod = bestOfferData(apiAttrs);
         base.forEach((b, i) =>{
             Object.assign(b, bod[i]);
         });
         if(!opt.best){
-            const aaod = allApisOfferData();
+            const aaod = allApisOfferData(apiAttrs);
             base.forEach((b, i) => {
                 Object.assign(b, aaod[i]);
             });
@@ -63,7 +65,7 @@ function BOMExporterV2(props){
         }
         XLSX.writeFile(wb, fileName+'.xlsx');
     }
-    function apiAttrDecode(offer, acc, stockStr, best){
+    function apiAttrDecode(offer, acc, stockStr){
         switch(acc){
             case 'prices':
                 return offer[acc].price[stockStr];
@@ -73,18 +75,22 @@ function BOMExporterV2(props){
                 return offer[acc][stockStr];
             case 'excess_price':
                 return offer[acc][stockStr];
+            case 'fees':
+                return offer.fees.total;
+            case 'display_total_price':
+                return offer.display_total_price[stockStr].total;
             default:
                 return offer[acc];
         }
     }
-    function allApisOfferData(){
+    function allApisOfferData(apiAttrs){
         const stockStr = stockString(props.algorithm.stock);
         const formatted = props.data.map((line) => {
             const apis = props.apis.reduce((obj, api) => {
                 if(api.accessor in line && line[api.accessor].offers.length > 0){
                     const apiData = line[api.accessor];
                     const offer = apiData.offers[apiData.offer_order[stockStr][props.algorithm.best][0]];
-                    props.apiAttrs.forEach((heading) => {
+                    apiAttrs.forEach((heading) => {
                         const key = api.Header+'_'+heading.accessor;
                         obj[key] = apiAttrDecode(offer, heading.accessor, stockStr, props.algorithm.best);
                     });
@@ -95,7 +101,7 @@ function BOMExporterV2(props){
         });
         return formatted;
     }
-    function bestOfferData(){
+    function bestOfferData(apiAttrs){
         const stockStr = stockString(props.algorithm.stock);
         const formatted = props.data.map((line, i) => {
             const hl = line.best[stockStr][props.algorithm.best];
@@ -105,7 +111,7 @@ function BOMExporterV2(props){
                 const best = line[hl.api].offers[hl.offer_num];
                 console.log(best);
                 const apiHeader = apiAccessorToHeader[hl.api];
-                const offerData = props.apiAttrs.reduce((obj, attr) => {
+                const offerData = apiAttrs.reduce((obj, attr) => {
                     if('longHeader' in attr){
                         obj[attr.longHeader] = apiAttrDecode(best, attr.accessor, stockStr, props.algorithm.best);
                     }else{

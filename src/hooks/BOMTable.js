@@ -109,6 +109,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 });
                 setTableBOM(newTable);
                 setLineNumsToEvaluate(new Set());
+                changeLocks(false);
             }
         }
         return () => {
@@ -152,17 +153,9 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             console.log('dp false');
         }else{
             console.log('dp true');
-            changeLocks(true);
+            //changeLocks(true);
         }
     }, [dataProcessingLock]);
-    useEffect(() => {
-        //console.log(lineNumsToEvaluate);
-        //if(lineNumsToEvaluate.size === 0){
-            //runBomAlgorithms(newTable);
-            //retryLock.set(false)
-            //changeLocks(false);
-        //}
-    }, [lineNumsToEvaluate]);
     useEffect(() => {
         let updateTimeout = null;
         if(retryLock.get){
@@ -337,7 +330,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             runBomAlgorithms(newBOM);
         }
     }
-    function changeQuantityLine(row, quantity){
+    function changeQuantityLine(quantity, row){
         const line = tableBOM[row];
         line.quantities.single = quantity;
         line.quantities.multi = quantity*quantityMultiplier;
@@ -459,18 +452,18 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         return filtered;
     }
     function octopartLineChange(octoData, row){
-        console.log(octoData);
-        const tableLine = {...tableBOM[row]};
-        const newOcto = octoData.sellers.map((seller) => {
-            //const newOffers = evalApiV2(seller, tableLine.quantities.multi);
-            seller.offers = evalApiV2(seller, tableLine.quantities.multi);
-            return seller;
-        });
-        console.log(newOcto);
-        tableLine.octopart = newOcto;
-        setTable(update(tableBOM, {
-            [row]: {$set: tableLine}
-        }));
+        if(octoData){
+            const tableLine = {...tableBOM[row]};
+            const newOcto = octoData.sellers.map((seller) => {
+                //const newOffers = evalApiV2(seller, tableLine.quantities.multi);
+                seller.offers = evalApiV2(seller, tableLine.quantities.multi);
+                return seller;
+            });
+            tableLine.octopart = newOcto;
+            setTable(update(tableBOM, {
+                [row]: {$set: tableLine}
+            }));
+        }
     }
     return [tableBOM, filteredTableBOM, setTable, headers, runBomAlgorithms, 
         runBOMLineAlgorithmsV2, //retryApis, 
@@ -480,46 +473,8 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     ];
 }
 
-
-export function useQuantityMultiplier(tableBOM, apiData, apisList, 
-    runBomAlgorithms, runBOMLineAlgorithms){
-    const [multiplier, setMultiplier] = useState(1);
-    function newLineChangeQuantity(line, single, multi){
-        const newLine = {...line};
-        newLine.quantities.single = single
-        newLine.quantities.multi = multi;
-        //processBomLine();
-        return newLine;
-    }
-    function adjustQuantity(newQuantity, row){
-        if(newQuantity !== tableBOM[row].quantities.single){
-            //condition handled at input level with lock
-            const newLine = newLineChangeQuantity(tableBOM[row], newQuantity, 
-                newQuantity*multiplier);
-            const newTable = update(tableBOM, {
-                [row]: {$set: newLine}
-            });
-        }
-    }
-    function handleNewMulti(newM){
-        const newMulti = newM === '0' ? 1 : parseInt(newM); 
-        //lock handled at input level
-        if(multiplier !== newMulti){
-            //console.log(newMulti);
-            const newTable = [...tableBOM].map((line) => {
-                const newLine = newLineChangeQuantity(line, line.quantities.initial,
-                    line.quantities.initial*newMulti);
-                return newLine;
-            });
-            runBomAlgorithms(newTable);
-            setMultiplier(newMulti);
-        }
-        return newMulti;
-    }
-    return [multiplier, adjustQuantity, handleNewMulti];
-}
-
 export function useQuantityMultiplierV2(){
+    //changeQuantityLine inside useTable
     const [multiplier, setMultiplier] = useState(1);
     function handleChangeMulti(newM){
         const newMulti = newM === '0' ? 1 : parseInt(newM);
@@ -530,71 +485,8 @@ export function useQuantityMultiplierV2(){
     return [multiplier, handleChangeMulti];
 }
 
-//maybe remove this hook, put inside 
-export function useApiRetrys(apiData, apisList, mpnList, retryForApis, waitingRowApi, callApiRetry, 
-    setDataProcessingLock, retryAllStart, callApisRetry, setMpnsInProgress, retryMpns){
-    function retryApi(mpn, api, rowNum){
-        setDataProcessingLock(true);
-        setMpnsInProgress(new Set([mpn]));//
-        function onComplete(newData){
-            retryForApis(rowNum, [api], newData);
-            setDataProcessingLock(false);
-        }
-        waitingRowApi(rowNum, api);
-        callApiRetry(mpn, api, onComplete);
-    }
-    function retryAll(){
-        //use a variable extracted after retrys complete
-        //console.log(retryMpns);
-        
-        const mpnRetrys = mpnList.reduce((arr, mpn) => {
-            if(apiData.has(mpn)){
-                const mpnApisData = apiData.get(mpn).data.apis;
-                const retryApis = apisList.reduce((arrApi, api)=> {
-                    if(mpnApisData[api].retry) arrApi.push(api);
-                    return arrApi;
-                }, []);
-                if(retryApis.length > 0){
-                    arr.push({mpn: mpn, apis: retryApis});
-                }
-                return arr;
-            }
-        }, []);
-        /*
-        const mpnRetrysMap = mpnList.reduce((mp, mpn) => {
-            if(apiData.has(mpn)){
-                const retryApis = apisList.reduce((arrApi, api)=> {
-                    if(mpnApisData[api].retry) arrApi.push(api);
-                    return arrApi;
-                }, []);
-                if(retryApis.length > 0){
-                    mp[mpn] = retryApis;
-                }
-                return mp;
-            }
-        }, {});*/
-        //const retryMpns = new Set(mpnRetrys.map((ret) => ret.mpn));
-        
-        //retryAllStart(retryMpns);
-        /*
-        function onComplete(mpn){
-            retryMpns.delete(mpn);
-            //retryForApis()
-            setMpnsInProgress(retryMpns);
-            if(retryMpns.size === 0){
-                setDataProcessingLock(false);
-                //console.log('lock release');
-                //console.log(props.apiData);
-            }
-        }
-        callApisRetry(mpnRetrys, onComplete);
-        */
-    }
-    return [retryApi]//, retryAll]//, retryAll];
-}
-
-export function useMpnOptions(tableBOM, apiData, apisList, setTable, runBOMLineAlgorithms, 
-    callMpn, changeMPNLine, processBomLine){
+export function useMpnOptions(tableBOM, apiData, apisList, setTable,
+    callMpn, changeMPNLine){
     const waitingOffer = {
         offers: [],
         offer_order: algorithmsInitialStructure([]),
@@ -669,52 +561,10 @@ export function useMpnOptions(tableBOM, apiData, apisList, setTable, runBOMLineA
     return [addMpnOption, editMpnOption, deleteMpnOption, changeMpnOption];
 }
 
-function evalApi(quantity, singleApiData){
-    const newOffers = singleApiData.offers.map((offer) => {
-        const newOffer = {...offer};
-        const {price, index} = findPriceBracket(newOffer.pricing, 
-            quantity, newOffer.moq);
-        newOffer.price = price;
-        newOffer.prices = {
-            price: algorithmsStockStructure(price),
-            pricing: offer.pricing,
-            pricingIndex: algorithmsStockStructure(index),
-            total_price: algorithmsStockStructure(price*quantity),
-            //excess: null
-        }
-        newOffer.adjustedQuantity = null;
-        newOffer.excessQuantity = null;
-        newOffer.excessPrice = null;
-        newOffer.selected = false;
-        return newOffer;
-    }); 
-    return newOffers;
-}
-function evalApis(quantity, multiApiData, apisList){
-    //console.log(multiApiData);
-    const data = multiApiData.apis
-    const evaledApis = apisList.reduce((obj, api) => {
-        const order = [...Array(data[api].offers.length).keys()];
-        obj[api] = {
-            offers: evalApi(quantity, data[api]),
-            offer_order: algorithmsInitialStructure(order),
-            message: data[api].message,
-            retry: data[api].retry
-        }
-        /*
-        obj[api].offers = evalApi(quantity, multiApiData.apis[api]);
-        obj[api].message = multiApiData[api].message;
-        obj[api].retry = multiApiData[api].retry;*/
-        return obj;
-    }, {});
-    return evaledApis;
-}
 
 function evalApisV2(multiApiData, apisList, quantity){
-    //console.log(multiApiData);
     const data = multiApiData.apis
     const evaledApis = apisList.reduce((obj, api) => {
-        //const order = [...Array(data[api].offers.length).keys()];
         const offers = evalApiV2(data[api], quantity);
         //console.log(offers);
         const order = allSortApiOffers(offers, quantity);
@@ -725,10 +575,6 @@ function evalApisV2(multiApiData, apisList, quantity){
             message: data[api].message,
             retry: data[api].retry
         }
-        /*
-        obj[api].offers = evalApi(quantity, multiApiData.apis[api]);
-        obj[api].message = multiApiData[api].message;
-        obj[api].retry = multiApiData[api].retry;*/
         return obj;
     }, {});
     return evaledApis;
@@ -737,42 +583,12 @@ function evalApisV2(multiApiData, apisList, quantity){
 function evalApiV2(singleApiData, quantity){
     const newOffers = singleApiData.offers.map((offer) => {
         const newOffer = {...offer};
-        //console.log(newOffer);
         const oe = offerEvaluation(newOffer, quantity);
         Object.assign(newOffer, oe);
-        /*
-        newOffer.price = 0;
-        //newOffer.prices = null;
-        newOffer.adjusted_quantity = null;
-        newOffer.excess_quantity = null;
-        newOffer.excess_price = null;
-        newOffer.selected = false;
-        */
         return newOffer;
     }); 
     return newOffers;
 }
-
-/*
-function algorithmsInitialStructure(value=null){
-    return {
-        in_stock: {
-            price: value,
-            leadtime: value
-        },
-        no_stock: {
-            price: value,
-            leadtime: value
-        }
-    }
-}
-function algorithmsStockStructure(value=null){
-    return {
-        in_stock: value,
-        no_stock: value
-    }
-}
-*/
 
 //unused overtaken by offerorder
 function sortAlgorithm(sort, offers){

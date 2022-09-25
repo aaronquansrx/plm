@@ -8,7 +8,7 @@ import { BsFileEarmarkArrowDown } from "react-icons/bs";
 
 import './../css/dropzone.css';
 
-export function MyDropzone(props) {
+export function ExcelDropzone(props) {
   const dropFunction = props.onDrop;
   const onDrop = useCallback((acceptedFiles) => {
     acceptedFiles.forEach((file) => {

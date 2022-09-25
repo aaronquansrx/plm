@@ -38,8 +38,9 @@ const renderers = {
     'adjusted_quantity': (p) => <AdjustedQuantityRenderer {...p}/>,
     'excess_price': (p) => <ExcessPriceRenderer {...p}/>,
     'excess_quantity': (p) => <AdjustedQuantityRenderer {...p}/>,
-    'total_price': (p) => <TotalPriceRenderer {...p}/>,
-    'octopart': (p) => <OctopartRenderer {...p}/>
+    'display_total_price': (p) => <DisplayTotalPriceRenderer {...p}/>,
+    'octopart': (p) => <OctopartRenderer {...p}/>,
+    'fees': (p) => <FeesRenderer {...p}/>
 };
 
 
@@ -48,17 +49,21 @@ const octoRenderers = {
     'adjusted_quantity': (p) => <AdjustedQuantityRenderer {...p}/>,
     'excess_price': (p) => <ExcessPriceRenderer {...p}/>,
     'excess_quantity': (p) => <AdjustedQuantityRenderer {...p}/>,
-    'total_price': (p) => <TotalPriceRenderer {...p}/>,
+    'display_total_price': (p) => <DisplayTotalPriceRenderer {...p}/>,
 }
 
 const headerRenderers = {
     'activeApis': (p) => <ActiveApisHeaderRenderer {...p}/>,
+    'moq': (p) => <LongHeaderTooltipRenderer {...p}/>,
+    'spq': (p) => <LongHeaderTooltipRenderer {...p}/>,
     'leadtime': (p) => <LeadTimeHeaderRenderer {...p}/>,
+    'display_total_price': (p) => <LongHeaderTooltipRenderer {...p}/>,
     'adjusted_quantity': (p) => <LongHeaderTooltipRenderer {...p}/>,
-    'total_price': (p) => <LongHeaderTooltipRenderer {...p}/>,
     'excess_quantity': (p) => <LongHeaderTooltipRenderer {...p}/>,
-    'excess_price': (p) => <LongHeaderTooltipRenderer {...p}/>
+    'excess_price': (p) => <LongHeaderTooltipRenderer {...p}/>,
+    'distributor_code': (p) => <LongHeaderTooltipRenderer {...p}/>,
 };
+
 
 const defaultRenderer = (p) => <DefaultRenderer/>
 
@@ -83,6 +88,7 @@ function smartAttr(type, funs, vars, rendererList){
 }
 
 export function BOMAPITableV2(props){
+    //console.log(props.data);
     const bomAttrs = props.bomAttrs;
     const apis = props.apis; //apis to display
     const allApis = props.allApis; // all possible apis
@@ -412,9 +418,13 @@ function BOMAttributeRenderer(props){
 function APIAttributeRenderer(props){
     //console.log(props.custom);
     //console.log(props.functions);
-    function handleClick(){
+    function handleClick(e){
         if(!props.octopart){
-            props.functions.selectOffer(props.rowNum, props.api, props.offerNum);
+            if(e.ctrlKey){
+                window.open(props.url, '_blank');
+            }else{
+                props.functions.selectOffer(props.rowNum, props.api, props.offerNum);
+            }
         }
     }
     
@@ -475,7 +485,7 @@ function APIRenderer(props){
             return (
                 <APIAttributeRenderer key={i} value={props.value.offers[props.offerNum][attr.attribute]}
                 custom={attr.custom} type='apiAttr' offerNum={props.offerNum} rowNum={props.rowNum} cellProps={cellProps} api={props.api}
-                stockMode={props.stockMode} algorithmMode={props.algorithmMode} functions={props.offerFunctions}/>
+                stockMode={props.stockMode} algorithmMode={props.algorithmMode} functions={props.offerFunctions} url={props.value.offers[props.offerNum].url}/>
             )
         })
         : <td colSpan={props.subAttributes.length}>
@@ -628,10 +638,39 @@ function PricesRenderer(props){
     );
 }
 
-function TotalPriceRenderer(props){
+function FeesRenderer(props){
+    const pt = (
+        <div>
+            {props.value && Object.entries(props.value.fees).map(([fee_name, value], i) => {
+                return <div key={i}>{fee_name}: {value}</div>
+            })}
+        </div>
+    );
+    return (
+        <>
+        {Object.keys(props.value.fees).length > 0 ? 
+        <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
+            <div>{props.value.total}</div>
+        </SimplePopover> 
+        : <div>{props.value.total}</div>
+        }
+        </>
+    )
+}
+
+function DisplayTotalPriceRenderer(props){
+    const pt = (
+        <div>
+            {props.value[props.stockMode].prices.map((p, i) => {
+                return <div key={i}>{p.name}: {p.value}</div>
+            })}
+        </div>
+    )
     return (
     <>
-        {props.value && priceDisplay(props.value[props.stockMode])}
+    <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
+        <div>{priceDisplay(props.value[props.stockMode].total)}</div>
+    </SimplePopover> 
     </>
     );
 }
@@ -721,6 +760,7 @@ function OctopartRenderer(props){
             console.log('req octo');
             //setOctoRequested(true);
         }
+        console.log(modalOn);
     }, [modalOn]);
     function callbackOctoRequest(od){
         //setOctoData(od);
@@ -818,15 +858,15 @@ function DefaultRenderer(props){
 function OctopartTable(props){
     //console.log(props.data);
     const octoHeaders = [{Header: 'Distributor', accessor: 'distributor'}];
-    const offerHeaders = props.apiAttrs;
-    /*[
-        {Header: 'Stock', accessor: 'available'},
-        {Header: 'MOQ', accessor: 'moq'},
-        {Header: 'Lead Time', accessor: 'leadtime'},
-        {Header: 'Price', accessor: 'prices'},
-        {Header: 'SPQ', accessor: 'spq'},
-        {Header: 'Packaging', accessor: 'packaging'}
-    ];*/
+    //const offerHeaders = props.apiAttrs;
+    const unneccessaryOfferHeaders = ['fees', 'distributor_code'];
+    const offerHeaders = props.apiAttrs.reduce((arr, attr) => {
+        if(!unneccessaryOfferHeaders.includes(attr.accessor)){
+            arr.push(attr);
+        }
+        return arr;
+    }, []);
+    console.log(offerHeaders);
     const headers = octoHeaders.concat(offerHeaders);
     const octoAttributes = octoHeaders.map(smartAttr('octopart', {}, {}, octoRenderers));
     const offerAttributes = offerHeaders.map(smartAttr('subattr', {}, {}, octoRenderers));
@@ -871,7 +911,7 @@ function OctopartRow(props){
         })}
         {props.data.offers.length > 0 && props.offerAttrs.map((attr, i) => {
             return <APIAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom} 
-            stockMode={props.stockMode} octopart/>
+            stockMode={props.stockMode} url={props.data.offers[0].url} octopart/>
         })}
         </tr>
         {props.data.offers.length > 1 && showAllOffers && 
@@ -881,7 +921,7 @@ function OctopartRow(props){
             <tr key={i}>
                 {props.offerAttrs.map((attr, j) => {
                     return <APIAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom} 
-                    stockMode={props.stockMode} octopart/>
+                    stockMode={props.stockMode} url={props.data.offers[0].url} octopart/>
                 })}
             </tr>
             );

@@ -52,10 +52,12 @@ const apiAttributes = [
     {Header: 'SPQ', accessor: 'spq', longHeader: 'Standard Pack Quantity'},
     {Header: 'Lead Time', accessor: 'leadtime'},
     {Header: 'Price', accessor: 'prices'},
-    {Header: 'T. P', accessor: 'total_price', longHeader: 'Total Price'},
+    {Header: 'Fees', accessor: 'fees'},
+    {Header: 'T. P', accessor: 'display_total_price', longHeader: 'Total Price'},
     {Header: 'Exc. P', accessor: 'excess_price', longHeader: 'Excess Price'},
     {Header: 'Adj. Q', accessor: 'adjusted_quantity', longHeader: 'Adjusted Quantity'},
     {Header: 'Exc. Q', accessor: 'excess_quantity', longHeader: 'Excess Quantity'},
+    {Header: 'Dist. Code', accessor: 'distributor_code', longHeader: 'Distributor Code'},
     {Header: 'Packaging', accessor: 'packaging'}
 ]
 
@@ -67,6 +69,8 @@ function BOMInterface(props){
     const [initialBOMEdit, setInitialBOMEdit] = useState([]);
     const [apiData, setApiData] = useState(new Map());
     const [octopartData, setOctopartData] = useState(new Map());
+
+    const [savedBOMEditState, setSavedBOMEditState] = useState(null);
 
     const [settings, setSettings] = useState({apiAttributes: apiAttributes})
 
@@ -141,7 +145,7 @@ function BOMInterface(props){
                 //return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 'tool':
                 return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} apiAttrs={settings.apiAttributes}
-                updateApiDataMap={updateApiDataMap} apiData={getApiData()} 
+                updateApiDataMap={updateApiDataMap} apiData={getApiData()} allApiAttrs={apiAttributes}
                 updateOctopartDataMap={updateOctopartDataMap} octopartData={getOctopartData()} user={props.user}
                 store={props.store} currency={props.currency} changeLock={props.changeLock}
                 loadData={loadData} bomType={BOMData.type}/>;

@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 
-import {MyDropzone} from './../components/Dropzone';
+import {ExcelDropzone} from './../components/Dropzone';
 
 import { HotTable } from '@handsontable/react';
 import XLSX from 'xlsx';
@@ -72,10 +72,10 @@ function Excel(props){
     */
     return(
         <div>
-        <MyDropzone class='DropFiles' onDrop={handleDrop} styles={true}>
+        <ExcelDropzone class='DropFiles' onDrop={handleDrop} styles={true}>
         <BsFileEarmarkArrowDown size={40}/>
         <p>Drop CBOM file</p>
-        </MyDropzone>
+        </ExcelDropzone>
         <div>
         <HotTable data={data} colHeaders={true} rowHeaders={true} settings={settings} height={600} width={800}/>
         </div>

@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 
 import Button from 'react-bootstrap/Button';
 
-import {MyDropzone} from './../components/Dropzone';
+import {ExcelDropzone} from './../components/Dropzone';
 import {LabeledCheckbox} from './../components/Forms';
 import {useImportCBom, useExportCBom, useCBomFunctions} from './../hooks/CBOM';
 import {lookupCriteria} from './../scripts/CBOM';
@@ -37,10 +37,10 @@ function CBom(){
 
     return(
         <div>
-        <MyDropzone class='DropFiles' onDrop={handleDrop} styles={true}>
+        <ExcelDropzone class='DropFiles' onDrop={handleDrop} styles={true}>
         <BsFileEarmarkArrowDown size={40}/>
         <p>Drop CBOM file</p>
-        </MyDropzone>
+        </ExcelDropzone>
         <div>
             {fileName}
             <div className='Hori'>

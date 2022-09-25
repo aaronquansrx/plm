@@ -8,7 +8,7 @@ import XLSX from 'xlsx';
 
 import Button from 'react-bootstrap/Button';
 
-import {MyDropzone} from './Dropzone';
+import {ExcelDropzone} from './Dropzone';
 import {BomDropdown} from './Dropdown';
 import {NamedCheckBox} from './Checkbox';
 import {HoverOverlay} from './Tooltips';
@@ -171,10 +171,10 @@ function BOMFileUploadInterface(props){
     }, [props.user]);
     return (
         <div>
-            <MyDropzone class='DropFiles' onDrop={handleDrop}>
+            <ExcelDropzone class='DropFiles' onDrop={handleDrop}>
                 <BsFileEarmarkArrowDown size={40}/>
                 <p>Drop BOM files (excel, csv)</p>
-            </MyDropzone>
+            </ExcelDropzone>
             {/*file &&
             <div>
                 <span>{file.name}</span>
