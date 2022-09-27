@@ -855,7 +855,7 @@ function DefaultRenderer(props){
     )
 }
 
-function OctopartTable(props){
+export function OctopartTable(props){
     //console.log(props.data);
     const octoHeaders = [{Header: 'Distributor', accessor: 'distributor'}];
     //const offerHeaders = props.apiAttrs;
@@ -974,4 +974,102 @@ function NewPricingTable(props){
         }
         </>
         );
+}
+
+const singleRenderers = {
+    'pricing': (p) => <SinglePricesRenderer {...p}/>,
+    'fees': (p) => <FeesRenderer {...p}/>,
+};
+
+export function SingleAPITable(props){
+    const mainHeaders = [{Header: 'Distributor', accessor: 'distributor'}];
+    const headers =  mainHeaders.concat(props.apiAttrs);
+    const mainAttrs = mainHeaders.map(smartAttr('single', {}, {}, singleRenderers));
+    const offerAttrs = props.apiAttrs.map(smartAttr('single', {}, {}, singleRenderers));
+    return(
+        <div className='MainTable'>
+        <Table>
+        <thead>
+            <tr>
+            {headers.map((header, i) => {
+                return <th key={i}>{header.Header}</th>;
+            })}
+            </tr>
+        </thead>
+        <tbody>
+        {props.data.map((dataObj, i) => {
+                return (
+                    <APIRow key={i} data={dataObj} mainAttrs={mainAttrs} 
+                    offerAttrs={offerAttrs} stockMode={props.stockMode}/>
+                );
+            })}
+        </tbody>
+        </Table>
+        </div>
+    )
+}
+
+function APIRow(props){
+    const rows = props.data.offers.length;
+    const [showAllOffers, setShowAllOffers] = useState(false);
+    const cellProps = showAllOffers ? {
+        rowSpan: rows,
+    } : {};
+    function changeShowOffers(){
+        setShowAllOffers(!showAllOffers);
+    }
+    const numTableCols = props.mainAttrs.length + props.offerAttrs.length;
+    return(
+        <>
+        <tr>
+        {props.data.offers.length > 0 && props.mainAttrs.map((attr, i) => {
+            return <BOMAttributeRenderer key={i} value={props.data[attr.attribute]} custom={attr.custom} cellProps={cellProps} stockMode={props.stockMode}/>;
+        })}
+        {props.data.offers.length > 0 && props.offerAttrs.map((attr, i) => {
+            return <APIAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom} 
+            stockMode={props.stockMode}/>
+        })}
+        </tr>
+        {props.data.offers.length > 1 && showAllOffers && 
+        [...Array(props.data.offers.length-1).keys()].map((i) => {
+            const offerNum = i+1;
+            return(
+            <tr key={i}>
+                {props.offerAttrs.map((attr, j) => {
+                    return <APIAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom} 
+                    stockMode={props.stockMode}/>
+                })}
+            </tr>
+            );
+        })}
+        {props.data.offers.length > 1 && 
+            <tr onClick={changeShowOffers}>
+                <td colSpan={numTableCols} className='NoPadding'>
+                <HoverOverlay placement='auto' 
+                tooltip={showAllOffers ? 'Close offers' : 'Open offers'}>
+                <HoverToggleSolidColour toggle={showAllOffers}/>
+                </HoverOverlay>
+                </td>
+            </tr>
+        }
+        </>
+    );
+}
+
+function SinglePricesRenderer(props){
+    return(
+        <>{props.value[0].unit_price}</>
+    );
+}
+
+function SingleAPIHeader(){
+    return(
+        <thead className='TableHeading'>
+        <tr>
+            <th>
+
+            </th>
+        </tr>
+        </thead>
+    )
 }

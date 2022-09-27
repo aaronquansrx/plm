@@ -562,7 +562,7 @@ export function useMpnOptions(tableBOM, apiData, apisList, setTable,
 }
 
 
-function evalApisV2(multiApiData, apisList, quantity){
+export function evalApisV2(multiApiData, apisList, quantity){
     const data = multiApiData.apis
     const evaledApis = apisList.reduce((obj, api) => {
         const offers = evalApiV2(data[api], quantity);
