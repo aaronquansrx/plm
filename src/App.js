@@ -35,8 +35,8 @@ const currencies = [
 const pages = [
   {path: 'bomtool', title: 'BOM Tool', element: (o,l,u) => <BOMMain options={o} changeLock={l} user={u}/>},
   {path: 'cbom', title: 'CBOM Exporter', element: () => <CBom/>},
-  {path: 'partsearch', title: 'Part Search', element: () => <PartSearch/>},
-  {path: 'bomscrub', title: 'BOM Scrub', element: () => <BOMScrub/>}
+  {path: 'partsearch', title: 'Part Search (new)', element: () => <PartSearch/>},
+  {path: 'bomscrub', title: 'BOM Scrub (new)', element: () => <BOMScrub/>}
 ];
 
 const inProduction = process.env.NODE_ENV === 'production';
@@ -134,7 +134,7 @@ function App() {
 
 const versions = [
   {
-      current: '1.2.1',
+      current: '1.2.2',
       name: '1.2',
       content:
       <div>
@@ -143,6 +143,10 @@ const versions = [
           <p>Internal algorithm changes and structural overhaul</p>
           <h5>1.2.1</h5>
           <p>Octopart request</p>
+          <h5>1.2.2</h5>
+          <p>Fees</p>
+          <p>Single part search</p>
+          <p>BOM Scrub alpha test</p>
       </div>
   },
   {
