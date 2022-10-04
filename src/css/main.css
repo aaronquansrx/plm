@@ -108,3 +108,12 @@ div.Pointer > label{
 td.MpnHeader{
     background-color: #94baf1;
 }
+
+.MPNRequest{
+    display: flex;
+    justify-content: center;
+}
+
+.MPNRequest input{
+    width: auto;
+}

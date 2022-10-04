@@ -18,6 +18,7 @@ import {UploadIcon, EditIcon, SheetIcon} from '../components/Icons';
 
 import Table from 'react-bootstrap/Table';
 import Button from 'react-bootstrap/Button';
+import Modal from 'react-bootstrap/Modal';
 
 import {useExcelUpload} from './../hooks/FileUpload';
 import {useServerUrl} from './../hooks/Urls';
@@ -119,6 +120,7 @@ function TableInterface(props){
     const [error, setError] = useState(null);
 
     const [dataLock, setDataLock] = useState(false); 
+    const [showExportModal, setShowExportModal] = useState(false);
     // to make sure mpnHeader doesnt change during data processing
 
     const [pageSize, setPageSize] = useState(5);
@@ -169,8 +171,6 @@ function TableInterface(props){
         console.log('do batch details data lookup');
         if(mpnHeader !== null){
             const mpns = tableData.map((line) => line[mpnHeader]);
-            //console.log(mpns);
-            //const mpnSplit = mpns.join(',');
             axios({
                 method: 'POST',
                 url: serverUrl+'api/partdetails',
@@ -214,14 +214,21 @@ function TableInterface(props){
             }
         }
     }
-    function handleExport(){
+    function handleExport(fn){
         const sheet = XLSX.utils.json_to_sheet(tableData, {header: columnOrder});
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, sheet, 'BOMScrub');
-        XLSX.writeFile(wb, 'test'+'.xlsx');
+        XLSX.writeFile(wb, fn+'.xlsx');
+    }
+    function handleOpenExport(){
+        setShowExportModal(true);
+    }
+    function handleCloseExport(){
+        setShowExportModal(false);
     }
     return(
     <div>
+        <ExportModal show={showExportModal} hideAction={handleCloseExport} exportAction={handleExport}/>
         <div>
             <Button onClick={handleAddColumn}>Add Column</Button>
         {error === null ? <Button onClick={handleDataLookup}>Data Lookup</Button> : 
@@ -229,7 +236,7 @@ function TableInterface(props){
             <Button onClick={handleDataLookup}>Data Lookup</Button>
         </SimplePopover>
         }
-        <Button onClick={handleExport}>Export</Button>
+        <Button onClick={handleOpenExport}>Export</Button>
         </div>
         <div className='MainTable'>
         <Table>
@@ -279,6 +286,33 @@ function TableInterface(props){
             pageSize={pageSize} onChangePageSize={handleChangePageSize}/>
         </div>
     </div>
+    );
+}
+
+function ExportModal(props){
+    const [fn, setFn] = useState('');
+    const handleClose = () => props.hideAction();
+    const handleExport = () => {
+        props.exportAction(fn);
+        props.hideAction();
+    };
+    function handleChange(e){
+        setFn(e.target.value);
+    }
+    return(
+    <Modal show={props.show} onHide={handleClose}>
+    <Modal.Header closeButton>
+        <Modal.Title>Export Excel</Modal.Title>
+    </Modal.Header>
+
+    <Modal.Body>
+        File Name: <input type='text' value={fn} onChange={handleChange}/>
+    </Modal.Body>
+    <Modal.Footer>
+        <Button variant="secondary" onClick={handleClose}>Close</Button>
+        <Button variant="primary" onClick={handleExport}>Export</Button>
+    </Modal.Footer>
+    </Modal>
     );
 }
 

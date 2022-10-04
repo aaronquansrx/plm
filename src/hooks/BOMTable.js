@@ -452,14 +452,15 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         return filtered;
     }
     function octopartLineChange(octoData, row){
-        if(octoData){
-            const tableLine = {...tableBOM[row]};
+        const tableLine = {...tableBOM[row]};
+        if(!tableLine.octopart.requested){
+            //const tableLine = {...tableBOM[row]};
             const newOcto = octoData.sellers.map((seller) => {
                 //const newOffers = evalApiV2(seller, tableLine.quantities.multi);
                 seller.offers = evalApiV2(seller, tableLine.quantities.multi);
                 return seller;
             });
-            tableLine.octopart = newOcto;
+            tableLine.octopart = {requested: true, data: newOcto};
             setTable(update(tableBOM, {
                 [row]: {$set: tableLine}
             }));

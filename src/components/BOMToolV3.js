@@ -96,6 +96,7 @@ function BOMToolV3(props){
             callOctopart(mpn, row, octopartLineChange);
         }else{
             console.log('no req');
+            console.log(props.octopartData.get(mpn));
             octopartLineChange(props.octopartData.get(mpn).data, row);
         }
     }
@@ -130,7 +131,8 @@ function BOMToolV3(props){
             submitGlobalApis: changeActiveApisGlobal,
         },
         octopart: {
-            requestOctopart: requestOctopart
+            requestOctopart: requestOctopart,
+            selectOffer: selectOctopartOffer
         },
         api: {
             retry: retryApi
@@ -138,6 +140,14 @@ function BOMToolV3(props){
         offer: {
             selectOffer: selectOffer
         }
+    }
+    function selectOctopartOffer(row, api, offerNum, octoRowNum){
+        console.log(row+api+offerNum+octoRowNum);
+        const opp = !tableBOM[row].octopart.data[octoRowNum].offers[offerNum].selected;
+        const newTable = update(tableBOM, {
+            [row]: {octopart: {data: {[octoRowNum]: {offers: {[offerNum]: {selected: {$set: opp}}}}}}}
+        });
+        setTable(newTable);
     }
     function selectOffer(row, api, offerNum){
         const newTable = update(tableBOM, {

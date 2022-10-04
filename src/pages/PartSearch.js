@@ -13,6 +13,8 @@ import {useServerUrl} from '../hooks/Urls';
 import { ListGroupItem } from 'react-bootstrap';
 import { set } from 'lodash';
 
+import './../css/main.css';
+
 function PartSearch(props){
     return(
         <div>
@@ -45,86 +47,59 @@ function SingleApiSearch(props){
     const [results, setResults] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [mpn, setMpn] = useState(null);
+    const [statusMessage, setStatusMessage] = useState('');
     function handleChangeTerm(e){
         setSearchTerm(e.target.value);
     }
     function handleSearch(){
         setMpn(searchTerm);
+        setStatusMessage('Loading...');
+        setResults([]);
         axios({
             method: 'GET',
             url: serverUrl+'api/part',
             params: {part: searchTerm}
         }).then(res => {
-            //console.log(res.data);
+            console.log(res.data);
+            let hasOffers = false;
             const apiData = res.data.apis;
             const parsedApiData = Object.entries(apiData).reduce((arr, [api, data]) => {
-                const dt = {
-                    distributor: apiNameMap[api],
-                    offers: data.offers
+                if(data.offers.length > 0){
+                    const dt = {
+                        distributor: apiNameMap[api],
+                        offers: data.offers
+                    }
+                    arr.push(dt);
+                    hasOffers = true;
                 }
-                arr.push(dt);
                 return arr;
             }, []);
+            const statusMess = hasOffers ? '' : 'No Offers Found';
+            setStatusMessage(statusMess);
             console.log(parsedApiData);
             setResults(parsedApiData);
         });
     }
+    function handleKeyDown(e){
+        if(e.key == 'Enter'){
+            handleSearch();
+        }
+    }
     return(
         <div>
-        <Form className="d-flex">
+        <div><h4>Single Part Request</h4></div>
+        <div className='MPNRequest'>
             <Form.Control
-            type="search"
-            placeholder="Search"
-            className="me-2"
-            aria-label="Search"
-            //value={searchTerm}
+            type="text"
+            placeholder="MPN (exact match)"
             onChange={handleChangeTerm}
+            onKeyDown={handleKeyDown}
             />
-            <Button variant="outline-success" onClick={handleSearch}>Search</Button>
-        </Form>
-        <div>Single Part Search</div>
-        {mpn && <div>API Data for <b>{mpn}</b></div>}
+            <Button variant="outline-success" onClick={handleSearch}>Request</Button>
+        </div>
+        {mpn && <div>API Request Data for <b>{mpn}</b></div>}
         <SingleAPITable apiAttrs={apiAttrs} data={results} stockMode='in_stock'/>
-        </div>
-    )
-}
-
-function OldPt(props){
-    const [results, setResults] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    function handleChangeTerm(e){
-        setSearchTerm(e.target.value);
-    }
-    const server_url = useServerUrl();
-    function handleSearch(){
-        axios({
-            method: 'get',
-            url: server_url+'partsearch',
-            params: {search: searchTerm}
-        }).then(res => {
-            console.log(res);
-            setResults(res.data.results);
-        });
-    }
-    return(
-        <div>
-        <div className='Login'>
-            <Form className="d-flex">
-                <Form.Control
-                type="search"
-                placeholder="Search"
-                className="me-2"
-                aria-label="Search"
-                //value={searchTerm}
-                onChange={handleChangeTerm}
-                />
-                <Button variant="outline-success" onClick={handleSearch}>Search</Button>
-            </Form>
-        </div>
-        <div>
-            {results.length} Results
-            <ResultList results={results}/>
-        </div>
+        <div>{statusMessage}</div>
         </div>
     )
 }

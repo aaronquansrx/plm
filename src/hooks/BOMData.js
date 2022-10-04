@@ -194,7 +194,14 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             }).then(response => {
                 console.log(response.data);
                 const octoData = response.data.data;
-                octoTempMap.set(mpn, octoData);
+                const ocd = octoData.sellers.map(seller => {
+                    seller.offers = seller.offers.map((offer) => {
+                        offer.selected = false;
+                        return offer;
+                    });
+                    return seller;
+                });
+                octoTempMap.set(mpn, ocd);
                 updateOctopartDataMap(octoTempMap);
                 octopartLineChange(octoData, row);
             });

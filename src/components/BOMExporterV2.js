@@ -6,6 +6,7 @@ import {stockString} from './../scripts/AlgorithmVariable';
 
 import XLSX from 'xlsx';
 import { forEach } from 'lodash';
+import { BsArrowLeftSquareFill } from 'react-icons/bs';
 
 const restrictedBomAttrs = ['activeApis', 'octopart'];
 
@@ -35,7 +36,8 @@ function BOMExporterV2(props){
         const best = {price: options.bestprice, leadtime: options.bestleadtime};
         const api = best.price ? 'price' : best.leadtime ? 'leadtime' : 'all'; //api: api (unused)
         const eva = options.evaluation;
-        return { api: api, evaluation: eva, best: options.bestoffer, filteredApiAttrs: options.filteredApiAttrs };
+        return { api: api, evaluation: eva, best: options.bestoffer, 
+            filteredApiAttrs: options.filteredApiAttrs, selected: options.selected };
     }
     function handleExport(fn, options={}){
         const fileName = fn === '' ? 'f' : fn;
@@ -52,6 +54,12 @@ function BOMExporterV2(props){
             const aaod = allApisOfferData(apiAttrs);
             base.forEach((b, i) => {
                 Object.assign(b, aaod[i]);
+            });
+        }
+        if(opt.selected){
+            const asod = allSelectedOfferData(apiAttrs);
+            base.forEach((b, i) => {
+                Object.assign(b, asod[i]);
             });
         }
         console.log(base);
@@ -126,6 +134,37 @@ function BOMExporterV2(props){
             }
             return {};
         });
+        return formatted;
+    }
+    function allSelectedOfferData(apiAttrs){
+        const stockStr = stockString(props.algorithm.stock);
+        const formatted = props.data.map((line, i) => {
+            const allSelectedOffers = props.apis.reduce((arrOffs, api) => {
+                const selApiOffers = line[api.accessor].offers.reduce((arr, offer, on) => {
+                    if(offer.selected) arr.push({offer:offer, api:api, offerNum: on});
+                    return arr;
+                }, []);
+                const offs = arrOffs.concat(selApiOffers);
+                return offs;
+            }, []);
+            console.log(allSelectedOffers);
+            const offerData = {};
+            
+            allSelectedOffers.forEach((offer, i) => {
+                const offStr = 'Selected Offer '+(i+1)+' ';
+                offerData[offStr+'Api'] = offer.api.accessor;
+                offerData[offStr+'Offer Num'] = offer.offerNum
+                apiAttrs.forEach((attr) => {
+                    if('longHeader' in attr){
+                        offerData[offStr+attr.longHeader] = apiAttrDecode(offer.offer, attr.accessor, stockStr, props.algorithm.best);
+                    }else{
+                        offerData[offStr+attr.Header] = apiAttrDecode(offer.offer, attr.accessor, stockStr, props.algorithm.best);
+                    }
+                });
+            });
+            return offerData;
+        });
+        console.log(formatted);
         return formatted;
     }
     function baseTableFormat(cols){

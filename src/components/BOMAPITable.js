@@ -408,6 +408,7 @@ function BOMOffer(props){
 }
 
 function BOMAttributeRenderer(props){
+    //add global clickability here
     return(
         <>
         {props.custom ? props.custom({...props}) : <DefaultRenderer {...props}/>}
@@ -419,13 +420,18 @@ function APIAttributeRenderer(props){
     //console.log(props.custom);
     //console.log(props.functions);
     function handleClick(e){
-        if(!props.octopart){
-            if(e.ctrlKey){
-                window.open(props.url, '_blank');
+        //if(!props.octopart){
+        if(e.ctrlKey){
+            window.open(props.url, '_blank');
+        }else{
+            if(props.octopart){
+                if(props.functions) props.functions.selectOffer(props.rowNum, props.api, props.offerNum, props.octoRowNum);
             }else{
-                props.functions.selectOffer(props.rowNum, props.api, props.offerNum);
+                if(props.functions) props.functions.selectOffer(props.rowNum, props.api, props.offerNum);
             }
+
         }
+        //}
     }
     
     return(
@@ -733,55 +739,12 @@ function ActiveApisRenderer(props){
     );
     return (
         <td {...props.cellProps}>
-        <Button disabled={props.lock} onClick={handleOpenModal}>Apis</Button>
+        <Button disabled={props.lock || props.functionLock} onClick={handleOpenModal}>Apis</Button>
         <TemplateModal show={apiModal} title='Select APIs' body={apisCheckboxes} footer={footer} onClose={handleCloseModal}/>
         {/*<ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' 
         body={apisCheckboxes} footer={footer}/>*/}
         </td>
     )
-}
-
-function OctopartRenderer(props){
-    //console.log(props.functions);
-    const [showModal, setShowModal] = useState(0);
-    //const [octoRequested, setOctoRequested] = useState(false);
-    const [modalOn, setModalOn] = useState(false);
-    const activator = (
-        <Button onClick={() => setModalOn(true)} disabled={props.lock}>Request</Button>
-    );
-    function onClose(){
-        setShowModal(showModal+1);
-        setModalOn(false)
-    };
-    //const [octoData, setOctoData] = useState([]);
-    useEffect(() => {
-        if(modalOn /*&& !octoRequested*/){
-            props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
-            console.log('req octo');
-            //setOctoRequested(true);
-        }
-        console.log(modalOn);
-    }, [modalOn]);
-    function callbackOctoRequest(od){
-        //setOctoData(od);
-    }
-    /*
-    function onOctopart(){
-        props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
-    }*/
-    const title = 'Octopart Offers for '+props.mpn;
-    const body = (
-        <>
-        {/*!isProduction && <Button onClick={onOctopart}>Octopart</Button>*/}
-        {props.value.length > 0 && <OctopartTable data={props.value} stockMode={props.stockMode} apiAttrs={props.vars.apiAttrs}/>}
-        </>
-    );
-    const footer = <Button variant='secondary' onClick={onClose}>Close</Button>
-    return (
-        <td {...props.cellProps}>
-            <ModalController modalClass='OctopartOffers' hide={showModal} activateModal={activator} title={title} body={body} footer={footer}/>
-        </td>
-    );
 }
 
 function LongHeaderTooltipRenderer(props){
@@ -833,7 +796,7 @@ function ActiveApisHeaderRenderer(props){
     );
     return(
         <th {...props.headerProps}>
-            <Button disabled={props.lock} onClick={handleOpenModal}>Apis</Button>
+            <Button disabled={props.lock || props.functionLock} onClick={handleOpenModal}>Apis</Button>
             <TemplateModal show={apiModal} title='Select APIs' body={apisCheckboxes} footer={footer} onClose={handleCloseModal}/>
         </th>
     );
@@ -855,6 +818,49 @@ function DefaultRenderer(props){
     )
 }
 
+function OctopartRenderer(props){
+    console.log(props.value);
+    const [showModal, setShowModal] = useState(0);
+    const [modalOn, setModalOn] = useState(false);
+    const activator = (
+        <Button onClick={() => setModalOn(true)} disabled={props.lock || props.functionLock}>Request</Button>
+    );
+    function onClose(){
+        setShowModal(showModal+1);
+        setModalOn(false)
+    };
+    //const [octoData, setOctoData] = useState([]);
+    useEffect(() => {
+        if(modalOn /*&& !octoRequested*/){
+            props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
+            console.log('req octo');
+            //setOctoRequested(true);
+        }
+        console.log(modalOn);
+    }, [modalOn]);
+    function callbackOctoRequest(od){
+        //setOctoData(od);
+    }
+    /*
+    function onOctopart(){
+        props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
+    }*/
+    const title = 'Octopart Offers for '+props.mpn;
+    const body = (
+        <>
+        {/*!isProduction && <Button onClick={onOctopart}>Octopart</Button>*/}
+        {props.value.data && props.value.data.length > 0 && <OctopartTable data={props.value.data} stockMode={props.stockMode} 
+        apiAttrs={props.vars.apiAttrs} rowNum={props.rowNum} functions={props.functions}/>}
+        </>
+    );
+    const footer = <Button variant='secondary' onClick={onClose}>Close</Button>
+    return (
+        <td {...props.cellProps}>
+            <ModalController modalClass='OctopartOffers' hide={showModal} activateModal={activator} title={title} body={body} footer={footer}/>
+        </td>
+    );
+}
+
 export function OctopartTable(props){
     //console.log(props.data);
     const octoHeaders = [{Header: 'Distributor', accessor: 'distributor'}];
@@ -866,7 +872,6 @@ export function OctopartTable(props){
         }
         return arr;
     }, []);
-    console.log(offerHeaders);
     const headers = octoHeaders.concat(offerHeaders);
     const octoAttributes = octoHeaders.map(smartAttr('octopart', {}, {}, octoRenderers));
     const offerAttributes = offerHeaders.map(smartAttr('subattr', {}, {}, octoRenderers));
@@ -885,7 +890,9 @@ export function OctopartTable(props){
             {props.data.map((dataObj, i) => {
                 //console.log(dataObj);
                 return (
-                    <OctopartRow key={i} data={dataObj} octoAttrs={octoAttributes} offerAttrs={offerAttributes} stockMode={props.stockMode}/>
+                    <OctopartRow key={i} octoRowNum={i} data={dataObj} octoAttrs={octoAttributes} 
+                    offerAttrs={offerAttributes} stockMode={props.stockMode} rowNum={props.rowNum}
+                    functions={props.functions}/>
                 );
             })}
         </tbody>
@@ -903,26 +910,37 @@ function OctopartRow(props){
         setShowAllOffers(!showAllOffers);
     }
     const numTableCols = props.octoAttrs.length + props.offerAttrs.length;
+    const fns = {
+        selectOffer: (rn, api, on, orn) => {console.log(rn+api+on+orn)}
+    }
     return(
         <>
         <tr>
-        {props.data.offers.length > 0 && props.octoAttrs.map((attr, i) => {
+        {props.data && props.data.offers.length > 0 && props.octoAttrs.map((attr, i) => {
             return <BOMAttributeRenderer key={i} value={props.data[attr.attribute]} custom={attr.custom} cellProps={octoCellProps} stockMode={props.stockMode}/>;
         })}
-        {props.data.offers.length > 0 && props.offerAttrs.map((attr, i) => {
+        {props.data.offers.length > 0 && 
+        <OctoOffer offer={props.data.offers[0]} functions={props.functions} offerAttrs={props.offerAttrs} stockMode={props.stockMode} rowNum={props.rowNum}
+        offerNum={0} octoRowNum={props.octoRowNum} api={props.data.distributor}/>
+        /*props.offerAttrs.map((attr, i) => {
             return <APIAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom} 
-            stockMode={props.stockMode} url={props.data.offers[0].url} octopart/>
-        })}
+            stockMode={props.stockMode} url={props.data.offers[0].url} functions={props.functions} octopart
+            rowNum={props.rowNum} api={props.data.distributor} offerNum={0} octoRowNum={props.octoRowNum}/>
+        
+        })*/}
         </tr>
-        {props.data.offers.length > 1 && showAllOffers && 
+        {props.data && props.data.offers.length > 1 && showAllOffers && 
         [...Array(props.data.offers.length-1).keys()].map((i) => {
             const offerNum = i+1;
             return(
             <tr key={i}>
-                {props.offerAttrs.map((attr, j) => {
+                <OctoOffer offer={props.data.offers[offerNum]} functions={props.functions} offerAttrs={props.offerAttrs} stockMode={props.stockMode} rowNum={props.rowNum}
+                offerNum={offerNum} octoRowNum={props.octoRowNum} api={props.data.distributor}/>
+                {/*props.offerAttrs.map((attr, j) => {
                     return <APIAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom} 
-                    stockMode={props.stockMode} url={props.data.offers[0].url} octopart/>
-                })}
+                    stockMode={props.stockMode} url={props.data.offers[0].url} functions={props.functions} octopart
+                    rowNum={props.rowNum} api={props.data.distributor} offerNum={offerNum} octoRowNum={props.octoRowNum}/>
+                })*/}
             </tr>
             );
         })}
@@ -936,6 +954,28 @@ function OctopartRow(props){
                 </td>
             </tr>
         }
+        </>
+    )
+}
+
+function OctoOffer(props){
+    let cn = props.offer.selected ? 'SelectedCell' : 'NormalCell';
+    /*
+    if(props.offer.selected && props.value.offers.length > 0 && props.offerNum < props.value.offers.length){
+        if(props.value.offers[props.offerNum].selected){
+            cn = 'SelectedCell';
+        }
+    }*/
+    const offerProps = {
+        className: cn
+    }
+    return(
+        <>
+        {props.offerAttrs.map((attr, j) => {
+            return <APIAttributeRenderer key={j} value={props.offer[attr.attribute]} custom={attr.custom} cellProps={offerProps}
+            stockMode={props.stockMode} url={props.offer.url} functions={props.functions} octopart
+            rowNum={props.rowNum} api={props.api} offerNum={props.offerNum} octoRowNum={props.octoRowNum}/>
+        })}
         </>
     )
 }
@@ -1018,6 +1058,9 @@ function APIRow(props){
     function changeShowOffers(){
         setShowAllOffers(!showAllOffers);
     }
+    const fns = {
+        selectOffer: (rn, api, on)=>console.log(rn+' '+api+' '+on)
+    }
     const numTableCols = props.mainAttrs.length + props.offerAttrs.length;
     return(
         <>
@@ -1027,6 +1070,7 @@ function APIRow(props){
         })}
         {props.data.offers.length > 0 && props.offerAttrs.map((attr, i) => {
             return <APIAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom} 
+            functions={fns} offerNum={0} api={props.data.distributor}
             stockMode={props.stockMode}/>
         })}
         </tr>
@@ -1037,6 +1081,7 @@ function APIRow(props){
             <tr key={i}>
                 {props.offerAttrs.map((attr, j) => {
                     return <APIAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom} 
+                    functions={fns} offerNum={offerNum} api={props.data.distributor}
                     stockMode={props.stockMode}/>
                 })}
             </tr>

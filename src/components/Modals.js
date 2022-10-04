@@ -62,7 +62,8 @@ export function ExportModal(props){
     const exportOptions = [
         {value: 'bestoffer', label: 'Best Offer Only'},
         {value: 'evaluation', label: 'Evaluation Sheet'},
-        {value: 'filteredApiAttrs', label: 'Use Filtered API Attributes'}
+        {value: 'filteredApiAttrs', label: 'Use Filtered API Attributes'},
+        {value: 'selected', label: 'Add selected offers'}
     ];
     const [options, setOptions] = useState(exportOptions.reduce((obj, opt) => {
         obj[opt.value] = false;
