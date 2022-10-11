@@ -819,7 +819,6 @@ function DefaultRenderer(props){
 }
 
 function OctopartRenderer(props){
-    console.log(props.value);
     const [showModal, setShowModal] = useState(0);
     const [modalOn, setModalOn] = useState(false);
     const activator = (

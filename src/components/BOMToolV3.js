@@ -64,7 +64,7 @@ function BOMToolV3(props){
     ];
     const [algorithmMode, setAlgorithmMode] = useState({best: highlightOptions[0].id, stock: false});
     const [quantityMultiplier, handleChangeMulti] = useQuantityMultiplierV2();
-    const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
+    const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
         props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock, props.octopartData, props.updateOctopartDataMap);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
         dataProcessingLock, retrySingle, retryAll, retryLock] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
@@ -166,7 +166,8 @@ function BOMToolV3(props){
         }))
     }
     function handleTest(){
-        runBOMAlgorithms();
+        testNewMpns();
+        //runBOMAlgorithms();
         //console.log(props.apiData);
         ///runBOMAlgorithms(tableBOM);
     }

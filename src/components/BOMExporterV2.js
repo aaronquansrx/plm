@@ -61,6 +61,7 @@ function BOMExporterV2(props){
             base.forEach((b, i) => {
                 Object.assign(b, asod[i]);
             });
+            return;
         }
         console.log(base);
         const sheet = XLSX.utils.json_to_sheet(base, {header: headers});
@@ -139,6 +140,7 @@ function BOMExporterV2(props){
     function allSelectedOfferData(apiAttrs){
         const stockStr = stockString(props.algorithm.stock);
         const formatted = props.data.map((line, i) => {
+            const offerData = {};
             const allSelectedOffers = props.apis.reduce((arrOffs, api) => {
                 const selApiOffers = line[api.accessor].offers.reduce((arr, offer, on) => {
                     if(offer.selected) arr.push({offer:offer, api:api, offerNum: on});
@@ -147,21 +149,41 @@ function BOMExporterV2(props){
                 const offs = arrOffs.concat(selApiOffers);
                 return offs;
             }, []);
-            console.log(allSelectedOffers);
-            const offerData = {};
-            
+            //console.log(allSelectedOffers);
             allSelectedOffers.forEach((offer, i) => {
                 const offStr = 'Selected Offer '+(i+1)+' ';
-                offerData[offStr+'Api'] = offer.api.accessor;
-                offerData[offStr+'Offer Num'] = offer.offerNum
+                offerData[offStr+'Api'] = offer.api.Header;
+                offerData[offStr+'Offer Num'] = offer.offerNum;
                 apiAttrs.forEach((attr) => {
-                    if('longHeader' in attr){
-                        offerData[offStr+attr.longHeader] = apiAttrDecode(offer.offer, attr.accessor, stockStr, props.algorithm.best);
-                    }else{
-                        offerData[offStr+attr.Header] = apiAttrDecode(offer.offer, attr.accessor, stockStr, props.algorithm.best);
+                    if(attr.accessor in offer.offer){
+                        const os = 'longHeader' in attr ? offStr+attr.longHeader : offStr+attr.Header;
+                        offerData[os] = apiAttrDecode(offer.offer, attr.accessor, stockStr, props.algorithm.best);
                     }
                 });
             });
+            const octopartSelectedOffers = line.octopart.requested ? line.octopart.data.reduce((octOffs, oct) => {
+                const api = oct.distributor;
+                const oOffs = oct.offers.reduce((arr, off, on) => {
+                    if(off.selected) arr.push({offer:off, api:api, offerNum: on});
+                    return arr;
+                }, []);
+                const offs = octOffs.concat(oOffs);
+                return offs;
+            }, []) : [];
+            console.log(octopartSelectedOffers);
+
+            octopartSelectedOffers.forEach((offer, i) => {
+                const offStr = 'Octopart Offer '+(i+1)+' ';
+                offerData[offStr+'Api'] = offer.api;
+                offerData[offStr+'Offer Num'] = offer.offerNum;
+                apiAttrs.forEach(attr => {
+                    if(attr.accessor in offer.offer){
+                        const os = 'longHeader' in attr ? offStr+attr.longHeader : offStr+attr.Header;
+                        offerData[os] = apiAttrDecode(offer.offer, attr.accessor, stockStr, props.algorithm.best);
+                    }
+                })
+            });
+
             return offerData;
         });
         console.log(formatted);

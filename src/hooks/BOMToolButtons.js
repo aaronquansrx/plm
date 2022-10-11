@@ -50,6 +50,7 @@ export function useSaveBom(bom, apiData, apisList, mpnList, user, currency, stor
         const mpnData = include_data ? getMpnData() : null;
         //console.log(mpnData);
         //console.log(bomId);
+        console.log(mpnData);
         const bd = overwrite ? bomId : null;
         if(user){
             axios({

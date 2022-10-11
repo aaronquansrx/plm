@@ -67,7 +67,6 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                 }
             });
             */
-            
             //mpns with quantity
             mpnListWithQuantity.forEach((mq) => {
                 const mpn = mq.mpn;
@@ -80,7 +79,8 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                     callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency, quantity);
                 }
             });
-            
+            //callParts(mpnList, serverUrl, controller, apisList, null, null, store, currency);
+            //not better with high amounts of external api calls
         }else{
             //check keys of loaddata
             console.log('load data');
@@ -206,48 +206,11 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                 octopartLineChange(octoData, row);
             });
         }
-            /*
-            const octoData = response.data;
-            const findMpnData = octoData.data.find((octo) => octo.mpn === mpn);
-            if(findMpnData !== undefined){
-                const dists = findMpnData.data.map((d) => {
-                    const offers = d.offers.reduce((arr, offer) => {
-                        if(Object.keys(offer.pricing).length > 0){
-                            if(props.currency in offer.pricing){
-                                const pricing = offer.pricing[props.currency].map((pr) => {
-                                    return pr;
-                                });
-                                const obj = {
-                                    available: offer.available,
-                                    moq: offer.moq,
-                                    leadtime: offer.leadtime,
-                                    spq: offer.spq,
-                                    //pricing: pricing,
-                                    prices: {
-                                        price: offer.price,
-                                        pricing: pricing,
-                                        pricingIndex: offer.price_index,
-                                    },
-                                    packaging: offer.packaging
-                                }
-                                arr.push(obj);
-                            }else{
-                                console.log(offer.pricing);
-                            }
-                        }
-                        return arr;
-                    }, []);
-                    return {
-                        distributor: d.company,
-                        offers: offers
-                    };
-                });
-                console.log(dists);
-                callback(dists);
-            }*/
     }
-
-    return [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart];
+    function testNewMpns(){
+        callParts(mpnList, serverUrl, null, apisList, null, null, store, currency);
+    }
+    return [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns];
 }
 
 export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, callApisRetry, store, currency){
@@ -422,6 +385,17 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
     });
 }
 
+function callParts(parts, serverUrl, controller, apis, callback, errorCallback, store, currency){
+    axios({
+        method: 'POST',
+        url: serverUrl+'api/part',
+        data: {parts: parts, apis: apis, store: store, currency: currency},
+        signal: controller ? controller.signal : null
+    }).then(response => {
+        console.log(response.data);
+    });
+}
+
 function formatApiData(rawApiData){
     const formattedData = Object.entries(rawApiData).reduce((obj, [k,v]) => {
         const success = v.status === 'success';
@@ -441,11 +415,11 @@ function formatApiData(rawApiData){
                     pricing_index: offer.best_price.index,
                     total_price: offer.best_price.total
                 },*/
-                prices: offer.prices,
-                adjusted_quantity: offer.adjusted_quantity,
-                excess_quantity: offer.excess_quantity,
-                excess_price: offer.excess_price,
-                total_price: offer.total_price,
+                //prices: offer.prices,
+                //adjusted_quantity: offer.adjusted_quantity,
+                //excess_quantity: offer.excess_quantity,
+                //excess_price: offer.excess_price,
+                //total_price: offer.total_price,
                 distributor_code: offer.distributor_code,
                 fees: 'fees' in offer ? offer.fees : null,
                 url: offer.url,
@@ -457,7 +431,7 @@ function formatApiData(rawApiData){
             offers: offers,
             message: v.message,
             retry: v.retry,
-            offer_order: v.offer_order
+            //offer_order: v.offer_order
         };
         return obj;
     }, {});
