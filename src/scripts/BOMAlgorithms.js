@@ -19,7 +19,6 @@ export function offerEvaluation(offer, min_quantity){
         index: both_stock(is.index, ns.index),
         total_price: both_stock(is.total_price, ns.total_price)
     };
-    //console.log(out_obj);
     return out_obj;
     /*{
         total_price: {in_stock: is.total_price, no_stock: ns.total_price},

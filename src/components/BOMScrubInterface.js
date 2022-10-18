@@ -11,7 +11,10 @@ import {SimplePopover} from './Tooltips';
 import {ExcelDropzone} from './Dropzone';
 import {SimpleDropdown} from './Dropdown';
 
+import {BOMApiProgressBarV2} from './Progress';
+
 import {PageInterface} from './Pagination';
+import { LabeledCheckbox } from './Forms';
 import {usePaging} from './../hooks/Paging';
 
 import {UploadIcon, EditIcon, SheetIcon} from '../components/Icons';
@@ -19,6 +22,7 @@ import {UploadIcon, EditIcon, SheetIcon} from '../components/Icons';
 import Table from 'react-bootstrap/Table';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
+
 
 import {useExcelUpload} from './../hooks/FileUpload';
 import {useServerUrl} from './../hooks/Urls';
@@ -107,8 +111,10 @@ function Navigation(props){
 }
 
 const scrubHeaders = [
-    'Description', 'RoHS', 'Reach', 'MSL', 'Lead', 
-]
+    'Description', 'RoHS', 'REACH', 'MSL', 'Lead', 
+];
+
+const hiddenHeaders = ['LongDescription'];
 
 function TableInterface(props){
     const serverUrl = useServerUrl();
@@ -121,6 +127,8 @@ function TableInterface(props){
 
     const [dataLock, setDataLock] = useState(false); 
     const [showExportModal, setShowExportModal] = useState(false);
+    const [showProgress, setShowProgress] = useState(false);
+    const [finishedData, setFinishedData] = useState(0);
     // to make sure mpnHeader doesnt change during data processing
 
     const [pageSize, setPageSize] = useState(5);
@@ -168,6 +176,8 @@ function TableInterface(props){
         }))
     }
     function handleDataLookup(){
+        setFinishedData(0);
+        setShowProgress(true);
         console.log('do batch details data lookup');
         if(mpnHeader !== null){
             const mpns = tableData.map((line) => line[mpnHeader]);
@@ -181,24 +191,31 @@ function TableInterface(props){
                 }
                 //signal: controller.signal
             }).then(response => {
-                console.log(response.data);
-                const details = response.data.details;
-                //setData(details);
-                const newTableData = tableData.map((line,i) => {
-                    const mpn = mpns[i];
-                    scrubHeaders.forEach(col => {
-                        if(col in details[mpn]){
-                            line[col] = details[mpn][col];
+                if(typeof response.data !== 'object'){
+                    setError('Data Lookup Error (contact IT)');
+                }else{
+                    //setError('Success');
+                    console.log(response.data);
+                    const details = response.data.details;
+                    //setData(details);
+                    const newTableData = tableData.map((line,i) => {
+                        const mpn = mpns[i];
+                        if(mpn in details){
+                            scrubHeaders.forEach(col => {
+                                if(col in details[mpn]){
+                                    line[col] = details[mpn][col];
+                                }
+                            });
                         }
-                    });
-                    return line;
-                })
-                setTableData(newTableData);
+                        return line;
+                    })
+                    setFinishedData(1);
+                    setTableData(newTableData);
+                }
             });
         }else{
             setError('MPN header not selected');
         }
-
     }
     function handleReset(){
         setColumnOrder(props.headers);
@@ -214,11 +231,22 @@ function TableInterface(props){
             }
         }
     }
-    function handleExport(fn){
-        const sheet = XLSX.utils.json_to_sheet(tableData, {header: columnOrder});
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, sheet, 'BOMScrub');
-        XLSX.writeFile(wb, fn+'.xlsx');
+    function handleExport(fn, options={}){
+        if(options.csv){
+            const sheet = XLSX.utils.json_to_sheet(tableData, {header: columnOrder});
+            const csv = XLSX.utils.sheet_to_csv(sheet, );
+            const csvContent = "data:text/csv;charset=utf-8,"+csv;
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", fn+".csv");
+            link.click();
+        }else{
+            const sheet = XLSX.utils.json_to_sheet(tableData, {header: columnOrder});
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, sheet, 'BOMScrub');
+            XLSX.writeFile(wb, fn+'.xlsx');
+        }
     }
     function handleOpenExport(){
         setShowExportModal(true);
@@ -226,6 +254,7 @@ function TableInterface(props){
     function handleCloseExport(){
         setShowExportModal(false);
     }
+    //const tbodyClass = ;
     return(
     <div>
         <ExportModal show={showExportModal} hideAction={handleCloseExport} exportAction={handleExport}/>
@@ -237,8 +266,10 @@ function TableInterface(props){
         </SimplePopover>
         }
         <Button onClick={handleOpenExport}>Export</Button>
+        {error !== null && <div style={{color: 'red'}}>{error}</div>}
         </div>
-        <div className='MainTable'>
+        <BOMApiProgressBarV2 show={showProgress} numParts={1} onHideBar={() => setShowProgress(false)} numFinished={finishedData}/>
+        <div>
         <Table>
             <thead className='TableHeading'>
             <tr>
@@ -269,7 +300,7 @@ function TableInterface(props){
                 })}
             </tr>
             </thead>
-            <tbody>
+            <tbody className=''>
             {displayTableData.map((line, ln) => 
             <tr key={ln}>
                 {columnOrder.map((val, i) => 
@@ -291,13 +322,17 @@ function TableInterface(props){
 
 function ExportModal(props){
     const [fn, setFn] = useState('');
+    const [csv, setCsv] = useState(false);
     const handleClose = () => props.hideAction();
     const handleExport = () => {
-        props.exportAction(fn);
+        props.exportAction(fn, {csv: csv});
         props.hideAction();
     };
     function handleChange(e){
         setFn(e.target.value);
+    }
+    function handleChangeCSV(){
+        setCsv(!csv)
     }
     return(
     <Modal show={props.show} onHide={handleClose}>
@@ -307,6 +342,7 @@ function ExportModal(props){
 
     <Modal.Body>
         File Name: <input type='text' value={fn} onChange={handleChange}/>
+        <LabeledCheckbox label={'CSV'} checked={csv} onChange={handleChangeCSV}/>
     </Modal.Body>
     <Modal.Footer>
         <Button variant="secondary" onClick={handleClose}>Close</Button>

@@ -67,7 +67,7 @@ function BOMToolV3(props){
     const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
         props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock, props.octopartData, props.updateOctopartDataMap);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
-        dataProcessingLock, retrySingle, retryAll, retryLock] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
+        /*dataProcessingLock,*/ retrySingle, retryAll, retryLock] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
             callApisRetry, props.store, props.currency);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
     function handleLeadtimeCutOff(newLTC){
@@ -85,7 +85,7 @@ function BOMToolV3(props){
         changeTableActiveApisGlobal, changeWaitingRowApi, tableLock, octopartLineChange] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, 
-        updateTableCall, leadtimeCutOff, props.store, props.currency, dataProcessingLock, props.changeLock,
+        updateTableCall, leadtimeCutOff, props.store, props.currency, /*dataProcessingLock,*/ props.changeLock,
         searchTerm, changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData
     );
     const apiAttrs = props.apiAttrs;
@@ -201,7 +201,8 @@ function BOMToolV3(props){
     }
     const [showSaveModal, toggleSavedBomModal, saveBom] = useSaveBom(tableBOM, props.apiData, allApisList, mpnList, 
         props.user, props.currency, props.store, props.loadData.bom_id);
-    return(
+    //console.log(tableBOM);
+        return(
         <>
         <div className='FlexNormal'>
             <div className='Hori'>

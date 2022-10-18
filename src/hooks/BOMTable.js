@@ -16,7 +16,7 @@ import _, { forEach } from 'lodash';
 const buildtype = process.env.NODE_ENV;
 
 export function useTableBOM(bom, tableHeaders, apis, apiData, 
-    testCall, ltco, store, currency, dataProcessingLock, appLock, searchMpn, 
+    testCall, ltco, store, currency, /*dataProcessingLock,*/ appLock, searchMpn, 
     changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData){
     const serverUrl = useServerUrl();
     const lenBOM = bom.length;
@@ -68,11 +68,12 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             return line;
         });
     });
+    const [currencyStore, setCurrencyStore] = useState({store: store, currency: currency})
     const [tableLock, setTableLock] = useState(true);
     const apisList = apis.map(api => api.accessor);
     const [tableBOM, setTableBOM] = useState(initTableBOM);
     const [filteredTableBOM, setFilteredTableBOM] = useState(initTableBOM);
-    const [oldAlgorithmMode, setOldAlgorithmMode] = useState(null);
+    const [oldAlgorithmMode, setOldAlgorithmMode] = useState(algorithmMode);
     const headers = useMemo(() => {
         const headerChangeMap = {
             mpn: 'mpns',
@@ -95,10 +96,13 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     const [lineNumsToEvaluate, setLineNumsToEvaluate] = useState(new Set([...Array(lenBOM).keys()]));
     //const linesComplete = lenBOM - lineNumsToEvaluate.size;
     useEffect(() => {
+        //console.log('up');
         let updateTimeout = null;
         if(retryLock.get){
+            console.log('retryLock');
             updateTimeout = retryAllProcess(lineNumsToEvaluate);
         }else if(tableLock){
+            //console.log(lineNumsToEvaluate);
             updateTimeout = newBomProcess(lineNumsToEvaluate);
         }else{
             console.log('devchange');
@@ -125,10 +129,18 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
 
     }, [tableBOM, searchMpn]);
     useEffect(() => {
-        const lnte = new Set([...Array(lenBOM)].keys());
-        setLineNumsToEvaluate(lnte);
-        const updateTimeout = newBomProcess(lnte);
-        setTableBOM(initTableBOM);
+        let updateTimeout = null;
+        if(store !== currencyStore.store || currency !== currencyStore.currency){
+            changeLocks(true);
+            setTableBOM(initTableBOM);
+            console.log('store/curr change');
+            const lnte = new Set([...Array(lenBOM)].keys());
+            setLineNumsToEvaluate(lnte);
+            //setTimeout(() => {
+            updateTimeout = newBomProcess(lnte, false);
+            //}, 1000);
+            setCurrencyStore({store: store, currency: currency});
+        }
         return () => {
             if(updateTimeout !== null) clearTimeout(updateTimeout);
         }
@@ -143,22 +155,23 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             const newTable = update(tableBOM, {
                 [singleRetryData.row]: {$set: newLine}
             });
-            setTable(newTable);
+            setTableBOM(newTable);
             runBomAlgorithms(newTable);
             changeLocks(false);
         }
     }, [singleRetryData]);
+    /*
     useEffect(() => {
         if(!dataProcessingLock){
             console.log('dp false');
         }else{
             console.log('dp true');
-            //changeLocks(true);
         }
-    }, [dataProcessingLock]);
+    }, [dataProcessingLock]);*/
     useEffect(() => {
         let updateTimeout = null;
         if(retryLock.get){
+            console.log('retlock');
             const retryLines = new Set();
             const retryMpnSet = new Set(retryMpns.map((ret) => ret.mpn));
             const mpnToApis = retryMpns.reduce((obj, retMpn) => {
@@ -182,22 +195,26 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         }
     }, [retryLock.get]);
     useEffect(() => {
-        //console.log(algorithmMode);
-        const newTable = tableBOM.map((line) => {
-            const newLine = {...line};
-            const mpn = newLine.mpns.current;
-            if(apiData.has(mpn)){
-                const best = findBestOffer(newLine);
-                if(oldAlgorithmMode){
-                    changeBestOffer(newLine, best, algorithmMode, oldAlgorithmMode);
-                }else{
-                    changeBestOffer(newLine, best, algorithmMode);
+        console.log(algorithmMode);
+        if(oldAlgorithmMode.best !== algorithmMode.best ||
+        oldAlgorithmMode.stock !== algorithmMode.stock){
+            console.log(algorithmMode);
+            const newTable = tableBOM.map((line) => {
+                const newLine = {...line};
+                const mpn = newLine.mpns.current;
+                if(apiData.has(mpn)){
+                    const best = findBestOffer(newLine);
+                    if(oldAlgorithmMode){
+                        changeBestOffer(newLine, best, algorithmMode, oldAlgorithmMode);
+                    }else{
+                        changeBestOffer(newLine, best, algorithmMode);
+                    }
                 }
-            }
-            return newLine;
-        });
-        setOldAlgorithmMode(algorithmMode);
-        setTable(newTable);
+                return newLine;
+            });
+            setOldAlgorithmMode(algorithmMode);
+            setTableBOM(newTable);
+        }
     }, [algorithmMode]);
     useEffect(() => {
         if(!tableLock){
@@ -216,41 +233,51 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 }
                 return newLine;
             });
-            setTable(newTable);
+            setTableBOM(newTable);
             runBomAlgorithms(newTable);
-        }
+        }//
     }, [quantityMultiplier]);
-    function newBomProcess(lnte){
+    function newBomProcess(lnte, runImmediate=true){
         let timeout = null;
-        const evaledLines = [];
-        const newTable = [...tableBOM].map((line, i) => {
-            const newLine = {...line};
-            const mpn = newLine.mpns.current;
-            if(lnte.has(i)){
-                if(apiData.has(mpn)){
-                    const ad = apiData.get(mpn).data;
-                    const quantity = newLine.quantities.multi;
-                    const ea = evalApisV2(ad, apisList, quantity);
-                    Object.assign(newLine, ea);
-                    const best = findBestOffer(newLine);
-                    changeBestOffer(newLine, best, algorithmMode);
-                    newLine.max_offers = ad.max_offers;
-                    newLine.evaluated = true;
-                    evaledLines.push(i);
+        if(runImmediate){
+            const evaledLines = [];
+            const newTable = [...tableBOM].map((line, i) => {
+                const newLine = {...line};
+                const mpn = newLine.mpns.current;
+                if(lnte.has(i)){
+                    if(apiData.has(mpn)){
+                        console.log(mpn);
+                        const ad = apiData.get(mpn).data;
+                        const quantity = newLine.quantities.multi;
+                        const ea = evalApisV2(ad, apisList, quantity);
+                        Object.assign(newLine, ea);
+                        const best = findBestOffer(newLine);
+                        changeBestOffer(newLine, best, algorithmMode);
+                        newLine.max_offers = ad.max_offers;
+                        newLine.evaluated = true;
+                        evaledLines.push(i);
+                    }
                 }
+                return newLine;
+            });
+            const newLineNumsEval = update(lnte, {
+                $remove: evaledLines
+            });
+            setTableBOM(newTable);
+            setLineNumsToEvaluate(newLineNumsEval);
+            //console.log(newLineNumsEval);
+            if(newLineNumsEval.size === 0){
+                runBomAlgorithms(newTable);
+                changeLocks(false);
+                console.log('lock free');
+            }else{
+                timeout = setTimeout(() => setUpdateTable(updateTable+1), 1000);
             }
-            return newLine;
-        });
-        setTableBOM(newTable);
-        const newLineNumsEval = update(lnte, {
-            $remove: evaledLines
-        });
-        setLineNumsToEvaluate(newLineNumsEval);
-        if(newLineNumsEval.size === 0){
-            runBomAlgorithms(newTable);
-            changeLocks(false);
-        }else{
+            return timeout;
+        }
+        if(lnte.size > 0){
             timeout = setTimeout(() => setUpdateTable(updateTable+1), 1000);
+            //console.log('update');
         }
         return timeout;
     }
@@ -286,9 +313,6 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     function changeLocks(bool){
         setTableLock(bool);
         appLock(bool);
-    }
-    function setTable(table){
-        setTableBOM(table);
     }
     function processBomLine(line, newApiData=null, apis=apisList){
         const newLine = {...line};
@@ -353,7 +377,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             [row]: newLine
         });
         //console.log(newActiveApis);
-        setTable(newTable);
+        setTableBOM(newTable);
         runBomAlgorithms(newTable);
     }
     function changeActiveApisGlobal(apis){
@@ -367,7 +391,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             const newLine = processBomLine(line);
             return newLine;
         });
-        setTable(newTable);
+        setTableBOM(newTable);
         runBomAlgorithms(newTable);
     }
     function runBomAlgorithms(b=null, lt=null){
@@ -385,6 +409,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         }).then(response => {
             //console.log(response);
             console.log(response.data);
+            console.log(b);
             changeEvaluation(response.data.data.totals);
         });
     }
@@ -427,18 +452,13 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             newLine[api].message = 'Waiting...';
         });
         return newLine;
-        /*
-        const newBOM = update(tableBOM, {
-            [row]: {$set: newLine}
-        });
-        setTable(newBOM);*/
     }
     function changeWaitingRowApi(row, apis){
         const newLine = waitingLineApi(tableBOM[row], apis);
         const newBOM = update(tableBOM, {
             [row]: {$set: newLine}
         });
-        setTable(newBOM);
+        setTableBOM(newBOM);
     }
     function searchMpnTableFilter(searchTerm){
         const loweredSearchTerm = searchTerm.toLowerCase();
@@ -461,12 +481,12 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 return seller;
             });
             tableLine.octopart = {requested: true, data: newOcto};
-            setTable(update(tableBOM, {
+            setTableBOM(update(tableBOM, {
                 [row]: {$set: tableLine}
             }));
         }
     }
-    return [tableBOM, filteredTableBOM, setTable, headers, runBomAlgorithms, 
+    return [tableBOM, filteredTableBOM, setTableBOM, headers, runBomAlgorithms, 
         runBOMLineAlgorithmsV2, //retryApis, 
         changeMPNLine, changeQuantityLine, changeActiveApis,
         changeActiveApisGlobal, changeWaitingRowApi, tableLock,
@@ -486,7 +506,7 @@ export function useQuantityMultiplierV2(){
     return [multiplier, handleChangeMulti];
 }
 
-export function useMpnOptions(tableBOM, apiData, apisList, setTable,
+export function useMpnOptions(tableBOM, apiData, apisList, setTableBOM,
     callMpn, changeMPNLine){
     const waitingOffer = {
         offers: [],
@@ -510,7 +530,7 @@ export function useMpnOptions(tableBOM, apiData, apisList, setTable,
                     $set: newLine
                 }
             });
-            setTable(newTable);
+            setTableBOM(newTable);
             function onComp(data){
                 changeMPNLine(row, newLine, newMpn, data);
             }
@@ -547,7 +567,7 @@ export function useMpnOptions(tableBOM, apiData, apisList, setTable,
                 const newBOM = update(tableBOM, {
                     [row]: {$set: newLine}
                 });
-                setTable(newBOM);
+                setTableBOM(newBOM);
                 callMpn(newMpn, onComp);
             }
         }

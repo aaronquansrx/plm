@@ -47,6 +47,7 @@ function App() {
   const [showVersionModal, setShowVersionModal] = useState(false);
   const [options, setOptions] = useState({store: stores[0].id, currency: currencies[0].id});
   const [dataProcessLock, setDataProcessLock] = useState(false);
+  const [tableLock, setTableLock] = useState(false);
   function handleVariableOptionChange(option, value){
     setOptions(update(options, {
       [option]: {$set: value}

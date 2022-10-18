@@ -1101,8 +1101,14 @@ function APIRow(props){
 }
 
 function SinglePricesRenderer(props){
+    console.log(props.value);
+    const table = <NewPricingTable pricing={props.value}/>;
     return(
-        <>{props.value[0].unit_price}</>
+        <SimplePopover popoverBody={table} trigger={['hover', 'focus']} placement='auto'>
+            <div>
+            {props.value[0].unit_price}
+            </div>
+        </SimplePopover>
     );
 }
 

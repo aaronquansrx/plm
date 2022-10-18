@@ -57,7 +57,7 @@ export function MainNavbar(props){
                 url: serverUrl+'api/ping',
                 params: {username: props.username},
             }).then(response => {
-                console.log(response.data);
+                //console.log(response.data);
                 setPingCount(pingCount+1);
             });
         }

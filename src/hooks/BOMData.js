@@ -47,7 +47,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                 const da = {
                     apis: errorApiData,
                     bests: algorithmsInitialStructure(),
-                    maxOffers: 0
+                    max_offers: 0
                 }
                 apiDataMap.set(mpn, {data: da, date: now});
                 updateApiDataMap(apiDataMap);
@@ -98,7 +98,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                             obj[api] = ad[mpn][api];
                             return obj;
                         }, {}),
-                        maxOffers: ad[mpn].maxOffers
+                        max_offers: ad[mpn].maxOffers
                     };
                     apiDataMap.set(mpn, {data: da, date: now});
                 }
@@ -223,7 +223,7 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
     const [showProgress, setShowProgress] = useState(true);
     const [numMpns, setNumMpns] = useState(mpnList.length);
     const [initialDataFlag, setInitialDataFlag] = useState(true); // run initial data bom collection first time
-    const [dataProcessingLock, setDataProcessingLock] = useState(true);
+    //const [dataProcessingLock, setDataProcessingLock] = useState(true);
     const [retryMpns, setRetryMpns] = useState([]); 
     const [retryLock, setRetryLock] = useState(false);
     useEffect(() => {
@@ -241,7 +241,7 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
             }));
             if(fin){
                 setInitialDataFlag(false);
-                setDataProcessingLock(false);
+                //setDataProcessingLock(false);
                 const mpnRetrys = findMpnRetrys();
                 setRetryMpns(mpnRetrys);
             }
@@ -267,10 +267,11 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
             }*/
         }
     }, [apiData]);
+    /*
     useEffect(() => {
         if(!dataProcessingLock){
         }
-    }, [dataProcessingLock]);
+    }, [dataProcessingLock]);*/
     useEffect(() => {
         const mpnsEvaled = new Set(
             mpnList.reduce((arr, mpn) => {
@@ -278,21 +279,22 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
                 return arr;
             }, [])
         );
+        setRetryMpns([]);
         setInitialDataFlag(true);
-        setDataProcessingLock(true);
+        //setDataProcessingLock(true);
         if(mpnsEvaled.size > 0){
             setShowProgress(true);
         }
         setMpnsInProgress(mpnsEvaled);
     }, [store, currency]);
     function retrySingle(mpn, api, row){
-        setDataProcessingLock(true);
+        //setDataProcessingLock(true);
         setShowProgress(true);
         setMpnsInProgress(new Set([mpn]));
         function onComplete(newData){
             console.log(newData);
             setMpnsInProgress(new Set());
-            setDataProcessingLock(false);
+            //setDataProcessingLock(false);
             setRetryMpns(findMpnRetrys(newData));
             //setTimeout(() => {setRetryMpns(findMpnRetrys(newData))}, 200); //find better solution for these timeouts
         }
@@ -326,7 +328,7 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
             const newMpnsInProgress = new Set([...retMpns].filter(m => !mpns.has(m)));
             setMpnsInProgress(newMpnsInProgress);
             if(newMpnsInProgress.size === 0){
-                setDataProcessingLock(false);
+                //setDataProcessingLock(false);
                 const retrys = [...apiDataFull.entries()].reduce((arr, [mpn, val]) => {
                     const apis = Object.entries(val.data.apis).reduce((a, [k,v]) => {
                         if(v.retry) a.push(k);
@@ -344,14 +346,14 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
         if(retryMpns.length > 0){
             callApisRetry(retryMpns, onComplete);
             setRetryLock(true);
-            setDataProcessingLock(true);
+            //setDataProcessingLock(true);
             setShowProgress(true);
         }
     }
     function handleHideBar(){
         setShowProgress(false);
     }
-    return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, dataProcessingLock, retrySingle, 
+    return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, /*dataProcessingLock,*/ retrySingle, 
         retryAll, {get:retryLock, set:setRetryLock}];
 }
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency, quantity=null){
