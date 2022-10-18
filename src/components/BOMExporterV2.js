@@ -61,9 +61,9 @@ function BOMExporterV2(props){
             base.forEach((b, i) => {
                 Object.assign(b, asod[i]);
             });
-            return;
+            //return;
         }
-        console.log(base);
+        //console.log(base);
         const sheet = XLSX.utils.json_to_sheet(base, {header: headers});
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, sheet, 'BOMData');
@@ -118,7 +118,7 @@ function BOMExporterV2(props){
             //const bl = bestList[i];
             if(hl){
                 const best = line[hl.api].offers[hl.offer_num];
-                console.log(best);
+                //console.log(best);
                 const apiHeader = apiAccessorToHeader[hl.api];
                 const offerData = apiAttrs.reduce((obj, attr) => {
                     if('longHeader' in attr){
@@ -170,7 +170,7 @@ function BOMExporterV2(props){
                 const offs = octOffs.concat(oOffs);
                 return offs;
             }, []) : [];
-            console.log(octopartSelectedOffers);
+            //console.log(octopartSelectedOffers);
 
             octopartSelectedOffers.forEach((offer, i) => {
                 const offStr = 'Octopart Offer '+(i+1)+' ';
