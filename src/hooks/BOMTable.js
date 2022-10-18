@@ -94,7 +94,6 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     }, [tableHeaders]);
     const [updateTable, setUpdateTable] = useState(0);
     const [lineNumsToEvaluate, setLineNumsToEvaluate] = useState(new Set([...Array(lenBOM).keys()]));
-    //const linesComplete = lenBOM - lineNumsToEvaluate.size;
     useEffect(() => {
         //console.log('up');
         let updateTimeout = null;
