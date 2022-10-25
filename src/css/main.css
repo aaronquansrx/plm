@@ -48,6 +48,12 @@ div.Pointer > label{
     flex-direction: row;
 }
 
+.HoriCenter{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
 .Vert{
     display: flex;
     flex-direction: column;

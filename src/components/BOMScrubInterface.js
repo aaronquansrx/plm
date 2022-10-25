@@ -111,10 +111,10 @@ function Navigation(props){
 }
 
 const scrubHeaders = [
-    'Description', 'RoHS', 'REACH', 'MSL', 'Lead', 
+    'Description', 'RoHS', 'REACH', 'MSL', 'Lead', 'Mounting Type'
 ];
 
-const hiddenHeaders = ['LongDescription'];
+const hiddenHeaders = ['Long Description'];
 
 function TableInterface(props){
     const serverUrl = useServerUrl();
@@ -139,7 +139,7 @@ function TableInterface(props){
         setPageSize(s);
         handlePageChange(0);
     }
-
+    const allHeaders = scrubHeaders.concat(hiddenHeaders);
     useEffect(() => {
         console.log(props.body);
 
@@ -191,11 +191,11 @@ function TableInterface(props){
                 }
                 //signal: controller.signal
             }).then(response => {
+                console.log(response.data);
                 if(typeof response.data !== 'object'){
                     setError('Data Lookup Error (contact IT)');
                 }else{
                     //setError('Success');
-                    console.log(response.data);
                     const details = response.data.details;
                     //setData(details);
                     const newTableData = tableData.map((line,i) => {
@@ -282,9 +282,9 @@ function TableInterface(props){
                             </SimplePopover>
                         </td>
                     );
-                    if(scrubHeaders.includes(header) || header === null){
+                    if(allHeaders.includes(header) || header === null){
                         headerCell = <td key={i} onClick={handleDeleteHeader(i)}>
-                            <SimpleDropdown items={scrubHeaders} 
+                            <SimpleDropdown items={allHeaders} 
                             selected={columnOrder[i] === null ? '-' : columnOrder[i]} onChange={(item) => handleEditAttributeChange(i, item)}/>
                         </td>;
                     }else if(header === mpnHeader){

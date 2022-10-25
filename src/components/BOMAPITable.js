@@ -1050,12 +1050,13 @@ export function SingleAPITable(props){
 
 function APIRow(props){
     const rows = props.data.offers.length;
-    const [showAllOffers, setShowAllOffers] = useState(false);
-    const cellProps = showAllOffers ? {
+    //const showAllOffers = props.showAllOffers;
+    //const [showAllOffers, setShowAllOffers] = useState(false);
+    const cellProps = /*showAllOffers ?*/ {
         rowSpan: rows,
-    } : {};
+    }// : {};
     function changeShowOffers(){
-        setShowAllOffers(!showAllOffers);
+        //setShowAllOffers(!showAllOffers);
     }
     const fns = {
         selectOffer: (rn, api, on)=>console.log(rn+' '+api+' '+on)
@@ -1073,7 +1074,7 @@ function APIRow(props){
             stockMode={props.stockMode}/>
         })}
         </tr>
-        {props.data.offers.length > 1 && showAllOffers && 
+        {props.data.offers.length > 1 /*&& showAllOffers*/ && 
         [...Array(props.data.offers.length-1).keys()].map((i) => {
             const offerNum = i+1;
             return(
@@ -1086,7 +1087,7 @@ function APIRow(props){
             </tr>
             );
         })}
-        {props.data.offers.length > 1 && 
+        {/*props.data.offers.length > 1 && 
             <tr onClick={changeShowOffers}>
                 <td colSpan={numTableCols} className='NoPadding'>
                 <HoverOverlay placement='auto' 
@@ -1095,7 +1096,7 @@ function APIRow(props){
                 </HoverOverlay>
                 </td>
             </tr>
-        }
+        */}
         </>
     );
 }

@@ -19,7 +19,8 @@ function PartDetails(props){
             params: {part: part, save: true}
         }).then(res =>{
             console.log(res.data);
-            if(res.data.success) setDetails(res.data.details);
+            if(res.data.status === 'success') setDetails(res.data.details);
+            console.log(res.data.details);
         })
     }, []);
     return(
