@@ -58,7 +58,8 @@ const apiAttributes = [
     {Header: 'Adj. Q', accessor: 'adjusted_quantity', longHeader: 'Adjusted Quantity'},
     {Header: 'Exc. Q', accessor: 'excess_quantity', longHeader: 'Excess Quantity'},
     {Header: 'Dist. Code', accessor: 'distributor_code', longHeader: 'Distributor Code'},
-    {Header: 'Packaging', accessor: 'packaging'}
+    {Header: 'Packaging', accessor: 'packaging'},
+    {Header: 'Manufacturer', accessor: 'api_manufacturer'}
 ]
 
 function BOMInterface(props){

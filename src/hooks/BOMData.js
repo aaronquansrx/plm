@@ -22,12 +22,13 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             //console.log(store);
             //const controller = new AbortController();
             const apiDataMap = new Map();
-            function apiCallback(mpn, apiData, maxOffers, apis, bests){
+            function apiCallback(mpn, apiData, maxOffers, apis, bests, manufacturers){
                 const now = Date.now();
                 const da = {
                     apis: apiData,
                     bests: bests,
-                    max_offers: maxOffers
+                    max_offers: maxOffers,
+                    found_manufacturers: manufacturers
                 };
                 apiDataMap.set(mpn, {data:da, date: now});
                 updateApiDataMap(apiDataMap);
@@ -112,7 +113,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
     }, [store, currency]);
     function callApiRetry(cmpn, api, rowNum, onComplete){
         const controller = new AbortController();
-        function apiCallbackSingle(mpn, data, maxOffers){
+        function apiCallbackSingle(mpn, data, maxOffers, apis, bests, manufacturers){
             const now = Date.now();
             if(apiData.has(mpn)){
                 const mpnDt = apiData.get(mpn);
@@ -140,7 +141,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
         const apiRetryDataMap = new Map();
         const mpnsComplete = new Set();
         const controller = new AbortController();
-        function apiCallbackMulti(mpn, data, maxOffers, apis){
+        function apiCallbackMulti(mpn, data, maxOffers, apis, bests, manufacturers){
             if(apiData.has(mpn)){
                 const mpnDt = apiData.get(mpn);
                 const mo = Math.max(mpnDt.data.maxOffers, maxOffers);
@@ -168,7 +169,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
     }
     function callMpn(cmpn, onComplete){
         const controller = new AbortController();
-        function apiCallbackSingle(mpn, data, maxOffers){
+        function apiCallbackSingle(mpn, data, maxOffers, apis, bests, manufacturers){
             const now = Date.now();
             const apiDataMap = new Map();
             const da = {
@@ -361,6 +362,7 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
     const params = {part: mpn, api:apiStr, store: store, currency: currency};
     if(quantity !== null) params.quantity = quantity;
     //console.log('calling '+mpn);
+    /*
     axios({
         method: 'GET',
         url: serverUrl+'api/part',
@@ -369,6 +371,7 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
     }).then(response => {
         //console.log(response.data);
         if(typeof response.data !== 'object'){
+            console.log(response.data);
             console.log(mpn); //catch problematic mpns
             errorCallback(mpn);
             axios({
@@ -383,6 +386,27 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
             const formattedApiData = formatApiData(resp.apis);
             const bests = resp.bests;
             callback(mpn, formattedApiData, resp.max_offers, apis, bests);
+        }
+    });
+    */
+
+    //new part call
+    //console.log()
+    const pars = {mpn: mpn, api: apiStr};
+    axios({
+        method: 'GET',
+        url: serverUrl+'api/part',
+        params: pars,
+        signal: controller.signal
+    }).then(response => {
+        console.log(response.data);
+        if(typeof response.data !== 'object'){
+            console.log(response.data);
+            console.log(mpn); //catch problematic mpns
+        }else{
+            const data = response.data;
+            const formattedApiData = formatApiData(data.refined.apis);
+            callback(mpn, formattedApiData, data.refined.max_offers, null);
         }
     });
 }
@@ -411,6 +435,7 @@ function formatApiData(rawApiData){
                 leadtime: offer.leadtime,
                 pricing: offer.pricing,
                 packaging: offer.packaging,
+                api_manufacturer: 'manufacturer' in offer ? offer.manufacturer : null,
                 /*prices: {
                     price: offer.best_price.price_per,
                     pricing: offer.pricing,

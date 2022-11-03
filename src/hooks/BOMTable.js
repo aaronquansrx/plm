@@ -24,6 +24,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         return bom.map((line, i) => {
             line.rowNum = i;
             line.selectedOffers = [];
+            line.manufacturer = {bom: null, found_manufacturers: []};
             line.octopart = {requested: false, data: null};
             line.mpns = {
                 current: line.mpn,
@@ -79,7 +80,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             mpn: 'mpns',
             quantity: 'quantities'
         };
-        const addedHeaders = [{Header: 'Apis', accessor: 'activeApis'}, {Header: 'Octopart', accessor: 'octopart'}];
+        const addedHeaders = [{Header: 'Manufacturer', accessor: 'manufacturers'}, {Header: 'Apis', accessor: 'activeApis'}, {Header: 'Octopart', accessor: 'octopart'}];
         /*if(buildtype !== 'production'){
             addedHeaders.push({Header: 'Octopart', accessor: 'octopart'});
         }*/
@@ -253,6 +254,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                         const best = findBestOffer(newLine);
                         changeBestOffer(newLine, best, algorithmMode);
                         newLine.max_offers = ad.max_offers;
+                        newLine.manufacturer.found_manufacturers = ad.found_manufacturers;
                         newLine.evaluated = true;
                         evaledLines.push(i);
                     }
@@ -323,6 +325,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             const best = findBestOffer(newLine);
             changeBestOffer(newLine, best, algorithmMode);
             newLine.max_offers = dt.max_offers;
+            newLine.manufacturer.found_manufacturers = dt.found_manufacturers;
         }
         if(newApiData !== null){
             doProcess(newApiData);

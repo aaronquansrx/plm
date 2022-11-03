@@ -40,7 +40,8 @@ const renderers = {
     'excess_quantity': (p) => <AdjustedQuantityRenderer {...p}/>,
     'display_total_price': (p) => <DisplayTotalPriceRenderer {...p}/>,
     'octopart': (p) => <OctopartRenderer {...p}/>,
-    'fees': (p) => <FeesRenderer {...p}/>
+    'fees': (p) => <FeesRenderer {...p}/>,
+    'manufacturer': (p) => <ManufacturerRenderer {...p}/>
 };
 
 
@@ -697,6 +698,22 @@ function ExcessPriceRenderer(props){
     );
 }
 
+function ManufacturerRenderer(props){
+    const [manufacturerModal, setManufacturerModal] = useState(false);
+    console.log(props.value.found_manufacturers);
+    return(
+        <>
+        <Button>Manufacturers</Button>
+        </>
+    );
+}
+
+function ApiManufacturerRenderer(props){
+    return(
+        <></>
+    );
+}
+
 function ActiveApisRenderer(props){
     const apisActivator = (
         <Button disabled={props.lock}>Select</Button>
@@ -1102,7 +1119,7 @@ function APIRow(props){
 }
 
 function SinglePricesRenderer(props){
-    console.log(props.value);
+    //console.log(props.value);
     const table = <NewPricingTable pricing={props.value}/>;
     return(
         <SimplePopover popoverBody={table} trigger={['hover', 'focus']} placement='auto'>
