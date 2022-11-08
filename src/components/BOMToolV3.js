@@ -11,7 +11,7 @@ import {
     useTableBOM, useApiRetrys,
     useMpnOptions, useQuantityMultiplierV2
 } from './../hooks/BOMTable';
-import {useApiData, useApiDataProgress} from './../hooks/BOMData';
+import {useApiData, useApiDataProgress, useManufacturers} from './../hooks/BOMData';
 import {useBOMEvaluation, useBOMEvaluationV2} from './../hooks/BOMEvaluation';
 import {useSaveBom} from './../hooks/BOMToolButtons';
 
@@ -63,6 +63,7 @@ function BOMToolV3(props){
         {label: 'Lead Time', id: 'leadtime'}
     ];
     const [algorithmMode, setAlgorithmMode] = useState({best: highlightOptions[0].id, stock: false});
+    const [manufacturers] = useManufacturers(props.bom);
     const [quantityMultiplier, handleChangeMulti] = useQuantityMultiplierV2();
     const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
         props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock, props.octopartData, props.updateOctopartDataMap);
@@ -82,7 +83,8 @@ function BOMToolV3(props){
     const [tableBOM, filteredTableBOM, setTable, tableHeaders, 
         runBOMAlgorithms, runBOMLineAlgorithms, /*retryApis,*/
         changeMPNLine, changeQuantityLine, changeActiveApis, 
-        changeTableActiveApisGlobal, changeWaitingRowApi, tableLock, octopartLineChange] = useTableBOM(
+        changeTableActiveApisGlobal, changeWaitingRowApi, tableLock, octopartLineChange,
+        filterManufacturerOffers] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, 
         updateTableCall, leadtimeCutOff, props.store, props.currency, /*dataProcessingLock,*/ props.changeLock,
@@ -139,6 +141,9 @@ function BOMToolV3(props){
         },
         offer: {
             selectOffer: selectOffer
+        },
+        manufacturer: {
+            filterManufacturers: filterManufacturerOffers
         }
     }
     function selectOctopartOffer(row, api, offerNum, octoRowNum){
@@ -166,7 +171,8 @@ function BOMToolV3(props){
         }))
     }
     function handleTest(){
-        testNewMpns();
+        console.log(manufacturers);
+        //testNewMpns();
         //runBOMAlgorithms();
         //console.log(props.apiData);
         ///runBOMAlgorithms(tableBOM);

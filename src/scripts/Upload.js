@@ -183,9 +183,13 @@ export function autoFindAttributesV2(bom, attributes=[], attributeOrder=null){
         }, -1);
         if(mpnI !== -1){
             //execute autofind
-            const headers = cols.map((attr) => {
-                return attr.header;
-            });
+            const headers = cols.reduce((arr, attr) => {
+                if(attr.header.accessor !== 'manufacturer'){ //remove manu if found
+                    arr.push(attr.header);
+                }
+                return arr;
+                //return attr.header;
+            }, []);
             if(quantityI === -1){
                 headers.push({Header: 'Quantity', accessor: 'quantity'});
             }
@@ -226,7 +230,7 @@ export function parseLoadedBomV1(bom){
         {Header: 'Quantity', accessor: 'quantity'}
     ];
     if(bom.length > 0){
-        if(bom[0].manufacturer) headers.push({Header: 'Manufacturer', accessor: 'manufacturer'});
+        //if(bom[0].manufacturer) headers.push({Header: 'Manufacturer', accessor: 'manufacturer'});
         if(bom[0].ipn) headers.push({Header: 'Internal Part Number', accessor: 'ipn'});
         if(bom[0].cpn) headers.push({Header: 'Customer Part Number', accessor: 'cpn'});
         if(bom[0].description) headers.push({Header: 'Description', accessor: 'description'});

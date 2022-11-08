@@ -5,6 +5,7 @@ import Table from 'react-bootstrap/Table';
 import Button from 'react-bootstrap/Button';
 
 import {useClientUrl} from './../hooks/Urls';
+import {useServerUrl} from './../hooks/Urls';
 
 import {SimplePopover, HoverOverlay} from './Tooltips';
 import {PricingTable} from './Tables';
@@ -16,6 +17,10 @@ import {PageInterface} from './Pagination';
 import {usePaging} from './../hooks/Paging';
 import { MPNDropdown } from './Dropdown';
 
+import {SuggestionSearcher} from './Searcher';
+
+import {ManufacturerRenderer} from './SpecialRenderers';
+
 //import {stockString} from './../scripts/AlgorithmVariable';
 import {getStockModeString} from './../scripts/BomTool'
 
@@ -26,11 +31,12 @@ import lockIcon from './../lock-128.png';
 import './../css/table.css';
 import './../css/offer.css';
 import './../css/main.css';
+import axios from 'axios';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
 const renderers = {
-    'mpn': (p) => <MPNRenderer {...p}/>,
+    //'mpn': (p) => <MPNRenderer {...p}/>,
     'mpns': (p) => <MPNsRenderer {...p}/>,
     'quantities': (p) => <QuantitiesRenderer {...p}/>,
     'prices': (p) => <PricesRenderer {...p}/>,
@@ -41,7 +47,7 @@ const renderers = {
     'display_total_price': (p) => <DisplayTotalPriceRenderer {...p}/>,
     'octopart': (p) => <OctopartRenderer {...p}/>,
     'fees': (p) => <FeesRenderer {...p}/>,
-    'manufacturer': (p) => <ManufacturerRenderer {...p}/>
+    'manu': (p) => <ManufacturerRenderer {...p}/>
 };
 
 
@@ -410,9 +416,15 @@ function BOMOffer(props){
 
 function BOMAttributeRenderer(props){
     //add global clickability here
+    const custom = props.custom ? props.custom({...props}) : <DefaultRenderer {...props}/>;
     return(
         <>
-        {props.custom ? props.custom({...props}) : <DefaultRenderer {...props}/>}
+        {props.type === 'normal' ?
+        <td {...props.cellProps}>
+        {custom}
+        </td>
+        : <>{custom}</>
+        }
         </>
     );
 }
@@ -539,7 +551,7 @@ function MPNRenderer(props){
         window.open(clientUrl+'partdetails/'+mpn, '_blank');
     }
     return(
-        <td className='Select' onClick={handleMPNClick}>{mpn}</td>
+        <>{mpn}</>
     );
 }
 
@@ -588,7 +600,7 @@ function MPNsRenderer(props){
     const showSelector = props.value.options.length > 1;
     const tooltipText = 'Select MPN options | shift-click to edit | ctrl-click for details | alt-click delete current';
     return(
-    <td {...props.cellProps}>
+    <>
         <HoverOverlay tooltip={tooltipText}>
         <div className='Select' onClick={handleMPNClick}>
             {/*showSelector
@@ -602,7 +614,7 @@ function MPNsRenderer(props){
             
         </div>
         </HoverOverlay>
-    </td> 
+    </> 
     );
 }
 
@@ -618,11 +630,11 @@ function QuantitiesRenderer(props){
     //<td {...props.cellProps}>
     //</td>
     return (
-        <td {...props.cellProps}>
+        <>
             <SimplePopover popoverBody={quantPop} trigger={['hover', 'focus']} placement='auto'>
             <div><NumberInput onBlur={handleBlur} value={props.value.single} disabled={props.lock || props.functionLock}/></div>
             </SimplePopover>
-        </td>
+        </>
     );
 }
 
@@ -697,16 +709,66 @@ function ExcessPriceRenderer(props){
         <>{display}</>
     );
 }
-
+/*
 function ManufacturerRenderer(props){
+    console.log(props.value);
+    const serverUrl = useServerUrl();
     const [manufacturerModal, setManufacturerModal] = useState(false);
-    console.log(props.value.found_manufacturers);
+    const [searchResults, setSearchResults] = useState(new Map());
+    const [chosenSuggestion, setChosenSuggestion] = useState(null);
+    const [updater, setUpdater] = useState(0);
+    const suggestionSize = 5;
+    const bd = (
+        <div>
+        <SuggestionSearcher searchTerm={chosenSuggestion ? chosenSuggestion.name : null} 
+        recommends={[...searchResults.keys()]} onSearch={handleSearch} 
+        onClickSuggestion={handleClickSuggestion} size={suggestionSize} updater={updater}/>
+        {chosenSuggestion && 
+        <div>
+            <div>Name: {chosenSuggestion.name}</div>
+            <div>ID: {chosenSuggestion.id}</div>
+        </div>
+        }
+        <
+        </div>
+    );
+    function handleSearch(st){
+        axios({
+            method: 'GET',
+            url: serverUrl+'api/manufacturer',
+            params: {search: st, limit: suggestionSize}
+        }).then((response) => {
+            console.log(response);
+            const data = response.data;
+            const mp = new Map();
+            data.search.forEach((manu) => {
+                mp.set(manu.name, manu.id);
+            })
+            setSearchResults(mp);
+        });
+    }
+    function handleClickSuggestion(suggestion){
+        const cs = {
+            name: suggestion,
+            id: searchResults.get(suggestion)
+        }
+        setSearchResults(new Map());
+        setChosenSuggestion(cs);
+        setUpdater(updater+1);
+    }
+    function handleOpenModal(){
+        setManufacturerModal(true);
+    }
+    function handleCloseModal(){
+        setManufacturerModal(false);
+    }
     return(
         <>
-        <Button>Manufacturers</Button>
+        <Button onClick={handleOpenModal}>Manufacturers</Button>
+        <TemplateModal show={manufacturerModal} title='Manufacturer' body={bd} onClose={handleCloseModal}/>
         </>
     );
-}
+}*/
 
 function ApiManufacturerRenderer(props){
     return(
@@ -755,12 +817,12 @@ function ActiveApisRenderer(props){
         </>
     );
     return (
-        <td {...props.cellProps}>
+        <>
         <Button disabled={props.lock || props.functionLock} onClick={handleOpenModal}>Apis</Button>
         <TemplateModal show={apiModal} title='Select APIs' body={apisCheckboxes} footer={footer} onClose={handleCloseModal}/>
         {/*<ModalController hide={showModal} activateModal={apisActivator} title='Select APIs' 
         body={apisCheckboxes} footer={footer}/>*/}
-        </td>
+        </>
     )
 }
 
@@ -831,7 +893,7 @@ function LeadTimeHeaderRenderer(props){
 
 function DefaultRenderer(props){
     return(
-        <td {...props.cellProps}>{props.value}</td>
+        <>{props.value}</>
     )
 }
 
@@ -871,9 +933,9 @@ function OctopartRenderer(props){
     );
     const footer = <Button variant='secondary' onClick={onClose}>Close</Button>
     return (
-        <td {...props.cellProps}>
+        <>
             <ModalController modalClass='OctopartOffers' hide={showModal} activateModal={activator} title={title} body={body} footer={footer}/>
-        </td>
+        </>
     );
 }
 

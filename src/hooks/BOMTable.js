@@ -24,7 +24,11 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         return bom.map((line, i) => {
             line.rowNum = i;
             line.selectedOffers = [];
-            line.manufacturer = {bom: null, found_manufacturers: []};
+            line.manu = {
+                bom: 'manufacturer' in line ? line.manufacturer : null,
+                linked_manufacturer: null,
+                found_manufacturers: [], manufacturer_filter: null
+            };
             line.octopart = {requested: false, data: null};
             line.mpns = {
                 current: line.mpn,
@@ -76,11 +80,23 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     const [filteredTableBOM, setFilteredTableBOM] = useState(initTableBOM);
     const [oldAlgorithmMode, setOldAlgorithmMode] = useState(algorithmMode);
     const headers = useMemo(() => {
+        const tableAccessorSet = tableHeaders.reduce((st, th) => {
+            st.add(th.accessor);
+            return st;
+        }, new Set());
+        console.log(tableAccessorSet);
         const headerChangeMap = {
             mpn: 'mpns',
             quantity: 'quantities'
         };
-        const addedHeaders = [{Header: 'Manufacturer', accessor: 'manufacturers'}, {Header: 'Apis', accessor: 'activeApis'}, {Header: 'Octopart', accessor: 'octopart'}];
+        const extraHeaders = [{Header: 'Manufacturer', accessor: 'manu'}, {Header: 'Apis', accessor: 'activeApis'}, {Header: 'Octopart', accessor: 'octopart'}];
+        const addedHeaders = extraHeaders.reduce((arr, header) => {
+            if(!tableAccessorSet.has(header.accessor)){
+                arr.push(header);
+            }
+            return arr;
+        }, []);
+        
         /*if(buildtype !== 'production'){
             addedHeaders.push({Header: 'Octopart', accessor: 'octopart'});
         }*/
@@ -246,15 +262,16 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 const mpn = newLine.mpns.current;
                 if(lnte.has(i)){
                     if(apiData.has(mpn)){
-                        console.log(mpn);
+                        //console.log(mpn);
                         const ad = apiData.get(mpn).data;
                         const quantity = newLine.quantities.multi;
                         const ea = evalApisV2(ad, apisList, quantity);
                         Object.assign(newLine, ea);
                         const best = findBestOffer(newLine);
                         changeBestOffer(newLine, best, algorithmMode);
-                        newLine.max_offers = ad.max_offers;
-                        newLine.manufacturer.found_manufacturers = ad.found_manufacturers;
+                        //newLine.max_offers = ad.max_offers;
+                        newLine.manu.found_manufacturers = ad.found_manufacturers;
+                        newLine.manu.manufacturer_filter = new Set([...ad.found_manufacturers]);
                         newLine.evaluated = true;
                         evaledLines.push(i);
                     }
@@ -315,17 +332,20 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         setTableLock(bool);
         appLock(bool);
     }
-    function processBomLine(line, newApiData=null, apis=apisList){
+    function processBomLine(line, newApiData=null, apis=apisList, newManufacturerFilter=null){
         const newLine = {...line};
         const mpn = newLine.mpns.current;
         function doProcess(dt){
             const quantity = newLine.quantities.multi;
-            const ea = evalApisV2(dt, apis, quantity);
+            const manuFilter = newManufacturerFilter !== null ? newManufacturerFilter
+            : new Set([...dt.found_manufacturers]);
+            newLine.manu.manufacturer_filter = manuFilter;
+            const ea = evalApisV2(dt, apis, quantity, manuFilter);
             Object.assign(newLine, ea);
             const best = findBestOffer(newLine);
             changeBestOffer(newLine, best, algorithmMode);
-            newLine.max_offers = dt.max_offers;
-            newLine.manufacturer.found_manufacturers = dt.found_manufacturers;
+            //newLine.max_offers = dt.max_offers;
+            newLine.manu.found_manufacturers = dt.found_manufacturers;
         }
         if(newApiData !== null){
             doProcess(newApiData);
@@ -488,11 +508,18 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             }));
         }
     }
+    function filterManufacturerOffers(row, filter_manufacturers){
+        const tableLine = {...tableBOM[row]};
+        const newLine = processBomLine(tableLine, null, apisList, filter_manufacturers);
+        setTableBOM(update(tableBOM, {
+            [row]: {$set: newLine}
+        }));
+    }
     return [tableBOM, filteredTableBOM, setTableBOM, headers, runBomAlgorithms, 
         runBOMLineAlgorithmsV2, //retryApis, 
         changeMPNLine, changeQuantityLine, changeActiveApis,
         changeActiveApisGlobal, changeWaitingRowApi, tableLock,
-        octopartLineChange
+        octopartLineChange, filterManufacturerOffers
     ];
 }
 
@@ -584,14 +611,14 @@ export function useMpnOptions(tableBOM, apiData, apisList, setTableBOM,
     return [addMpnOption, editMpnOption, deleteMpnOption, changeMpnOption];
 }
 
-
-export function evalApisV2(multiApiData, apisList, quantity){
-    const data = multiApiData.apis
+//manufacturer filter is a set of manufacturers
+export function evalApisV2(multiApiData, apisList, quantity, manufacturerFilter=null){
+    const data = multiApiData.apis;
+    let maxOffers = 0;
     const evaledApis = apisList.reduce((obj, api) => {
-        const offers = evalApiV2(data[api], quantity);
-        //console.log(offers);
+        const offers = evalApiV2(data[api], quantity, manufacturerFilter);
         const order = allSortApiOffers(offers, quantity);
-        //console.log(order);
+        maxOffers = maxOffers < offers.length ? offers.length : maxOffers;
         obj[api] = {
             offers: offers,
             offer_order: order,
@@ -600,16 +627,21 @@ export function evalApisV2(multiApiData, apisList, quantity){
         }
         return obj;
     }, {});
+    evaledApis.max_offers = maxOffers;
     return evaledApis;
 }
 
-function evalApiV2(singleApiData, quantity){
-    const newOffers = singleApiData.offers.map((offer) => {
-        const newOffer = {...offer};
-        const oe = offerEvaluation(newOffer, quantity);
-        Object.assign(newOffer, oe);
-        return newOffer;
-    }); 
+function evalApiV2(singleApiData, quantity, manufacturerFilter=null){
+    const newOffers = singleApiData.offers.reduce((arr, offer) => {
+        //console.log(offer.api_manufacturer);
+        if(manufacturerFilter === null || manufacturerFilter.has(offer.api_manufacturer)){
+            const newOffer = {...offer};
+            const oe = offerEvaluation(newOffer, quantity);
+            Object.assign(newOffer, oe);
+            arr.push(newOffer)
+        }
+        return arr;
+    }, []); 
     return newOffers;
 }
 

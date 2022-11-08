@@ -23,6 +23,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             //const controller = new AbortController();
             const apiDataMap = new Map();
             function apiCallback(mpn, apiData, maxOffers, apis, bests, manufacturers){
+                console.log(manufacturers);
                 const now = Date.now();
                 const da = {
                     apis: apiData,
@@ -357,6 +358,29 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
     return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, /*dataProcessingLock,*/ retrySingle, 
         retryAll, {get:retryLock, set:setRetryLock}];
 }
+
+export function useManufacturers(bom){
+    const serverUrl = useServerUrl();
+    const uniqueManufacturers = useMemo(() => {
+        const manus = bom.reduce((st, line) => {
+            if(line.manufacturer !== null) st.add(line.manufacturer);
+            return st;
+        }, new Set());
+        return manus;
+    }, [bom]);
+    const [manufacturerData, setManufacturerData] = useState(new Map());
+    useEffect(() => {
+        axios({
+            method: 'GET',
+            url: serverUrl+'api/manufacturer',
+            data: {}
+        }).then((response) => {
+            console.log(response.data);
+        });
+    }, [uniqueManufacturers]);
+    return [uniqueManufacturers];
+}
+
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency, quantity=null){
     const apiStr = apis.join(',');
     const params = {part: mpn, api:apiStr, store: store, currency: currency};
@@ -399,14 +423,15 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
         params: pars,
         signal: controller.signal
     }).then(response => {
-        console.log(response.data);
+        //console.log(response.data);
         if(typeof response.data !== 'object'){
             console.log(response.data);
             console.log(mpn); //catch problematic mpns
         }else{
             const data = response.data;
             const formattedApiData = formatApiData(data.refined.apis);
-            callback(mpn, formattedApiData, data.refined.max_offers, null);
+            const manufacturers = data.refined.found_manufacturers;
+            callback(mpn, formattedApiData, data.refined.max_offers, null, null, manufacturers);
         }
     });
 }
