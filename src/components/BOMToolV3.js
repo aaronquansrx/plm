@@ -62,13 +62,21 @@ function BOMToolV3(props){
         {label: 'Price', id: 'price'}, 
         {label: 'Lead Time', id: 'leadtime'}
     ];
+    const filterColours = {
+        start: {show: true, colour: 'grey', display: 'To Start', toggle: false},
+        normal: {show: true, colour: 'white', display: 'Complete', toggle: true},
+        no_offers: {show: true, colour: '#de6c64', display: 'No Offers', toggle: true},
+        retry: {show: true, colour: '#d4d192', display: 'Retry', toggle: true},
+        error: {show: true, colour: '#db986e', display: 'Error', toggle: true}
+    }
+    const [filterStates, setFilterStates] = useState(filterColours); // to use to filter lines based on state
     const [algorithmMode, setAlgorithmMode] = useState({best: highlightOptions[0].id, stock: false});
     const [manufacturers] = useManufacturers(props.bom);
     const [quantityMultiplier, handleChangeMulti] = useQuantityMultiplierV2();
     const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
         props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock, props.octopartData, props.updateOctopartDataMap);
-    const [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns,
-        /*dataProcessingLock,*/ retrySingle, retryAll, retryLock] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
+    const [showProgress, handleHideBar, numMpns, mpnsInProgress,
+         retrySingle, retryAll, retryLock, retryMpns] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
             callApisRetry, props.store, props.currency);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
     function handleLeadtimeCutOff(newLTC){
@@ -84,11 +92,12 @@ function BOMToolV3(props){
         runBOMAlgorithms, runBOMLineAlgorithms, /*retryApis,*/
         changeMPNLine, changeQuantityLine, changeActiveApis, 
         changeTableActiveApisGlobal, changeWaitingRowApi, tableLock, octopartLineChange,
-        filterManufacturerOffers] = useTableBOM(
+        filterManufacturerOffers, mpnQuantityMap] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, 
         updateTableCall, leadtimeCutOff, props.store, props.currency, /*dataProcessingLock,*/ props.changeLock,
-        searchTerm, changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData
+        searchTerm, changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData,
+        filterStates
     );
     const apiAttrs = props.apiAttrs;
     function requestOctopart(row){
@@ -142,7 +151,7 @@ function BOMToolV3(props){
         offer: {
             selectOffer: selectOffer
         },
-        manufacturer: {
+        manu: {
             filterManufacturers: filterManufacturerOffers
         }
     }
@@ -172,6 +181,7 @@ function BOMToolV3(props){
     }
     function handleTest(){
         console.log(manufacturers);
+        console.log(mpnQuantityMap);
         //testNewMpns();
         //runBOMAlgorithms();
         //console.log(props.apiData);
@@ -207,8 +217,21 @@ function BOMToolV3(props){
     }
     const [showSaveModal, toggleSavedBomModal, saveBom] = useSaveBom(tableBOM, props.apiData, allApisList, mpnList, 
         props.user, props.currency, props.store, props.loadData.bom_id);
-    //console.log(tableBOM);
-        return(
+    function handleFilterChange(filterName){
+        setFilterStates(update(filterStates, {
+            [filterName]: {
+                show: {$set: !filterStates[filterName].show}
+            }
+        }));
+    }
+    function retAll(){
+        retryAll();
+    }
+    function retryUntilFinished(){
+        retryAll(true, retryMpns.get.length);
+    }
+    const canRetry = tableLock || retryMpns.get.length === 0;
+    return(
         <>
         <div className='FlexNormal'>
             <div className='Hori'>
@@ -218,6 +241,9 @@ function BOMToolV3(props){
             <NumberInput label={'Leadtime Cut Off'} value={leadtimeCutOff} onBlur={handleLeadtimeCutOff} 
             disabled={tableLock}/>
             <Search search={searchMpns} on/>
+            </div>
+            <div>
+                <FilterStateInterface filterStates={filterStates} filterChange={handleFilterChange}/>
             </div>
             {<BOMExporterV2 data={tableBOM} apis={props.apis} bomAttrs={tableHeaders} 
             apiAttrs={apiAttrs} allApiAttrs={props.allApiAttrs} evaluation={bomEvaluation} algorithm={algorithmMode}/>}
@@ -231,7 +257,8 @@ function BOMToolV3(props){
             {/*<HoverOverlay tooltip={props.user ? 'Save BOM' : 'Requires Login'}>
             <Button onClick={toggleSavedBomModal} disabled={!props.user}>Save BOM</Button>
             </HoverOverlay>*/}
-            <Button onClick={retryAll} disabled={tableLock || retryMpns.length === 0}>Retry {retryMpns.length} MPN(s)</Button>
+            <Button onClick={retAll} disabled={canRetry}>Retry {retryMpns.get.length} MPN(s)</Button>
+            <Button onClick={retryUntilFinished} disabled={canRetry}>Complete Retry</Button>
             </div>
             { buildtype !== 'production' &&
             <div>
@@ -251,7 +278,7 @@ function BOMToolV3(props){
         apis={displayApis} allApis={props.apis} apiAttrs={apiAttrs} functions={functions}
         algorithmMode={algorithmMode}  functionLock={tableLock}
         hasLineLocks onLineLockAll={handleLineLockAll} onLineLock={handleLineLock}
-        tableState={tableState}/>
+        tableState={tableState} filterStates={filterStates}/>
         </>
     );
 }
@@ -322,6 +349,30 @@ function Search(props){
             onChange={handleChangeTerm}
             />
         </Form>
+    )
+}
+
+function FilterStateInterface(props){
+    const shownFilters = Object.entries(props.filterStates).reduce((arr, [name, val]) => {
+        const fsObj = {
+            ...val,
+            name: name
+        }
+        if(val.toggle) arr.push(fsObj);
+        return arr;
+    }, []);
+    function handleChangeFilterState(fsName){
+        return function(){
+            props.filterChange(fsName);
+        }
+    }
+    return(
+        <>
+        {shownFilters.map((fs, i) => {
+            return <LabeledCheckbox key={i} label={fs.display} id={fs.name} className='Pointer'
+            checked={fs.show} onChange={handleChangeFilterState(fs.name)}/>
+        })}
+        </>
     )
 }
 

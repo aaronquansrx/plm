@@ -6,6 +6,7 @@ import axios from 'axios';
 import {useServerUrl} from './../hooks/Urls';
 
 import {algorithmsInitialStructure} from './../scripts/AlgorithmVariable';
+import { set } from 'lodash';
 
 export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiDataMap, 
     store, currency, apiData, bomType, loadData, appLock, octopartData, updateOctopartDataMap){
@@ -22,14 +23,11 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             //console.log(store);
             //const controller = new AbortController();
             const apiDataMap = new Map();
-            function apiCallback(mpn, apiData, maxOffers, apis, bests, manufacturers){
-                console.log(manufacturers);
+            function apiCallback(mpn, apiData, mpnVars, apis){
                 const now = Date.now();
                 const da = {
                     apis: apiData,
-                    bests: bests,
-                    max_offers: maxOffers,
-                    found_manufacturers: manufacturers
+                    ...mpnVars
                 };
                 apiDataMap.set(mpn, {data:da, date: now});
                 updateApiDataMap(apiDataMap);
@@ -42,14 +40,13 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                         offers: [],
                         message: 'Server Error',
                         offer_order: algorithmsInitialStructure(),
-                        retry: false
+                        retry: true
                     }
                     return obj;
                 }, {});
                 const da = {
                     apis: errorApiData,
-                    bests: algorithmsInitialStructure(),
-                    max_offers: 0
+                    ...refinedMpnVars()
                 }
                 apiDataMap.set(mpn, {data: da, date: now});
                 updateApiDataMap(apiDataMap);
@@ -87,25 +84,20 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             //check keys of loaddata
             console.log('load data');
             const ad = loadData.api_data;
-            //const kk = Object.keys(ad);
-            //console.log(kk);
-            //console.log(mpnList);
-            //if(kk.length === mpnList.length){
-                //console.log(loadData);
-                const now = Date.now();
-                const apiDataMap = new Map();
-                for(const mpn in ad){
-                    const da = {
-                        apis: apisList.reduce((obj, api) => {
-                            obj[api] = ad[mpn][api];
-                            return obj;
-                        }, {}),
-                        max_offers: ad[mpn].maxOffers
-                    };
-                    apiDataMap.set(mpn, {data: da, date: now});
-                }
-                updateApiDataMap(apiDataMap);
-            //}
+            const now = Date.now();
+            const apiDataMap = new Map();
+            for(const mpn in ad){
+                const da = {
+                    apis: apisList.reduce((obj, api) => {
+                        obj[api] = ad[mpn][api];
+                        return obj;
+                    }, {}),
+                    max_offers: ad[mpn].maxOffers,
+                    //manufacturers:
+                };
+                apiDataMap.set(mpn, {data: da, date: now});
+            }
+            updateApiDataMap(apiDataMap);
         }
         //setDataProcessing(false);
         return () => {
@@ -114,21 +106,25 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
     }, [store, currency]);
     function callApiRetry(cmpn, api, rowNum, onComplete){
         const controller = new AbortController();
-        function apiCallbackSingle(mpn, data, maxOffers, apis, bests, manufacturers){
+        function apiCallbackSingle(mpn, data, rmv, apis){
             const now = Date.now();
             if(apiData.has(mpn)){
                 const mpnDt = apiData.get(mpn);
-                const mo = Math.max(mpnDt.data.max_offers, maxOffers);
+                const mo = Math.max(mpnDt.data.max_offers, rmv.max_offers);
+                const manus = new Set([...mpnDt.data.found_manufacturers], [...rmv.found_manufacturers]);
+                const status = getRetryStatusString(mpnDt.data, rmv.status, true);
                 const newDa = update(mpnDt.data, {
                     apis: {
                         [api]: {$set: data[api]}
                     },
-                    max_offers: {$set: mo}
+                    max_offers: {$set: mo},
+                    found_manufacturers: {$set: manus},
+                    status: {$set: status}
                 });
                 const nm = new Map();
                 nm.set(mpn, {data:newDa, date: mpnDt.date});
                 const newData = updateApiDataMap(nm);
-                const singData = {apis: {[api]: data[api]}, max_offers: mo};
+                const singData = {apis: {[api]: data[api]}, max_offers: mo, found_manufacturers: [...manus], status: status};
                 //console.log(singData);
                 setSingleRetryData({data: singData, api: api, row: rowNum});
                 onComplete(newData);
@@ -142,20 +138,22 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
         const apiRetryDataMap = new Map();
         const mpnsComplete = new Set();
         const controller = new AbortController();
-        function apiCallbackMulti(mpn, data, maxOffers, apis, bests, manufacturers){
+        function apiCallbackMulti(mpn, data, rmv, apis){
             if(apiData.has(mpn)){
                 const mpnDt = apiData.get(mpn);
-                const mo = Math.max(mpnDt.data.maxOffers, maxOffers);
+                const mo = Math.max(mpnDt.data.max_offers, rmv.max_offers);
+                const manus = new Set([...mpnDt.data.found_manufacturers], [...rmv.found_manufacturers]);
                 const apisUpdate = apis.reduce((obj, api) => {
                     obj[api] = {$set: data[api]};
                     return obj;
                 }, {});
-                //console.log(apisUpdate);
+                const status = getRetryStatusString(mpnDt.data, rmv.status, true);
                 const newDa = update(mpnDt.data, {
                     apis: apisUpdate,
-                    max_offers: {$set: mo}
+                    max_offers: {$set: mo},
+                    found_manufacturers: {$set: [...manus]},
+                    status: {$set: status}
                 });
-                //const nm = new Map();
                 apiRetryDataMap.set(mpn, {data:newDa, date: mpnDt.date});
                 updateApiDataMap(apiRetryDataMap);
                 mpnsComplete.add(mpn);
@@ -168,14 +166,30 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             callApi(mr.mpn, serverUrl, controller, mr.apis, apiCallbackMulti, () => {onComplete(mr.mpn)}, store, currency);
         })
     }
+    //api param used for single to check for other retries
+    function getRetryStatusString(dt, newStatus, api=false){
+        if(newStatus === 'no_offers' && dt.status === 'complete'){
+            return 'complete'
+        }
+        if(api){
+            const rets = Object.entries(dt.apis).reduce((arr, [api, v]) => {
+                if(v.retry) arr.push(v);
+                return arr;
+            }, []);
+            if(rets.length > 1){
+                return 'retry';
+            }
+        }
+        return newStatus;
+    }
     function callMpn(cmpn, onComplete){
         const controller = new AbortController();
-        function apiCallbackSingle(mpn, data, maxOffers, apis, bests, manufacturers){
+        function apiCallbackSingle(mpn, data, rmv, apis){
             const now = Date.now();
             const apiDataMap = new Map();
             const da = {
                 apis: data,
-                max_offers: maxOffers
+                ...rmv
             };
             apiDataMap.set(mpn, {data:da, date: now});
             const newData = updateApiDataMap(apiDataMap);
@@ -228,6 +242,8 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
     //const [dataProcessingLock, setDataProcessingLock] = useState(true);
     const [retryMpns, setRetryMpns] = useState([]); 
     const [retryLock, setRetryLock] = useState(false);
+    const [testRetryMpns, setTestRetryMpns] = useState(new Set());
+    const [retryAgain, setRetryAgain] = useState(false);
     useEffect(() => {
         if(initialDataFlag){
             const remMpns = [...mpnsInProgress].reduce((arr, mpn) => {
@@ -268,6 +284,7 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
                 setRetryMpns(mpnRetrys);
             }*/
         }
+        //test
     }, [apiData]);
     /*
     useEffect(() => {
@@ -289,6 +306,12 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
         }
         setMpnsInProgress(mpnsEvaled);
     }, [store, currency]);
+    useEffect(() => {
+        if(retryAgain && !retryLock){
+            retryAll();
+            setRetryAgain(false);
+        }
+    }, [retryAgain, retryLock]);
     function retrySingle(mpn, api, row){
         //setDataProcessingLock(true);
         setShowProgress(true);
@@ -302,16 +325,17 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
         }
         callApiRetry(mpn, api, row, onComplete);
     }
-    //function 
     function findMpnRetrys(apDt=null){
         const ad = apDt !== null ? apDt : apiData;
         return mpnList.reduce((arr, mpn) => {
             if(ad.has(mpn)){
+                const data = ad.get(mpn).data;
                 const mpnApisData = ad.get(mpn).data.apis;
                 const retryApis = apisList.reduce((arrApi, api)=> {
                     if(mpnApisData[api].retry) arrApi.push(api);
                     return arrApi;
                 }, []);
+                //const quantity = data.
                 if(retryApis.length > 0){
                     arr.push({mpn: mpn, apis: retryApis});
                 }
@@ -319,14 +343,15 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
             }
         }, []);
     }
-    function retryAll(){
+    function retryAll(ra=false, n=null, newRetrys=null){
         console.log('start retry');
         setNumMpns(retryMpns.length);
-        const retMpns = new Set(retryMpns.map((ret) => ret.mpn));
+        const retMpns = newRetrys !== null ? new Set(newRetrys.map((ret) => ret.mpn)) : new Set(retryMpns.map((ret) => ret.mpn));
         console.log(retMpns);
         setMpnsInProgress(retMpns);
         //const mpnProgress = retMpns;
         function onComplete(mpn, mpns, apiDataFull){
+            console.log(apiDataFull);
             const newMpnsInProgress = new Set([...retMpns].filter(m => !mpns.has(m)));
             setMpnsInProgress(newMpnsInProgress);
             if(newMpnsInProgress.size === 0){
@@ -343,6 +368,11 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
                 }, []);
                 console.log(retrys);
                 setRetryMpns(retrys);
+                if(ra && retrys.length < n && retrys.length > 0){
+                    console.log('ret again');
+                    //setTimeout(() => {retryAll(ra, retrys.length, retrys)}, 1200); // use delay
+                    setRetryAgain(ra);
+                }
             }
         }
         if(retryMpns.length > 0){
@@ -355,8 +385,8 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
     function handleHideBar(){
         setShowProgress(false);
     }
-    return [showProgress, handleHideBar, numMpns, mpnsInProgress, retryMpns, /*dataProcessingLock,*/ retrySingle, 
-        retryAll, {get:retryLock, set:setRetryLock}];
+    return [showProgress, handleHideBar, numMpns, mpnsInProgress, retrySingle, 
+        retryAll, {get:retryLock, set:setRetryLock}, {get:retryMpns, set:setRetryMpns}];
 }
 
 export function useManufacturers(bom){
@@ -408,14 +438,15 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
             //console.log(mpn);
             const resp = response.data;
             const formattedApiData = formatApiData(resp.apis);
+            const mpnVars = {
+                bests: resp.bests,
+                max_offers: resp.max_offers
+            }
             const bests = resp.bests;
-            callback(mpn, formattedApiData, resp.max_offers, apis, bests);
+            callback(mpn, formattedApiData, mpnVars, apis);
         }
     });
     */
-
-    //new part call
-    //console.log()
     const pars = {mpn: mpn, api: apiStr};
     axios({
         method: 'GET',
@@ -426,12 +457,23 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
         //console.log(response.data);
         if(typeof response.data !== 'object'){
             console.log(response.data);
+
             console.log(mpn); //catch problematic mpns
+            errorCallback(mpn);
+            axios({
+                method: 'POST',
+                url: serverUrl+'api/errorreport',
+                data: {report: response.data, mpn: mpn}
+            }).then(res => {
+                console.log(res);
+            });
         }else{
+            console.log(response.data);
             const data = response.data;
             const formattedApiData = formatApiData(data.refined.apis);
-            const manufacturers = data.refined.found_manufacturers;
-            callback(mpn, formattedApiData, data.refined.max_offers, null, null, manufacturers);
+            //const manufacturers = data.refined.found_manufacturers;
+            const rmv = refinedMpnVars(data.refined);
+            callback(mpn, formattedApiData, rmv, apis);
         }
     });
 }
@@ -488,4 +530,20 @@ function formatApiData(rawApiData){
         return obj;
     }, {});
     return formattedData;
+}
+
+function refinedMpnVars(data=null){
+    if(data===null){
+        return {
+            //bests: algorithmsInitialStructure(),
+            max_offers: 0,
+            found_manufacturers: [],
+            status: 'error'
+        }
+    }
+    return {
+        found_manufacturers: data.found_manufacturers,
+        max_offers: data.max_offers,
+        status: data.status,
+    }
 }

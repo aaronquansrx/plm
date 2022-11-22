@@ -9,7 +9,11 @@ export function usePaging(dataLength, pageSize){
     useEffect(() => {
         //console.log(numPages);
         if(pageNumber > numPages){
-            setPageNumber(numPages-1);
+            if(numPages == 0){
+                setPageNumber(0);
+            }else{
+                setPageNumber(numPages-1);
+            }
         }
     }, [dataLength]);
     return [pageNumber, numPages, handleChangePageNumber];

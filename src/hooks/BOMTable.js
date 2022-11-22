@@ -17,7 +17,7 @@ const buildtype = process.env.NODE_ENV;
 
 export function useTableBOM(bom, tableHeaders, apis, apiData, 
     testCall, ltco, store, currency, /*dataProcessingLock,*/ appLock, searchMpn, 
-    changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData){
+    changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData, filterStates){
     const serverUrl = useServerUrl();
     const lenBOM = bom.length;
     const initTableBOM = useMemo(() => {
@@ -46,6 +46,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                     active: true
                 }
             });
+            line.status = 'normal';
             /*
             line.highlights = {
                 price: null,
@@ -79,6 +80,13 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     const [tableBOM, setTableBOM] = useState(initTableBOM);
     const [filteredTableBOM, setFilteredTableBOM] = useState(initTableBOM);
     const [oldAlgorithmMode, setOldAlgorithmMode] = useState(algorithmMode);
+    const [mpnQuantityMap, setMpnQuantityMap] = useState(new Map(bom.reduce((arr, line) => {
+        const mpnQuantities = line.mpnOptions.map((mpn) => {
+            return [mpn, line.quantity];
+        })
+        return arr.concat(mpnQuantities);
+    }, [])
+    ));
     const headers = useMemo(() => {
         const tableAccessorSet = tableHeaders.reduce((st, th) => {
             st.add(th.accessor);
@@ -137,13 +145,35 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         }
     }, [updateTable]);
     useEffect(() => {
+        const filterStrings = new Set([...Object.entries(filterStates).reduce((arr, [k, v]) => {
+            if(v.show) arr.push(k);
+            return arr;
+        }, [])]);
+        const filtered = searchMpn !== '' 
+        ? tableBOM.reduce((arr, line) => {
+            const loweredSearchTerm = searchMpn.toLowerCase();
+            if(filterStrings.has(line.status) 
+            && line.mpns.current.toLowerCase().includes(loweredSearchTerm)){
+                arr.push(line);
+            }
+            return arr;
+        }, [])
+        : tableBOM.reduce((arr, line) => {
+            if(filterStrings.has(line.status)){
+                arr.push(line);
+            }
+            return arr;
+        }, []);
+        /*
         if(searchMpn !== ''){
-            searchMpnTableFilter(searchMpn);
+            //searchMpnTableFilter(searchMpn);
+            //tableFilter(filterStates, searchMpn);
         }else{
-            setFilteredTableBOM(tableBOM);
-        }
-
-    }, [tableBOM, searchMpn]);
+            //setFilteredTableBOM(tableBOM);
+            //tableFilter(filterStates);
+        }*/
+        setFilteredTableBOM(filtered);
+    }, [tableBOM, searchMpn, filterStates]);
     useEffect(() => {
         let updateTimeout = null;
         if(store !== currencyStore.store || currency !== currencyStore.currency){
@@ -189,8 +219,8 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         if(retryLock.get){
             console.log('retlock');
             const retryLines = new Set();
-            const retryMpnSet = new Set(retryMpns.map((ret) => ret.mpn));
-            const mpnToApis = retryMpns.reduce((obj, retMpn) => {
+            const retryMpnSet = new Set(retryMpns.get.map((ret) => ret.mpn));
+            const mpnToApis = retryMpns.get.reduce((obj, retMpn) => {
                 obj[retMpn.mpn] = retMpn.apis;
                 return obj;
             }, {})
@@ -211,10 +241,8 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         }
     }, [retryLock.get]);
     useEffect(() => {
-        console.log(algorithmMode);
         if(oldAlgorithmMode.best !== algorithmMode.best ||
         oldAlgorithmMode.stock !== algorithmMode.stock){
-            console.log(algorithmMode);
             const newTable = tableBOM.map((line) => {
                 const newLine = {...line};
                 const mpn = newLine.mpns.current;
@@ -251,8 +279,22 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             });
             setTableBOM(newTable);
             runBomAlgorithms(newTable);
+            setMpnQuantityMap(mpnQuantityMatch(newTable));
         }//
     }, [quantityMultiplier]);
+    function endBomTableDataProcess(){
+
+    }
+    function mpnQuantityMatch(table=null){
+        const tb = table !== null ? table : tableBOM;
+        const mp = new Map();
+        tb.forEach((line) => {
+            line.mpns.options.forEach((mpn) => {
+                mp.set(mpn, line.quantities.multi);
+            });
+        });
+        return mp;
+    }
     function newBomProcess(lnte, runImmediate=true){
         let timeout = null;
         if(runImmediate){
@@ -295,7 +337,6 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         }
         if(lnte.size > 0){
             timeout = setTimeout(() => setUpdateTable(updateTable+1), 1000);
-            //console.log('update');
         }
         return timeout;
     }
@@ -322,6 +363,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         
         if(newLineNumsEval.size === 0){
             runBomAlgorithms(newTable);
+            console.log('retry all fin');
             retryLock.set(false)
             changeLocks(false);
         }else{
@@ -332,23 +374,25 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         setTableLock(bool);
         appLock(bool);
     }
-    function processBomLine(line, newApiData=null, apis=apisList, newManufacturerFilter=null){
+    function processBomLine(line, mpnApiData=null, apis=apisList, newManufacturerFilter=null){
         const newLine = {...line};
         const mpn = newLine.mpns.current;
         function doProcess(dt){
             const quantity = newLine.quantities.multi;
             const manuFilter = newManufacturerFilter !== null ? newManufacturerFilter
-            : new Set([...dt.found_manufacturers]);
+            : dt.found_manufacturers === null ? new Set() : new Set([...dt.found_manufacturers]);
             newLine.manu.manufacturer_filter = manuFilter;
-            const ea = evalApisV2(dt, apis, quantity, manuFilter);
+            const ea = evalApisV2(dt, apis, quantity, newManufacturerFilter);
             Object.assign(newLine, ea);
             const best = findBestOffer(newLine);
             changeBestOffer(newLine, best, algorithmMode);
             //newLine.max_offers = dt.max_offers;
             newLine.manu.found_manufacturers = dt.found_manufacturers;
+            //newLine.status = dt.status;
         }
-        if(newApiData !== null){
-            doProcess(newApiData);
+        
+        if(mpnApiData !== null){
+            doProcess(mpnApiData);
         }else if(apiData.has(mpn)){
             const ad = apiData.get(mpn).data;
             doProcess(ad);
@@ -378,14 +422,22 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     }
     function changeQuantityLine(quantity, row){
         const line = tableBOM[row];
+        const newQuantity = quantity*quantityMultiplier;
         line.quantities.single = quantity;
-        line.quantities.multi = quantity*quantityMultiplier;
+        line.quantities.multi = newQuantity;
         const newLine = processBomLine(line);
         const newBOM = update(tableBOM, {
             [row]: {$set: newLine}
         });
         setTableBOM(newBOM);
         runBomAlgorithms(newBOM);
+        const mpnQUpdates = line.mpns.options.map((mpn) => {
+            return [mpn, newQuantity];
+        });
+        const mpnQM = update(mpnQuantityMap, {
+            $add: mpnQUpdates
+        });
+        setMpnQuantityMap(mpnQM);
     }
     function changeActiveApis(apis, row){
         const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
@@ -519,7 +571,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         runBOMLineAlgorithmsV2, //retryApis, 
         changeMPNLine, changeQuantityLine, changeActiveApis,
         changeActiveApisGlobal, changeWaitingRowApi, tableLock,
-        octopartLineChange, filterManufacturerOffers
+        octopartLineChange, filterManufacturerOffers, mpnQuantityMap
     ];
 }
 
@@ -628,10 +680,12 @@ export function evalApisV2(multiApiData, apisList, quantity, manufacturerFilter=
         return obj;
     }, {});
     evaledApis.max_offers = maxOffers;
+    evaledApis.status = multiApiData.status;
     return evaledApis;
 }
 
 function evalApiV2(singleApiData, quantity, manufacturerFilter=null){
+    //console.log(singleApiData);
     const newOffers = singleApiData.offers.reduce((arr, offer) => {
         //console.log(offer.api_manufacturer);
         if(manufacturerFilter === null || manufacturerFilter.has(offer.api_manufacturer)){

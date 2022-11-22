@@ -54,6 +54,7 @@ export function ManufacturerRenderer(props){
         if(chosenManufacturers !== null){
             //run function 
             //parameters: row, manufacturer set
+            console.log(props.functions);
             props.functions.filterManufacturers(props.rowNum, chosenManufacturers);
         }
     }

@@ -164,12 +164,11 @@ export function BOMAPITableV2(props){
     });
     const extendedApiAttrs = apiAttrs.concat([
         {Header: 'Distributor', accessor: 'distributor'}, 
-        {Header: 'Total Price', accessor: 'totalPrice'}
+        //{Header: 'Total Price', accessor: 'totalPrice'}
     ]);
-    const extApiAttrs = extendedApiAttrs.map(smartAttr('best', props.functions, {}, renderers));
+    const extApiAttrs = extendedApiAttrs.map(smartAttr('normal', props.functions, {}, renderers));
     const bestAttributeOrder = normalAttributes.concat(extApiAttrs);
     //const headerOrder = [];
-
     const [pageSize, setPageSize] = useState(5);
     const [pageNumber, numPages, handlePageChange] = usePaging(props.data.length, pageSize);
     const displayWidth = 3;
@@ -196,7 +195,7 @@ export function BOMAPITableV2(props){
                     data={line} hasLineLocks={props.hasLineLocks} mpn={line.mpns.current}
                     attributeOrder={attributeOrder} functionLock={props.functionLock} offerFunctions={props.functions.offer}
                     onLineLock={props.onLineLock} bestAttributeOrder={bestAttributeOrder}
-                    tableState={tbs} apisToHeader={apisToHeader} apis={apis} allApis={allApis}/>
+                    tableState={tbs} apisToHeader={apisToHeader} apis={apis} allApis={allApis} filterStates={props.filterStates}/>
                 )}
             </tbody>
         </Table>
@@ -245,7 +244,7 @@ function BOMAPITableHeader(props){
     const apiAttributes = props.apis.map(smartAttr('api', props.functions, vars, headerRenderers));
     const extendedApiAttrs = props.apiAttrs.concat([
         {Header: 'Distributor', accessor: 'distributor'}, 
-        {Header: 'Total Price', accessor: 'total_price'}
+        //{Header: 'Total Price', accessor: 'total_price'}
     ]);
     const bestAttrs = extendedApiAttrs.map(smartAttr('subattr', props.functions, vars, headerRenderers));
     const normHeaderProps = {
@@ -300,12 +299,17 @@ const HoverToggleSolidColour = styled.div`
 
 function BOMRow(props){
     const [showAllOffers, setShowAllOffers] = useState(false);
+    const rowColour = props.filterStates[props.data.status].colour;
     function changeShowOffers(){
         setShowAllOffers(!showAllOffers);
     }
     const maxOffers = getMaxOffers();
     //console.log(maxOffers);
-    const firstRowCellProps = showAllOffers && maxOffers > 0 && props.tableState ? {rowSpan: maxOffers} : {rowSpan: 1};
+    const rs = showAllOffers && maxOffers > 0 && props.tableState ? maxOffers : 1;
+    const firstRowCellProps = {
+        rowSpan: rs,
+        style: {background: rowColour}
+    }
     const numTableCols = props.attributeOrder.reduce((c, attr) => {
         if(attr.type == 'api'){
             return c+attr.subAttributes.length;
@@ -326,14 +330,13 @@ function BOMRow(props){
     const lockTTip = props.data.lineLock ? 'Unlock Line' : 'Lock Line';
     const attributeOrder = props.tableState ? props.attributeOrder : props.functionLock ? props.attributeOrder : props.bestAttributeOrder;
     const stockMode = getStockModeString(props.algorithmMode.stock);
-    const hl = props.data.highlights[stockMode][props.algorithmMode.best];
-    const bestOffer = hl ? props.data[hl.api].offers[hl.offerNum] : null;
+    const hl = 'best' in props.data ? props.data.best[stockMode][props.algorithmMode.best] : null;
+    const bestOffer = hl ? props.data[hl.api].offers[hl.offer_num] : null;
     const data = props.tableState ? props.data : {
         ...props.data,
         ...bestOffer,
         distributor: hl ? props.apisToHeader[hl.api] : ''
     };
-    //console.log(props.bestAttributeOrder);
     return(
         <>
         <tr>
@@ -345,7 +348,7 @@ function BOMRow(props){
                 </td>
             }
             {
-            <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={attributeOrder} 
+            <BOMOffer offerNum={0} rowNum={props.rowNum} attributeOrder={attributeOrder} tableState={props.tableState}
             data={data} cellProps={firstRowCellProps} algorithmMode={props.algorithmMode} 
             lock={props.data.lineLock} functionLock={props.functionLock} mpn={props.mpn} offerFunctions={props.offerFunctions}/>
             }
@@ -667,11 +670,11 @@ function FeesRenderer(props){
     );
     return (
         <>
-        {Object.keys(props.value.fees).length > 0 ? 
+        {props.value && Object.keys(props.value.fees).length > 0 ? 
         <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
             <div>{props.value.total}</div>
         </SimplePopover> 
-        : <div>{props.value.total}</div>
+        : <div>{props.value && props.value.total}</div>
         }
         </>
     )
@@ -680,7 +683,7 @@ function FeesRenderer(props){
 function DisplayTotalPriceRenderer(props){
     const pt = (
         <div>
-            {props.value[props.stockMode].prices.map((p, i) => {
+            {props.value && props.value[props.stockMode].prices.map((p, i) => {
                 return <div key={i}>{p.name}: {p.value}</div>
             })}
         </div>
@@ -688,7 +691,7 @@ function DisplayTotalPriceRenderer(props){
     return (
     <>
     <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
-        <div>{priceDisplay(props.value[props.stockMode].total)}</div>
+        <div>{props.value && priceDisplay(props.value[props.stockMode].total)}</div>
     </SimplePopover> 
     </>
     );
