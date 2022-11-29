@@ -9,7 +9,7 @@ import {algorithmsInitialStructure} from './../scripts/AlgorithmVariable';
 import { set } from 'lodash';
 
 export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiDataMap, 
-    store, currency, apiData, bomType, loadData, appLock, octopartData, updateOctopartDataMap){
+    store, currency, apiData, bomType, loadData, appLock, octopartData, updateOctopartDataMap, mpnQuantityMap){
     //const [dataProcessing, setDataProcessing] = useState([]);
     const serverUrl = useServerUrl();
     const expireTime = 1000000;
@@ -53,20 +53,22 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             }
             const dt = Date.now();
 
-            //mpns with no quantity
-            /*
+            //mpns with no quantity, attach quantity from map
+            
             mpnList.forEach(mpn => {
+                const quantity = mpnQuantityMap.get(mpn);
                 if(apiData.has(mpn)){
                     if(dt > apiData.get(mpn).date + expireTime){
                         //console.log('recall');
-                        callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency);
+                        callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency, quantity);
                     }
                 }else{
-                    callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency);
+                    callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency, quantity);
                 }
             });
-            */
+            
             //mpns with quantity
+            /*
             mpnListWithQuantity.forEach((mq) => {
                 const mpn = mq.mpn;
                 const quantity = mq.quantity;
@@ -78,6 +80,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                     callApi(mpn, serverUrl, controller, apisList, apiCallback, errorCallback, store, currency, quantity);
                 }
             });
+            */
             //callParts(mpnList, serverUrl, controller, apisList, null, null, store, currency);
             //not better with high amounts of external api calls
         }else{
@@ -131,7 +134,8 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             }
 
         }
-        callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, () => {}, store, currency);
+        const quantity = mpnQuantityMap.get(cmpn);
+        callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, () => {}, store, currency, quantity);
     }
     function callApisRetry(mpnRetrys, onComplete=null){
         setMultiRetryData(new Map());
@@ -162,8 +166,8 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             }
         }
         mpnRetrys.forEach((mr) => {
-            //console.log(mr.mpn);
-            callApi(mr.mpn, serverUrl, controller, mr.apis, apiCallbackMulti, () => {onComplete(mr.mpn)}, store, currency);
+            const quantity = mpnQuantityMap.get(mr.mpn);
+            callApi(mr.mpn, serverUrl, controller, mr.apis, apiCallbackMulti, () => {onComplete(mr.mpn)}, store, currency, quantity);
         })
     }
     //api param used for single to check for other retries
@@ -400,15 +404,17 @@ export function useManufacturers(bom){
     }, [bom]);
     const [manufacturerData, setManufacturerData] = useState(new Map());
     useEffect(() => {
+        console.log(uniqueManufacturers);
         axios({
-            method: 'GET',
+            method: 'POST',
             url: serverUrl+'api/manufacturer',
-            data: {}
+            data: {manufacturers: [...uniqueManufacturers], strings: true}
         }).then((response) => {
             console.log(response.data);
+            //Object.entries(response.data).
         });
     }, [uniqueManufacturers]);
-    return [uniqueManufacturers];
+    return [uniqueManufacturers, {get: manufacturerData, set: setManufacturerData}];
 }
 
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency, quantity=null){

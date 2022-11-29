@@ -17,7 +17,8 @@ const buildtype = process.env.NODE_ENV;
 
 export function useTableBOM(bom, tableHeaders, apis, apiData, 
     testCall, ltco, store, currency, /*dataProcessingLock,*/ appLock, searchMpn, 
-    changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData, filterStates){
+    changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData, filterStates,
+    mqm){
     const serverUrl = useServerUrl();
     const lenBOM = bom.length;
     const initTableBOM = useMemo(() => {
@@ -80,13 +81,14 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     const [tableBOM, setTableBOM] = useState(initTableBOM);
     const [filteredTableBOM, setFilteredTableBOM] = useState(initTableBOM);
     const [oldAlgorithmMode, setOldAlgorithmMode] = useState(algorithmMode);
+    /*
     const [mpnQuantityMap, setMpnQuantityMap] = useState(new Map(bom.reduce((arr, line) => {
         const mpnQuantities = line.mpnOptions.map((mpn) => {
             return [mpn, line.quantity];
         })
         return arr.concat(mpnQuantities);
     }, [])
-    ));
+    ));*/
     const headers = useMemo(() => {
         const tableAccessorSet = tableHeaders.reduce((st, th) => {
             st.add(th.accessor);
@@ -279,7 +281,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             });
             setTableBOM(newTable);
             runBomAlgorithms(newTable);
-            setMpnQuantityMap(mpnQuantityMatch(newTable));
+            mqm.set(mpnQuantityMatch(newTable));
         }//
     }, [quantityMultiplier]);
     function endBomTableDataProcess(){
@@ -421,9 +423,10 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         }
     }
     function changeQuantityLine(quantity, row){
+        const q = parseInt(quantity);
         const line = tableBOM[row];
-        const newQuantity = quantity*quantityMultiplier;
-        line.quantities.single = quantity;
+        const newQuantity = q*quantityMultiplier;
+        line.quantities.single = q;
         line.quantities.multi = newQuantity;
         const newLine = processBomLine(line);
         const newBOM = update(tableBOM, {
@@ -434,10 +437,10 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         const mpnQUpdates = line.mpns.options.map((mpn) => {
             return [mpn, newQuantity];
         });
-        const mpnQM = update(mpnQuantityMap, {
+        const mpnQM = update(mqm.get, {
             $add: mpnQUpdates
         });
-        setMpnQuantityMap(mpnQM);
+        mqm.set(mpnQM);
     }
     function changeActiveApis(apis, row){
         const newActiveApis = [...tableBOM[row].activeApis].map((actApi) => {
@@ -571,7 +574,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         runBOMLineAlgorithmsV2, //retryApis, 
         changeMPNLine, changeQuantityLine, changeActiveApis,
         changeActiveApisGlobal, changeWaitingRowApi, tableLock,
-        octopartLineChange, filterManufacturerOffers, mpnQuantityMap
+        octopartLineChange, filterManufacturerOffers
     ];
 }
 

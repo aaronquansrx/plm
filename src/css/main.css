@@ -123,3 +123,15 @@ td.MpnHeader{
 .MPNRequest input{
     width: auto;
 }
+
+.SelectedManufacturer{
+    background-color: #94baf1;
+}
+
+.ManufacturerItem{
+    cursor: pointer;
+}
+
+.ManufacturerItem:active{
+    background-color: #94baf1;
+}

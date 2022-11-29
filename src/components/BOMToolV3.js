@@ -54,7 +54,8 @@ function BOMToolV3(props){
         //console.log(line);
         line.mpnOptions.forEach(mpn => arr.push({mpn: mpn, quantity: line.quantity}));
         return arr;
-    }, []), [props.bom])
+    }, []), [props.bom]);
+    const [mpnQuantityMap, setMpnQuantityMap] = useState(getInitMpnQuantityMap());
     const isLoadedBom = props.bomType === 'saved' || props.bomType === 'saved_nodata';
     const [updateTableCall, setUpdateTableCall] = useState(0);
 
@@ -74,7 +75,8 @@ function BOMToolV3(props){
     const [manufacturers] = useManufacturers(props.bom);
     const [quantityMultiplier, handleChangeMulti] = useQuantityMultiplierV2();
     const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
-        props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock, props.octopartData, props.updateOctopartDataMap);
+        props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock, props.octopartData, props.updateOctopartDataMap, 
+        mpnQuantityMap);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress,
          retrySingle, retryAll, retryLock, retryMpns] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
             callApisRetry, props.store, props.currency);
@@ -92,14 +94,27 @@ function BOMToolV3(props){
         runBOMAlgorithms, runBOMLineAlgorithms, /*retryApis,*/
         changeMPNLine, changeQuantityLine, changeActiveApis, 
         changeTableActiveApisGlobal, changeWaitingRowApi, tableLock, octopartLineChange,
-        filterManufacturerOffers, mpnQuantityMap] = useTableBOM(
+        filterManufacturerOffers] = useTableBOM(
         props.bom, props.tableHeaders, 
         props.apis, props.apiData, 
         updateTableCall, leadtimeCutOff, props.store, props.currency, /*dataProcessingLock,*/ props.changeLock,
         searchTerm, changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData,
-        filterStates
+        filterStates, {get: mpnQuantityMap, set: setMpnQuantityMap}
     );
     const apiAttrs = props.apiAttrs;
+    useEffect(() => {
+        setMpnQuantityMap(getInitMpnQuantityMap());
+    }, [props.bom]);
+    function getInitMpnQuantityMap(){
+        const mql = props.bom.reduce((arr, line) => {
+            //console.log(line);
+            line.mpnOptions.forEach(mpn => arr.push([mpn, line.quantity]));
+            return arr;
+        }, []);
+        //const mqs = new Set(mql);
+        const mqm = new Map(mql);
+        return mqm;
+    }
     function requestOctopart(row){
         const mpn = tableBOM[row].mpns.current;
         if(!props.octopartData.has(mpn)){
