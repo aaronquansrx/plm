@@ -393,7 +393,7 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
         retryAll, {get:retryLock, set:setRetryLock}, {get:retryMpns, set:setRetryMpns}];
 }
 
-export function useManufacturers(bom){
+export function useManufacturers(bom, manufacturerData, stringToManufacturer){
     const serverUrl = useServerUrl();
     const uniqueManufacturers = useMemo(() => {
         const manus = bom.reduce((st, line) => {
@@ -402,7 +402,8 @@ export function useManufacturers(bom){
         }, new Set());
         return manus;
     }, [bom]);
-    const [manufacturerData, setManufacturerData] = useState(new Map());
+    //const [manufacturerData, setManufacturerData] = useState(new Map());
+    //const [stringToManufacturer, setStringToManufacturer] = useState({});
     useEffect(() => {
         console.log(uniqueManufacturers);
         axios({
@@ -412,9 +413,29 @@ export function useManufacturers(bom){
         }).then((response) => {
             console.log(response.data);
             //Object.entries(response.data).
+            const newManufacturerData = new Map();
+            response.data.manufacturers.forEach((manuData) => {
+                newManufacturerData.set(manuData.name, manuData);
+            });
+            manufacturerData.set(newManufacturerData);
+            stringToManufacturer.set(response.data.string_to_manufacturer);
+            //setStringToManufacturer(response.data.string_to_manufacturer);
         });
     }, [uniqueManufacturers]);
-    return [uniqueManufacturers, {get: manufacturerData, set: setManufacturerData}];
+    function addManufacturerData(manufacturer){
+        const strObj = manufacturer.strings.reduce((obj, str) => {
+            obj[str] = manufacturer.name;
+            return obj;
+        }, {});
+        const fullStringToManufacturer = update(stringToManufacturer.get, {
+            $merge: strObj
+        });
+        stringToManufacturer.set(fullStringToManufacturer);
+        manufacturerData.set(update(manufacturerData.get, {
+            $add: [[manufacturer.name, manufacturer]]
+        }));
+    }
+    return [uniqueManufacturers, addManufacturerData];
 }
 
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency, quantity=null){
@@ -462,8 +483,6 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
     }).then(response => {
         //console.log(response.data);
         if(typeof response.data !== 'object'){
-            console.log(response.data);
-
             console.log(mpn); //catch problematic mpns
             errorCallback(mpn);
             axios({
@@ -474,7 +493,6 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
                 console.log(res);
             });
         }else{
-            console.log(response.data);
             const data = response.data;
             const formattedApiData = formatApiData(data.refined.apis);
             //const manufacturers = data.refined.found_manufacturers;

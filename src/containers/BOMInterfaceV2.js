@@ -70,6 +70,8 @@ function BOMInterface(props){
     const [initialBOMEdit, setInitialBOMEdit] = useState([]);
     const [apiData, setApiData] = useState(new Map());
     const [octopartData, setOctopartData] = useState(new Map());
+    const [manufacturerData, setManufacturerData] = useState(new Map());
+    const [stringToManufacturer, setStringToManufacturer] = useState({});
 
     const [savedBOMEditState, setSavedBOMEditState] = useState(null);
 
@@ -149,7 +151,8 @@ function BOMInterface(props){
                 updateApiDataMap={updateApiDataMap} apiData={getApiData()} allApiAttrs={apiAttributes}
                 updateOctopartDataMap={updateOctopartDataMap} octopartData={getOctopartData()} user={props.user}
                 store={props.store} currency={props.currency} changeLock={props.changeLock}
-                loadData={loadData} bomType={BOMData.type}/>;
+                loadData={loadData} bomType={BOMData.type} manufacturerData={{get:manufacturerData, set:setManufacturerData}} 
+                stringToManufacturer={{get: stringToManufacturer, set: setStringToManufacturer}}/>;
             default:
                 return "Unknown interface state";
         }

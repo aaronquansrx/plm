@@ -6,6 +6,7 @@ import axios from 'axios';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import ListGroup from 'react-bootstrap/ListGroup';
 
 import {
     useTableBOM, useApiRetrys,
@@ -64,18 +65,19 @@ function BOMToolV3(props){
         {label: 'Lead Time', id: 'leadtime'}
     ];
     const filterColours = {
-        start: {show: true, colour: 'grey', display: 'To Start', toggle: false},
-        normal: {show: true, colour: 'white', display: 'Complete', toggle: true},
+        start: {show: true, colour: '#c7c7c7', display: 'To Start', toggle: false},
+        normal: {show: true, colour: '#cafcd4', display: 'Complete', toggle: true},
         no_offers: {show: true, colour: '#de6c64', display: 'No Offers', toggle: true},
-        retry: {show: true, colour: '#d4d192', display: 'Retry', toggle: true},
+        retry: {show: true, colour: '#f2f0c9', display: 'Retry', toggle: true},
         error: {show: true, colour: '#db986e', display: 'Error', toggle: true}
     }
     const [filterStates, setFilterStates] = useState(filterColours); // to use to filter lines based on state
     const [algorithmMode, setAlgorithmMode] = useState({best: highlightOptions[0].id, stock: false});
-    const [manufacturers] = useManufacturers(props.bom);
+    const [manufacturers, addManufacturerData] = useManufacturers(props.bom, props.manufacturerData, props.stringToManufacturer);
     const [quantityMultiplier, handleChangeMulti] = useQuantityMultiplierV2();
     const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
-        props.store, props.currency, props.apiData, props.bomType, props.loadData, props.changeLock, props.octopartData, props.updateOctopartDataMap, 
+        props.store, props.currency, props.apiData, props.bomType, props.loadData, 
+        props.changeLock, props.octopartData, props.updateOctopartDataMap, 
         mpnQuantityMap);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress,
          retrySingle, retryAll, retryLock, retryMpns] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
@@ -99,7 +101,7 @@ function BOMToolV3(props){
         props.apis, props.apiData, 
         updateTableCall, leadtimeCutOff, props.store, props.currency, /*dataProcessingLock,*/ props.changeLock,
         searchTerm, changeEvaluation, algorithmMode, quantityMultiplier, retryLock, retryMpns, multiRetryData, singleRetryData,
-        filterStates, {get: mpnQuantityMap, set: setMpnQuantityMap}
+        filterStates, {get: mpnQuantityMap, set: setMpnQuantityMap}, props.manufacturerData, props.stringToManufacturer
     );
     const apiAttrs = props.apiAttrs;
     useEffect(() => {
@@ -167,7 +169,8 @@ function BOMToolV3(props){
             selectOffer: selectOffer
         },
         manu: {
-            filterManufacturers: filterManufacturerOffers
+            filterManufacturers: filterManufacturerOffers,
+            addManufacturerData: addManufacturerData
         }
     }
     function selectOctopartOffer(row, api, offerNum, octoRowNum){
@@ -383,10 +386,22 @@ function FilterStateInterface(props){
     }
     return(
         <>
-        {shownFilters.map((fs, i) => {
+        {/*shownFilters.map((fs, i) => {
             return <LabeledCheckbox key={i} label={fs.display} id={fs.name} className='Pointer'
             checked={fs.show} onChange={handleChangeFilterState(fs.name)}/>
-        })}
+        })*/}
+        <ListGroup>
+            {shownFilters.map((fs, i) => {
+                const style = {
+                    backgroundColor: fs.show ? fs.colour : 'white',
+                    padding: '1px',
+                    cursor: 'pointer'
+                };
+                return <ListGroup.Item key={i} style={style} onClick={handleChangeFilterState(fs.name)}>
+                    {fs.display}
+                </ListGroup.Item>;
+            })}
+        </ListGroup>
         </>
     )
 }

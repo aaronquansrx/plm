@@ -20,27 +20,27 @@ export function ManufacturerRenderer(props){
     const serverUrl = useServerUrl();
     const [manufacturerModal, setManufacturerModal] = useState(false);
     const [searchResults, setSearchResults] = useState(new Map());
-    const [chosenSuggestion, setChosenSuggestion] = useState(null);
-    const [chosenDatabaseManufacturers, setChosenDatabaseManufacturers] = useState([]);
+    const [chosenManufacturer, setChosenManufacturer] = useState(null);
+    //const [chosenDatabaseManufacturers, setChosenDatabaseManufacturers] = useState([]);
     const [chosenManufacturers, setChosenManufacturers] = useState(props.value.manufacturer_filter);
     const [updater, setUpdater] = useState(0);
-
-    const [manufacturerStringModal, setManufacturerStringModal] = useState(false);
+    useEffect(() => {
+        setChosenManufacturer(props.value.linked_manufacturer);
+    }, [props.value.linked_manufacturer]);
     const suggestionSize = 5;
     const bd = (
         <div>
-        <SuggestionSearcher searchTerm={chosenSuggestion ? chosenSuggestion.name : null} 
+        <SuggestionSearcher searchTerm={chosenManufacturer ? chosenManufacturer.name : null} 
         recommends={[...searchResults.keys()]} onSearch={handleSearch} 
         onClickSuggestion={handleClickSuggestion} size={suggestionSize} updater={updater}/>
         {/*chosenSuggestion && 
-        <div>
-            <div>Name: {chosenSuggestion.name}</div>
-            <div>ID: {chosenSuggestion.id}</div>
-            <ManufacturerStringInterface show={manufacturerStringModal} manuName={chosenSuggestion.name} 
-            databaseManufacturers={chosenDatabaseManufacturers}/>
-        </div>
-    */}
-        <Accordion alwaysOpen defaultActiveKey={["0"]}>
+            <div>
+                <ManufacturerStringInterface show={manufacturerStringModal} manuName={chosenSuggestion.name} 
+                databaseManufacturers={chosenDatabaseManufacturers}/>
+            </div>
+        */}
+        {/*
+        <Accordion alwaysopen={true} defaultActiveKey={["0"]}>
             <Accordion.Item eventKey="0">
             <Accordion.Header>Display Manufacturers</Accordion.Header>
                 <Accordion.Body>
@@ -48,19 +48,25 @@ export function ManufacturerRenderer(props){
                     chosenManufacturers={chosenManufacturers} 
                     onChangeManufacturers={handleChangeManufacturer}/>
                 </Accordion.Body>
-            </Accordion.Item>
-            {chosenSuggestion &&
+            </Accordion.Item>      
+        */}
+            {/*chosenSuggestion &&
             <ManufacturerStringInterface show={manufacturerStringModal} manuName={chosenSuggestion.name} 
             databaseManufacturers={chosenDatabaseManufacturers} onSaveManufacturers={handleSaveManufacturers}/>
-            }
-        </Accordion>
+            */}
+        {/*</Accordion>*/}
+        <h3>Filter Manufacturers</h3>
+        <ManufacturerList manufacturers={props.value.found_manufacturers} 
+            chosenManufacturers={chosenManufacturers} 
+            onChangeManufacturers={handleChangeManufacturer}/>
         </div>
     );
-    const isSaveDisabled = chosenSuggestion === null;
+    const isSaveDisabled = chosenManufacturer === null;
     const footer = (
         <>
-        <Button onClick={handleSaveManufacturers} disabled={isSaveDisabled}>Save Manufacturer</Button>
-        <Button onClick={handleSubmit}>Submit</Button>
+        {/*<Button onClick={handleSaveManufacturers} disabled={isSaveDisabled}>Save Manufacturer</Button>*/}
+        <Button onClick={handleCloseModal} variant="secondary">Close</Button>
+        <Button onClick={handleSubmit} variant="primary">Submit</Button>
         </>
     );
     useEffect(() => {
@@ -74,8 +80,26 @@ export function ManufacturerRenderer(props){
         if(chosenManufacturers !== null){
             //run function 
             //parameters: row, manufacturer set
-            console.log(props.functions);
-            props.functions.filterManufacturers(props.rowNum, chosenManufacturers);
+            //console.log(props.functions);
+            if(chosenManufacturer !== null){
+                chosenManufacturer.strings = [...chosenManufacturers].map((s) => s.toLowerCase());
+                const chosen = new Set([...chosenManufacturers]);
+                chosen.add(chosenManufacturer.name);
+                const remove = props.value.found_manufacturers.reduce((arr, m) => {
+                    if(!chosenManufacturers.has(m)) arr.push(m);
+                    return arr;
+                }, []);
+                axios({
+                    method: 'POST',
+                    url: serverUrl+'api/manufacturer',
+                    data: {
+                        strings: [...chosen], remove: remove, id: chosenManufacturer.id
+                    }
+                }).then((response) => {
+                    console.log(response.data);
+                });
+            }
+            props.functions.filterManufacturers(props.rowNum, chosenManufacturer);
         }
     }
     function handleSearch(st){
@@ -101,7 +125,7 @@ export function ManufacturerRenderer(props){
             method: 'POST',
             url: serverUrl+'api/manufacturer',
             data: {
-                strings: chosen, id: chosenSuggestion.id
+                strings: chosen, id: chosenManufacturer.id
             }
         }).then((response) => {
             console.log(response);
@@ -113,7 +137,7 @@ export function ManufacturerRenderer(props){
             id: searchResults.get(suggestion)
         }
         setSearchResults(new Map());
-        setChosenSuggestion(cs);
+        //setChosenSuggestion(cs);
         setUpdater(updater+1);
         axios({
             method: 'GET',
@@ -123,8 +147,17 @@ export function ManufacturerRenderer(props){
             console.log(response);
             //set
             const stringSet = new Set(response.data.strings);
-            setChosenManufacturers(stringSet);
-            setChosenDatabaseManufacturers(response.data.strings);
+            const found = props.value.found_manufacturers.reduce((s, m) => {
+                if(stringSet.has(m.toLowerCase())){
+                    s.add(m);
+                }
+                return s;
+            }, new Set());
+            setChosenManufacturers(found);
+            //setChosenDatabaseManufacturers(response.data.strings);
+            cs.strings = [...response.data.strings];
+            setChosenManufacturer(cs);
+            props.functions.addManufacturerData(cs);
         });
     }
     function handleOpenModal(){
@@ -134,9 +167,13 @@ export function ManufacturerRenderer(props){
     function handleCloseModal(){
         setManufacturerModal(false);
     }
+    const buttonString = props.value.linked_manufacturer !== null ? props.value.linked_manufacturer.name : 
+    (props.value.bom ? props.value.bom : 'Manufacturers');
     return(
         <>
-        <Button onClick={handleOpenModal}>{props.value.bom !== null ? props.value.bom : 'Manufacturers'}</Button>
+        <Button onClick={handleOpenModal} variant={props.value.linked_manufacturer === null ? 'danger' : 'primary'}>
+        {buttonString}
+        </Button>
         <TemplateModal show={manufacturerModal} title='Manufacturer' body={bd} footer={footer} onClose={handleCloseModal}/>
         </>
     );
@@ -211,9 +248,9 @@ function ManufacturerStringInterface(props){
     useEffect(() => {
         setStrings(props.databaseManufacturers);
     }, [props.databaseManufacturers]);
-    function handleClickString(string){
+    function handleClickString(string, i){
         return function(){
-            setSelectedString(string);
+            setSelectedString({string: string, index: i});
         }
     }
     function handleKeyDown(e){
@@ -227,26 +264,29 @@ function ManufacturerStringInterface(props){
         }));
     }
     function handleAdd(){
-        setAddString({string: '', index: strings});
+        setAddString({string: '', index: strings.length});
         setStrings(strings.concat(''));
     }
     function handleEdit(){
-
+        setAddString({string: selectedString.string, index: selectedString.index})
     }
     function handleSave(){
         props.onSaveManufacturers(strings);
     }
     function handleDelete(){
-        const index = strings.findIndex((i) => i === selectedString);
-        const newStrings = [...strings].splice(index, 1);
+        //const index = strings.findIndex((i) => i === selectedString);
+        const newStrings = [...strings];
+        newStrings.splice(selectedString.index, 1);
         setStrings(newStrings);
     }
     function enterString(){
-        const toAdd = addString;
+        const toAdd = addString.string;
         const f = strings.findIndex((s) => s === toAdd);
         //console.log(f);
         if(f === -1){
-            setStrings(strings['string'].concat(toAdd));
+            setStrings(update(strings, {
+                [addString.index]: {$set: addString.string}
+            }));
             setAddString(null);
             setSelectedString(null);
         }
@@ -260,15 +300,16 @@ function ManufacturerStringInterface(props){
                     {strings.map((manuString, i) => {
                         //const cl = selectedString === manuString ? 'SelectedManufacturer' : 'ManufacturerItem';
                         const cl = 'ManufacturerItem';
-                        const content = addString.index === i ? <Form.Control
+                        const content = addString !== null && addString.index === i ? <Form.Control
                         type="text"
                         placeholder="Type manufacturer string"
                         onChange={handleChangeTerm}
                         onKeyDown={handleKeyDown} onBlur={enterString}
                         value={addString.string}
-                        /> : {manuString};
+                        /> : manuString;
+                        const isActive = selectedString !== null && selectedString.index === i;
                         return(
-                        <ListGroup.Item key={i} className={cl} active={selectedString === manuString} onClick={handleClickString(manuString)}>
+                        <ListGroup.Item key={i} className={cl} active={isActive} onClick={handleClickString(manuString, i)}>
                             {content}
                         </ListGroup.Item>
                         );
@@ -285,8 +326,8 @@ function ManufacturerStringInterface(props){
                 </ListGroup>
                 <Button onClick={handleSave}>Save</Button>
                 <Button onClick={handleAdd}>Add</Button>
-                <Button onClick={handleEdit} disable={selectedString !== null}>Edit</Button>
-                <Button onClick={handleDelete} disable={selectedString !== null}>Delete</Button>
+                <Button onClick={handleEdit} disable={selectedString === null}>Edit</Button>
+                <Button onClick={handleDelete} disable={selectedString === null}>Delete</Button>
                 </Accordion.Body>
             </Accordion.Item>
         </>

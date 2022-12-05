@@ -998,7 +998,7 @@ function OctopartRow(props){
         <>
         <tr>
         {props.data && props.data.offers.length > 0 && props.octoAttrs.map((attr, i) => {
-            return <BOMAttributeRenderer key={i} value={props.data[attr.attribute]} custom={attr.custom} cellProps={octoCellProps} stockMode={props.stockMode}/>;
+            return <BOMAttributeRenderer key={i} value={props.data[attr.attribute]} type={'normal'} custom={attr.custom} cellProps={octoCellProps} stockMode={props.stockMode}/>;
         })}
         {props.data.offers.length > 0 && 
         <OctoOffer offer={props.data.offers[0]} functions={props.functions} offerAttrs={props.offerAttrs} stockMode={props.stockMode} rowNum={props.rowNum}
