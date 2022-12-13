@@ -1105,7 +1105,7 @@ const singleRenderers = {
 export function SingleAPITable(props){
     const mainHeaders = [{Header: 'Distributor', accessor: 'distributor'}];
     const headers =  mainHeaders.concat(props.apiAttrs);
-    const mainAttrs = mainHeaders.map(smartAttr('single', {}, {}, singleRenderers));
+    const mainAttrs = mainHeaders.map(smartAttr('normal', {}, {}, singleRenderers));
     const offerAttrs = props.apiAttrs.map(smartAttr('single', {}, {}, singleRenderers));
     return(
         <div className='MainTable'>
@@ -1148,7 +1148,7 @@ function APIRow(props){
         <>
         <tr>
         {props.data.offers.length > 0 && props.mainAttrs.map((attr, i) => {
-            return <BOMAttributeRenderer key={i} value={props.data[attr.attribute]} custom={attr.custom} cellProps={cellProps} stockMode={props.stockMode}/>;
+            return <BOMAttributeRenderer key={i} {...attr} value={props.data[attr.attribute]} custom={attr.custom} cellProps={cellProps} stockMode={props.stockMode}/>;
         })}
         {props.data.offers.length > 0 && props.offerAttrs.map((attr, i) => {
             return <APIAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom} 

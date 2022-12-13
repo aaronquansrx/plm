@@ -29,14 +29,14 @@ export function NumberInput(props){
     const disabled = props.disabled ? props.disabled : false;
     //const n = props.value !== null ? props.value : number;
     return(
-        <div className='Hori'>
+        <>
         {props.label && 
         <Form.Label>{props.label}</Form.Label>
         }
         <Form.Control className='SmallText' type="text" 
         onChange={handleChange} onBlur={handleBlur} value={number}
         disabled={disabled}/>
-        </div>
+        </>
     );
 }
 

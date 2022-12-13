@@ -1,5 +1,7 @@
 import {useState, useEffect} from 'react';
 
+import BOMToolSettings from './../components/BOMToolSettings';
+
 export default function Test(props){
 
     useEffect(() => {
@@ -8,6 +10,7 @@ export default function Test(props){
     return(
         <div>
             Testing
+            <BOMToolSettings apiAttributes={[]}/>
         </div>
     );
 }

@@ -15,6 +15,7 @@ import BOMMain from './pages/BOMMain';
 import Excel from './pages/Excel';
 import CBom from './pages/CBom';
 import BOMScrub from './pages/BOMScrub';
+import Test from './pages/Test';
 import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
 import useUsername from './hooks/useUsername';
@@ -127,7 +128,8 @@ function App() {
         <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
         <Route path={path('excel')} element={<Excel/>}/>
-        {!inProduction && <Route path={path('circular')} element={<CircularBufferTest/>}/>}
+        <Route path={path('test')} element={<Test/>}/>
+        {/*!inProduction && <Route path={path('circular')} element={<CircularBufferTest/>}/>*/}
       </Routes>
     </div>
   );

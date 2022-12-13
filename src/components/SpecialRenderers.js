@@ -23,6 +23,8 @@ export function ManufacturerRenderer(props){
     const [chosenManufacturer, setChosenManufacturer] = useState(null);
     //const [chosenDatabaseManufacturers, setChosenDatabaseManufacturers] = useState([]);
     const [chosenManufacturers, setChosenManufacturers] = useState(props.value.manufacturer_filter);
+
+
     const [updater, setUpdater] = useState(0);
     useEffect(() => {
         setChosenManufacturer(props.value.linked_manufacturer);
@@ -30,9 +32,11 @@ export function ManufacturerRenderer(props){
     const suggestionSize = 5;
     const bd = (
         <div>
-        <SuggestionSearcher searchTerm={chosenManufacturer ? chosenManufacturer.name : null} 
+        {!chosenManufacturer ? <SuggestionSearcher /*searchTerm={chosenManufacturer ? chosenManufacturer.name : null}*/ 
         recommends={[...searchResults.keys()]} onSearch={handleSearch} 
         onClickSuggestion={handleClickSuggestion} size={suggestionSize} updater={updater}/>
+        : <Button className={'ChosenManufacturerButton'} onClick={handleDeselectManufacturer}>{chosenManufacturer.name}</Button>
+        }
         {/*chosenSuggestion && 
             <div>
                 <ManufacturerStringInterface show={manufacturerStringModal} manuName={chosenSuggestion.name} 
@@ -118,6 +122,12 @@ export function ManufacturerRenderer(props){
             });
         }
     }
+    function handleDeselectManufacturer(){
+        setChosenManufacturer(null);
+        console.log(chosenManufacturers);
+        console.log(props.value.found_manufacturers);
+        setChosenManufacturers(new Set(props.value.found_manufacturers))
+    }
     function handleSaveManufacturers(strings=null){
         const chosen = strings === null ? strings : (chosenManufacturers === null ? props.value.found_manufacturers : 
         [...chosenManufacturers]);
@@ -128,7 +138,7 @@ export function ManufacturerRenderer(props){
                 strings: chosen, id: chosenManufacturer.id
             }
         }).then((response) => {
-            console.log(response);
+            console.log(response.data);
         });
     }
     function handleClickSuggestion(suggestion){

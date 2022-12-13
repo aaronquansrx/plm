@@ -3,7 +3,8 @@ import Nav from 'react-bootstrap/Nav';
 
 export function TabPages(props){
     const tabs = props.tabs ? props.tabs : [];
-    const [selectedTab, setSelectedTab] = useState(props.tabs ? 0 : null);
+    const dt = props.displayTab ? (props.displayTab >= tabs.length ? tabs.length-1 : props.displayTab) : 0;
+    const [selectedTab, setSelectedTab] = useState(props.tabs ? dt : null);
     const content = selectedTab !== null ? tabs[selectedTab].content : null;
     function handleChangeTab(i){
         return function(){

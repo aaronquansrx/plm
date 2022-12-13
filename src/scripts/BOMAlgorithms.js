@@ -42,7 +42,7 @@ function best_price_finder_offer(offer, min_quantity, include_available=true){
     return ret;
 }
 
-function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_total, include_available=true){
+function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_total, include_available=true, excess_rule=null){
     //if(pricing.length === 0) return price_return(0, 0, 0, null);
     if(isNaN(spq) || spq <= 0){
         spq = 1;
@@ -67,6 +67,8 @@ function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_
     const bracket_index = get_pricing_bracket_index(pricing, quantity);
     let price_per = pricing[bracket_index].unit_price;
     let ret = price_return(price_per, quantity, min_quantity, bracket_index, fee_total);
+    const quantity_post_rule = apply_excess_rule(quantity, excess_rule);
+    console.log(quantity_post_rule);
     if(quantity !== pricing[bracket_index].break_quantity && bracket_index+1 < pricing.length){
         price_per = pricing[bracket_index+1].unit_price;
         quantity = pricing[bracket_index+1].break_quantity;
@@ -291,4 +293,11 @@ function compare_offer_lead_time(o1, o2, s){
         return o1.total_price[stock_str] > o2.total_price[stock_str];
     }
     return o1.leadtime > o2.leadtime;
+}
+
+function apply_excess_rule(quantity, excess_rule){
+    if(excess_rule){
+        return excess_rule.evaluate(quantity);
+    }
+    return quantity;
 }
