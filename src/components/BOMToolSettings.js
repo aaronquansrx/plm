@@ -118,6 +118,7 @@ function ExcessControlRules(props){
     }
     return(
     <>
+    <div style={{borderBottom: '1px solid #dee2e6'}}>
     <h4>Excess Control Rules</h4>
     <Accordion defaultActiveKey={['0']}>
         {rules.map((rule, i) => {
@@ -141,6 +142,7 @@ function ExcessControlRules(props){
         )
         })}
     </Accordion>
+    </div>
     <h4>Add Rule</h4>
     <AddRule addRule={addRule}/>
     <Button onClick={saveRules}>Save Rules</Button>
@@ -210,8 +212,8 @@ function AddRule(props){
     function handleAddRule(){
         if(parameterConditions.length > 0){
             props.addRule({
-                parameterConditions: parameterConditions, 
-                numberConditions: numericalConditions, 
+                parameter_conditions: parameterConditions, 
+                number_conditions: numericalConditions, 
                 adjustments: adjustments
             });
         }

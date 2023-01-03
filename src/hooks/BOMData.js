@@ -9,7 +9,8 @@ import {algorithmsInitialStructure} from './../scripts/AlgorithmVariable';
 import { set } from 'lodash';
 
 export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiDataMap, 
-    store, currency, apiData, bomType, loadData, appLock, octopartData, updateOctopartDataMap, mpnQuantityMap){
+    store, currency, apiData, bomType, loadData, appLock, octopartData, updateOctopartDataMap, mpnQuantityMap,
+    manufacturerDataFound){
     //const [dataProcessing, setDataProcessing] = useState([]);
     const serverUrl = useServerUrl();
     const expireTime = 1000000;
@@ -19,7 +20,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
         const controller = new AbortController();
         console.log(currency);
         appLock(true);
-        if(bomType !== 'saved'){
+        if(manufacturerDataFound && bomType !== 'saved'){
             //console.log(store);
             //const controller = new AbortController();
             const apiDataMap = new Map();
@@ -106,7 +107,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
         return () => {
             controller.abort();
         }
-    }, [store, currency]);
+    }, [store, currency, manufacturerDataFound]);
     function callApiRetry(cmpn, api, rowNum, onComplete){
         const controller = new AbortController();
         function apiCallbackSingle(mpn, data, rmv, apis){
@@ -402,6 +403,7 @@ export function useManufacturers(bom, manufacturerData, stringToManufacturer){
         }, new Set());
         return manus;
     }, [bom]);
+    const [manufacturerDataFound, setManufacturerDataFound] = useState(false);
     //const [manufacturerData, setManufacturerData] = useState(new Map());
     //const [stringToManufacturer, setStringToManufacturer] = useState({});
     useEffect(() => {
@@ -419,6 +421,7 @@ export function useManufacturers(bom, manufacturerData, stringToManufacturer){
             });
             manufacturerData.set(newManufacturerData);
             stringToManufacturer.set(response.data.string_to_manufacturer);
+            setManufacturerDataFound(true);
             //setStringToManufacturer(response.data.string_to_manufacturer);
         });
     }, [uniqueManufacturers]);
@@ -435,7 +438,7 @@ export function useManufacturers(bom, manufacturerData, stringToManufacturer){
             $add: [[manufacturer.name, manufacturer]]
         }));
     }
-    return [uniqueManufacturers, addManufacturerData];
+    return [uniqueManufacturers, addManufacturerData, manufacturerDataFound];
 }
 
 function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, store, currency, quantity=null){

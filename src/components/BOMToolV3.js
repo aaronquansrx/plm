@@ -73,15 +73,16 @@ function BOMToolV3(props){
     }
     const [filterStates, setFilterStates] = useState(filterColours); // to use to filter lines based on state
     const [algorithmMode, setAlgorithmMode] = useState({best: highlightOptions[0].id, stock: false});
-    const [manufacturers, addManufacturerData] = useManufacturers(props.bom, props.manufacturerData, props.stringToManufacturer);
+    const [manufacturers, addManufacturerData, manufacturerDataFound] = useManufacturers(props.bom, props.manufacturerData, props.stringToManufacturer);
     const [quantityMultiplier, handleChangeMulti] = useQuantityMultiplierV2();
-    const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns] = useApiData(mpnList, mpnListWithQuantity, allApisList, props.updateApiDataMap, 
+    const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns] = useApiData(mpnList, 
+        mpnListWithQuantity, allApisList, props.updateApiDataMap, 
         props.store, props.currency, props.apiData, props.bomType, props.loadData, 
         props.changeLock, props.octopartData, props.updateOctopartDataMap, 
-        mpnQuantityMap);
+        mpnQuantityMap, manufacturerDataFound);
     const [showProgress, handleHideBar, numMpns, mpnsInProgress,
-         retrySingle, retryAll, retryLock, retryMpns] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
-            callApisRetry, props.store, props.currency);
+        retrySingle, retryAll, retryLock, retryMpns] = useApiDataProgress(mpnList, allApisList, props.apiData, callApiRetry,
+        callApisRetry, props.store, props.currency);
     const [leadtimeCutOff, setLeadtimeCutOff] = useState('');
     function handleLeadtimeCutOff(newLTC){
         if(newLTC === ''){
@@ -170,7 +171,7 @@ function BOMToolV3(props){
         },
         manu: {
             filterManufacturers: filterManufacturerOffers,
-            addManufacturerData: addManufacturerData
+            addManufacturerData: addManufacturerData,
         }
     }
     function selectOctopartOffer(row, api, offerNum, octoRowNum){

@@ -68,7 +68,7 @@ function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_
     let price_per = pricing[bracket_index].unit_price;
     let ret = price_return(price_per, quantity, min_quantity, bracket_index, fee_total);
     const quantity_post_rule = apply_excess_rule(quantity, excess_rule);
-    console.log(quantity_post_rule);
+    //console.log(quantity_post_rule);
     if(quantity !== pricing[bracket_index].break_quantity && bracket_index+1 < pricing.length){
         price_per = pricing[bracket_index+1].unit_price;
         quantity = pricing[bracket_index+1].break_quantity;

@@ -28,7 +28,8 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             line.manu = {
                 bom: 'manufacturer' in line ? line.manufacturer : null,
                 linked_manufacturer: null,
-                found_manufacturers: [], manufacturer_filter: null
+                found_manufacturers: [], manufacturer_filter: null,
+                database_strings: []
             };
             line.octopart = {requested: false, data: null};
             line.mpns = {
@@ -303,6 +304,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                         newLine.manu.linked_manufacturer = gmf.linked_manufacturer;
                         newLine.manu.found_manufacturers = dt.found_manufacturers;
                         newLine.manu.manufacturer_filter = gmf.filtered_manufacturers;
+                        newLine.manu.database_strings = gmf.database_strings;
                         const ea = evalApisV2(dt, apisList, quantity, gmf.filtered_manufacturers);
                         Object.assign(newLine, ea);
                         const best = findBestOffer(newLine);
@@ -335,7 +337,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         return timeout;
     }
     function getManufacturerFilter(foundManufacturers, linkedManufacturer, lineManu=null){
-        const out = {filtered_manufacturers: new Set([...foundManufacturers]), linked_manufacturer: linkedManufacturer};
+        const out = {filtered_manufacturers: new Set([...foundManufacturers]), linked_manufacturer: linkedManufacturer, database_strings: []};
         if(linkedManufacturer !== null){
             console.log(foundManufacturers);
             const stringSet = new Set([...linkedManufacturer.strings]);
@@ -345,6 +347,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 }
                 return s;
             }, new Set());
+            out.database_strings = linkedManufacturer.strings;
             out.filtered_manufacturers = found;
         }
         else if(lineManu !== null){
@@ -361,6 +364,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                         }
                         return s;
                     }, new Set());
+                    out.database_strings = md.strings;
                     out.filtered_manufacturers = found;
                 }
             }
@@ -401,16 +405,22 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         setTableLock(bool);
         appLock(bool);
     }
-    function processBomLine(line, mpnApiData=null, apis=apisList, newManufacturer=null){
+    function processBomLine(line, mpnApiData=null, apis=apisList, changeManufacturer=false, newManufacturer=null, overwriteManufacturer=false){
         const newLine = {...line};
         const mpn = newLine.mpns.current;
         function doProcess(dt){
             const quantity = newLine.quantities.multi;
-            const gmf = getManufacturerFilter(dt.found_manufacturers, newManufacturer, newLine.manu.bom);
-            newLine.manu.linked_manufacturer = gmf.linked_manufacturer;
-            newLine.manu.found_manufacturers = dt.found_manufacturers;
-            newLine.manu.manufacturer_filter = gmf.filtered_manufacturers;
-            const ea = evalApisV2(dt, apis, quantity, gmf.filtered_manufacturers);
+            let fm = newLine.manu.manufacturer_filter;
+            if(changeManufacturer){
+                const bomManu = overwriteManufacturer ? null : newLine.manu.bom;
+                const gmf = getManufacturerFilter(dt.found_manufacturers, newManufacturer, bomManu);
+                newLine.manu.linked_manufacturer = gmf.linked_manufacturer;
+                newLine.manu.found_manufacturers = dt.found_manufacturers;
+                newLine.manu.manufacturer_filter = gmf.filtered_manufacturers;
+                newLine.manu.database_strings = gmf.database_strings;
+                fm = gmf.filtered_manufacturers;
+            }
+            const ea = evalApisV2(dt, apis, quantity, fm);
             Object.assign(newLine, ea);
             const best = findBestOffer(newLine);
             changeBestOffer(newLine, best, algorithmMode);
@@ -451,7 +461,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         const newQuantity = q*quantityMultiplier;
         line.quantities.single = q;
         line.quantities.multi = newQuantity;
-        const newLine = processBomLine(line);
+        const newLine = processBomLine(line, null, apisList, false);
         const newBOM = update(tableBOM, {
             [row]: {$set: newLine}
         });
@@ -585,10 +595,11 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     }
     function filterManufacturerOffers(row, linkedManufacturer){
         const tableLine = {...tableBOM[row]};
-        const newLine = processBomLine(tableLine, null, apisList, linkedManufacturer);
+        const newLine = processBomLine(tableLine, null, apisList, true, linkedManufacturer, true);
         setTableBOM(update(tableBOM, {
             [row]: {$set: newLine}
         }));
+        console.log(linkedManufacturer);
     }
     return [tableBOM, filteredTableBOM, setTableBOM, headers, runBomAlgorithms, 
         runBOMLineAlgorithmsV2, //retryApis, 

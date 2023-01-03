@@ -50,7 +50,7 @@ export function SuggestionSearcher(props){
             ref={textInput}
         />
         {props.recommends.length > 0 && showSuggestions && 
-        <ListGroup className='Pointer' style={{position: 'absolute', zIndex: 2}}>
+        <ListGroup className='Pointer' style={{position: 'absolute', zIndex: 10}}>
             {[...Array(recoLength).keys()].map((i) => {
                 const reco = props.recommends[i];
                 return <ListGroup.Item key={i} onClick={handleClickSuggestion(reco)}>{reco}</ListGroup.Item>;
@@ -103,7 +103,7 @@ export function ObjectSuggestionSearcher(props){
             ref={textInput}
         />
         {props.recommends.length > 0 && showSuggestions && 
-        <ListGroup className='Pointer' style={{position: 'absolute', zIndex: 2}}>
+        <ListGroup className='Pointer' style={{position: 'absolute', zIndex: 10}}>
             {[...Array(recoLength).keys()].map((i) => {
                 const reco = props.recommends[i];
                 return <ListGroup.Item key={i} onClick={handleClickSuggestion(reco)}>{reco.name}</ListGroup.Item>;

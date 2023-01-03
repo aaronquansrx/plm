@@ -15,7 +15,6 @@ export class ExcessRule{
             if(!condition.evaluate(value)) return false;
             return sat;
         }, true);
-
         if(satisfy){
             const out = this.adjustment.reduce((v, adjustment) => {
                 return adjustment.evaluate(v);

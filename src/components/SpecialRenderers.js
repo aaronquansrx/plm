@@ -23,9 +23,15 @@ export function ManufacturerRenderer(props){
     const [chosenManufacturer, setChosenManufacturer] = useState(null);
     //const [chosenDatabaseManufacturers, setChosenDatabaseManufacturers] = useState([]);
     const [chosenManufacturers, setChosenManufacturers] = useState(props.value.manufacturer_filter);
-
+    const fullLowerManuSet = new Set(props.value.found_manufacturers.map((m) => m.toLowerCase()));
+    const [lowerManuStrings, setLowerManuStrings] = useState(props.value.database_strings);
 
     const [updater, setUpdater] = useState(0);
+    useEffect(() => {
+        const s = new Set([...props.value.database_strings]);
+        s.add(props.value.bom.toLowerCase());
+        setLowerManuStrings([...s]);
+    }, [props.value.database_strings]);
     useEffect(() => {
         setChosenManufacturer(props.value.linked_manufacturer);
     }, [props.value.linked_manufacturer]);
@@ -37,32 +43,17 @@ export function ManufacturerRenderer(props){
         onClickSuggestion={handleClickSuggestion} size={suggestionSize} updater={updater}/>
         : <Button className={'ChosenManufacturerButton'} onClick={handleDeselectManufacturer}>{chosenManufacturer.name}</Button>
         }
-        {/*chosenSuggestion && 
-            <div>
-                <ManufacturerStringInterface show={manufacturerStringModal} manuName={chosenSuggestion.name} 
-                databaseManufacturers={chosenDatabaseManufacturers}/>
-            </div>
-        */}
-        {/*
-        <Accordion alwaysopen={true} defaultActiveKey={["0"]}>
-            <Accordion.Item eventKey="0">
-            <Accordion.Header>Display Manufacturers</Accordion.Header>
-                <Accordion.Body>
-                    <ManufacturerList manufacturers={props.value.found_manufacturers} 
-                    chosenManufacturers={chosenManufacturers} 
-                    onChangeManufacturers={handleChangeManufacturer}/>
-                </Accordion.Body>
-            </Accordion.Item>      
-        */}
-            {/*chosenSuggestion &&
-            <ManufacturerStringInterface show={manufacturerStringModal} manuName={chosenSuggestion.name} 
-            databaseManufacturers={chosenDatabaseManufacturers} onSaveManufacturers={handleSaveManufacturers}/>
-            */}
-        {/*</Accordion>*/}
         <h3>Filter Manufacturers</h3>
         <ManufacturerList manufacturers={props.value.found_manufacturers} 
             chosenManufacturers={chosenManufacturers} 
             onChangeManufacturers={handleChangeManufacturer}/>
+        {chosenManufacturer &&
+            <ManufacturerStringInterface show={manufacturerModal} manuName={chosenManufacturer.name} bomManu={props.value.bom}
+            databaseManufacturers={lowerManuStrings} originalManuStrings={props.value.database_strings} 
+            onUpdateStrings={handleUpdateStrings}
+            //onSaveManufacturers={handleSaveManufacturers}
+            />
+        }
         </div>
     );
     const isSaveDisabled = chosenManufacturer === null;
@@ -77,7 +68,29 @@ export function ManufacturerRenderer(props){
         setChosenManufacturers(props.value.manufacturer_filter);
     }, [props.value.manufacturer_filter]);
     function handleChangeManufacturer(checked){
+        const lowerChecked = new Set([...checked].map((m) => m.toLowerCase()));
+        const s = new Set([...lowerManuStrings]);
+        fullLowerManuSet.forEach((m) => {
+            if(lowerChecked.has(m)){
+                s.add(m);
+            }else{
+                s.delete(m);
+            }
+        });
         setChosenManufacturers(checked);
+        setLowerManuStrings([...s]);
+    }
+    function handleUpdateStrings(strs){
+        setLowerManuStrings(strs);
+        const newChosen = new Set([...chosenManufacturers]);
+        const strSet = new Set(strs);
+        props.value.found_manufacturers.forEach(m => {
+            console.log(m);
+            if(strSet.has(m.toLowerCase())){
+                newChosen.add(m);
+            }
+        });
+        setChosenManufacturers(newChosen);
     }
     function handleSubmit(){
         handleCloseModal();
@@ -86,13 +99,15 @@ export function ManufacturerRenderer(props){
             //parameters: row, manufacturer set
             //console.log(props.functions);
             if(chosenManufacturer !== null){
-                chosenManufacturer.strings = [...chosenManufacturers].map((s) => s.toLowerCase());
+                chosenManufacturer.strings = [...lowerManuStrings].map((s) => s.toLowerCase());
                 const chosen = new Set([...chosenManufacturers]);
                 chosen.add(chosenManufacturer.name);
+                chosen.add(props.value.bom);
                 const remove = props.value.found_manufacturers.reduce((arr, m) => {
                     if(!chosenManufacturers.has(m)) arr.push(m);
                     return arr;
                 }, []);
+                /*
                 axios({
                     method: 'POST',
                     url: serverUrl+'api/manufacturer',
@@ -102,8 +117,23 @@ export function ManufacturerRenderer(props){
                 }).then((response) => {
                     console.log(response.data);
                 });
+                */
+                const toAdd = new Set([...lowerManuStrings]);
+                //toAdd.add(chosenManufacturer.name.toLowerCase());
+                //toAdd.add(props.value.bom.toLowerCase());
+                console.log(toAdd);
+                axios({
+                    method: 'POST',
+                    url: serverUrl+'api/manufacturer',
+                    data: {
+                        strs: [...toAdd], id: chosenManufacturer.id
+                    }
+                }).then((response) => {
+                    console.log(response.data);
+                });
             }
             props.functions.filterManufacturers(props.rowNum, chosenManufacturer);
+            console.log(chosenManufacturer);
         }
     }
     function handleSearch(st){
@@ -123,6 +153,7 @@ export function ManufacturerRenderer(props){
         }
     }
     function handleDeselectManufacturer(){
+        //props.functions.filterManufacturers(props.rowNum, null);
         setChosenManufacturer(null);
         console.log(chosenManufacturers);
         console.log(props.value.found_manufacturers);
@@ -131,6 +162,7 @@ export function ManufacturerRenderer(props){
     function handleSaveManufacturers(strings=null){
         const chosen = strings === null ? strings : (chosenManufacturers === null ? props.value.found_manufacturers : 
         [...chosenManufacturers]);
+        console.log(strings);
         axios({
             method: 'POST',
             url: serverUrl+'api/manufacturer',
@@ -177,12 +209,15 @@ export function ManufacturerRenderer(props){
     function handleCloseModal(){
         setManufacturerModal(false);
     }
-    const buttonString = props.value.linked_manufacturer !== null ? props.value.linked_manufacturer.name : 
+    //console.log(props.value);
+    const buttonString = /*props.value.linked_manufacturer !== null ? props.value.linked_manufacturer.name : */
     (props.value.bom ? props.value.bom : 'Manufacturers');
     return(
         <>
         <Button onClick={handleOpenModal} variant={props.value.linked_manufacturer === null ? 'danger' : 'primary'}>
         {buttonString}
+        {props.value.linked_manufacturer && props.value.bom !== props.value.linked_manufacturer.name 
+        && ' ('+props.value.linked_manufacturer.name+')'}
         </Button>
         <TemplateModal show={manufacturerModal} title='Manufacturer' body={bd} footer={footer} onClose={handleCloseModal}/>
         </>
@@ -251,12 +286,13 @@ function ManufacturerList(props){
 
 function ManufacturerStringInterface(props){
     const serverUrl = useServerUrl();
-    const [strings, setStrings] = useState(props.databaseManufacturers);
+    const manus = [...props.databaseManufacturers];
+    const original = new Set(props.originalManuStrings);
+    const [strings, setStrings] = useState(manus);
     const [addString, setAddString] = useState(null);
-    //const [addIndex, setAddIndex] = useStat
     const [selectedString, setSelectedString] = useState(null);
     useEffect(() => {
-        setStrings(props.databaseManufacturers);
+        setStrings(manus);
     }, [props.databaseManufacturers]);
     function handleClickString(string, i){
         return function(){
@@ -288,28 +324,36 @@ function ManufacturerStringInterface(props){
         const newStrings = [...strings];
         newStrings.splice(selectedString.index, 1);
         setStrings(newStrings);
+        setSelectedString(null);
     }
     function enterString(){
         const toAdd = addString.string;
         const f = strings.findIndex((s) => s === toAdd);
         //console.log(f);
         if(f === -1){
+            const strs = update(strings, {
+                [addString.index]: {$set: addString.string}
+            })
             setStrings(update(strings, {
                 [addString.index]: {$set: addString.string}
             }));
             setAddString(null);
             setSelectedString(null);
+            props.onUpdateStrings(strs);
         }
+        
     }
+    const dis = selectedString === null || (selectedString !== null && 
+        (selectedString.string === props.manuName.toLowerCase() || selectedString.string === props.bomManu.toLowerCase()));
     return(
-        <>
-            <Accordion.Item eventKey="1">
+        <Accordion>
+            <Accordion.Item eventKey="0">
                 <Accordion.Header>{props.manuName} Strings</Accordion.Header>
                 <Accordion.Body>
                 <ListGroup>
                     {strings.map((manuString, i) => {
                         //const cl = selectedString === manuString ? 'SelectedManufacturer' : 'ManufacturerItem';
-                        const cl = 'ManufacturerItem';
+                        const cl = original.has(manuString) ? 'ManufacturerItem' : 'NewManufacturerItem';
                         const content = addString !== null && addString.index === i ? <Form.Control
                         type="text"
                         placeholder="Type manufacturer string"
@@ -334,13 +378,13 @@ function ManufacturerStringInterface(props){
                     </ListGroup.Item>
                     */}
                 </ListGroup>
-                <Button onClick={handleSave}>Save</Button>
+                {/*<Button onClick={handleSave}>Save</Button>*/}
                 <Button onClick={handleAdd}>Add</Button>
-                <Button onClick={handleEdit} disable={selectedString === null}>Edit</Button>
-                <Button onClick={handleDelete} disable={selectedString === null}>Delete</Button>
+                <Button onClick={handleEdit} disabled={dis}>Edit</Button>
+                <Button onClick={handleDelete} disabled={dis}>Delete</Button>
                 </Accordion.Body>
             </Accordion.Item>
-        </>
+        </Accordion>
     );
 }
 

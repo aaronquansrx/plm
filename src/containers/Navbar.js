@@ -1,5 +1,7 @@
 import React, {useEffect, useState} from 'react';
 
+import { useLocation } from 'react-router-dom'
+
 import {useClientUrl, useServerUrl} from './../hooks/Urls';
 
 import styled from 'styled-components';
@@ -71,6 +73,10 @@ export function MainNavbar(props){
             setTimeout(handlePing, 60000);
         }
     }, [props.username, pingCount]);
+    const location = useLocation();
+    //console.log(location.pathname);
+    const lastPath = location.pathname.split('/').at(-1);
+    //console.log(lastPath);
     //console.log(props.username);
     return(
         <div className='FlexNormal'>
@@ -94,7 +100,7 @@ export function MainNavbar(props){
                 navbarScroll
             >
                 {props.pages.map((page, i) => {
-                    return <Nav.Link key={i} href={path(page.path)}>{page.title}</Nav.Link>
+                    return <Nav.Link key={i} href={path(page.path)} active={lastPath === page.path}>{page.title}</Nav.Link>
                 })}
             </Nav>
             {/*

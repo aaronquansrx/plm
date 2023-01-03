@@ -136,6 +136,15 @@ td.MpnHeader{
     background-color: #94baf1;
 }
 
+.NewManufacturerItem{
+    cursor: pointer;
+    background-color: #35dc43;
+}
+
+.ManufacturerItem:active{
+    background-color: #94baf1;
+}
+
 .ChosenManufacturerButton{
     color: #0d6efd;
     background-color: #fff;
