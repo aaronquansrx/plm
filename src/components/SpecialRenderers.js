@@ -25,6 +25,7 @@ export function ManufacturerRenderer(props){
     const [chosenManufacturers, setChosenManufacturers] = useState(props.value.manufacturer_filter);
     const fullLowerManuSet = new Set(props.value.found_manufacturers.map((m) => m.toLowerCase()));
     const [lowerManuStrings, setLowerManuStrings] = useState(props.value.database_strings);
+    const [originalManuStrings, setOriginalManuStrings] = useState(props.value.database_strings);
 
     const [updater, setUpdater] = useState(0);
     useEffect(() => {
@@ -49,7 +50,7 @@ export function ManufacturerRenderer(props){
             onChangeManufacturers={handleChangeManufacturer}/>
         {chosenManufacturer &&
             <ManufacturerStringInterface show={manufacturerModal} manuName={chosenManufacturer.name} bomManu={props.value.bom}
-            databaseManufacturers={lowerManuStrings} originalManuStrings={props.value.database_strings} 
+            databaseManufacturers={lowerManuStrings} originalManuStrings={originalManuStrings} 
             onUpdateStrings={handleUpdateStrings}
             //onSaveManufacturers={handleSaveManufacturers}
             />
@@ -91,6 +92,7 @@ export function ManufacturerRenderer(props){
             }
         });
         setChosenManufacturers(newChosen);
+
     }
     function handleSubmit(){
         handleCloseModal();
@@ -200,6 +202,8 @@ export function ManufacturerRenderer(props){
             cs.strings = [...response.data.strings];
             setChosenManufacturer(cs);
             props.functions.addManufacturerData(cs);
+            setLowerManuStrings(response.data.strings);
+            setOriginalManuStrings(response.data.strings);
         });
     }
     function handleOpenModal(){

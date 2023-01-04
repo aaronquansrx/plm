@@ -137,7 +137,7 @@ function App() {
 
 const versions = [
   {
-      current: '1.2.3',
+      current: '1.2.4',
       name: '1.2',
       content:
       <div>
@@ -154,6 +154,9 @@ const versions = [
           <p>New manufacturer field and filtering</p>
           <p>Line status and filters</p>
           <p>Improved retry system</p>
+          <h5>1.2.4</h5>
+          <p>Manufacturer field string interface</p>
+          <p>Linked manufacturer change/cancel button</p>
       </div>,
       subversions: []
   },

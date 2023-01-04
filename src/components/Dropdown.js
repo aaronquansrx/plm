@@ -28,7 +28,7 @@ export function BomDropdown(props){
         }
     }
     return(
-        <Dropdown>
+        <Dropdown style={{position: 'inherit'}}>
             <Dropdown.Toggle variant="success" id="dropdown-basic">
                 {props.selectedBom && props.selectedBom.name}
             </Dropdown.Toggle>
