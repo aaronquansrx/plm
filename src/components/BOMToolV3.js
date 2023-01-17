@@ -76,7 +76,7 @@ function BOMToolV3(props){
     const [manufacturers, addManufacturerData, manufacturerDataFound] = useManufacturers(props.bom, props.manufacturerData, props.stringToManufacturer);
     const [quantityMultiplier, handleChangeMulti] = useQuantityMultiplierV2();
     const [callApiRetry, callMpn, callApisRetry, multiRetryData, singleRetryData, callOctopart, testNewMpns] = useApiData(mpnList, 
-        mpnListWithQuantity, allApisList, props.updateApiDataMap, 
+        mpnListWithQuantity, allApisList, props.updateApiDataMap, props.updateMpnDetailsMap,
         props.store, props.currency, props.apiData, props.bomType, props.loadData, 
         props.changeLock, props.octopartData, props.updateOctopartDataMap, 
         mpnQuantityMap, manufacturerDataFound);

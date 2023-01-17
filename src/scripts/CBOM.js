@@ -185,7 +185,6 @@ export function parseMasterFile(sheet){
                 if('v' in cell){
                     const trimmedCell = cell.v.trim();
                     if(trimmedCell in masterFileRev){
-                
                         titles[lt] = masterFileRev[trimmedCell];
                     }else if(lookupCriteria.includes(trimmedCell)){
                         titles[lt] = trimmedCell;

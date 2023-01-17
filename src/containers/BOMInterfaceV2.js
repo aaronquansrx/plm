@@ -69,6 +69,7 @@ function BOMInterface(props){
     const [interfaceState, setInterfaceState] = useState(0);
     const [initialBOMEdit, setInitialBOMEdit] = useState([]);
     const [apiData, setApiData] = useState(new Map());
+    const [mpnDetails, setMpnDetails] = useState(new Map());
     const [octopartData, setOctopartData] = useState(new Map());
     const [manufacturerData, setManufacturerData] = useState(new Map());
     const [stringToManufacturer, setStringToManufacturer] = useState({});
@@ -106,6 +107,11 @@ function BOMInterface(props){
         setInitialBOMEdit(bom);
     }
     const SCKey = props.store+':'+props.currency;
+    function updateMpnDetailsMap(joinMap){
+        const newMpnDetails = new Map([...mpnDetails, ...joinMap]); 
+        setMpnDetails(newMpnDetails);
+        return newMpnDetails;
+    }
     function updateApiDataMap(joinMap){
         const addToData = getApiData();
         const newApiData = new Map([...addToData, ...joinMap]);
@@ -148,7 +154,9 @@ function BOMInterface(props){
                 //return <BOMEditInterface bom={uploadedBOM} onFinishEdit={handleEditBOM} changeState={changeState} headers={tableHeaders}/>
             case 'tool':
                 return <BOMToolV3 bom={BOMData.bom} tableHeaders={BOMData.attrs} apis={BOMData.apis} apiAttrs={settings.apiAttributes}
-                updateApiDataMap={updateApiDataMap} apiData={getApiData()} allApiAttrs={apiAttributes}
+                updateApiDataMap={updateApiDataMap} apiData={getApiData()} 
+                updateMpnDetailsMap={updateMpnDetailsMap} mpnDetails={mpnDetails}
+                allApiAttrs={apiAttributes}
                 updateOctopartDataMap={updateOctopartDataMap} octopartData={getOctopartData()} user={props.user}
                 store={props.store} currency={props.currency} changeLock={props.changeLock}
                 loadData={loadData} bomType={BOMData.type} manufacturerData={{get:manufacturerData, set:setManufacturerData}} 

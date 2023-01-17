@@ -16,6 +16,22 @@ import './../css/offer.css';
 import { slice } from 'lodash';
 
 
+export function SimpleArrayTable(props){
+    return(
+        <Table>
+            <tbody>
+                {props.data.map((row, i) => 
+                    <tr key={i}>
+                        {row.map((str, j) =>
+                            <td key={j}>{str}</td>
+                        )}
+                    </tr>
+                )}
+            </tbody>
+        </Table>
+    )
+}
+
 export function BOMAPITable(props){
     //const [init, setInit] = useState(false);
     const data = useMemo(() => props.data, [props.data]);

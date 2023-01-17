@@ -517,7 +517,9 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 lead_time_cut_off: newLeadtimeCutOff
             }
         }).then(response => {
-            changeEvaluation(response.data.data.totals);
+            if(response.data.data){
+                changeEvaluation(response.data.data.totals);
+            }
         });
     }
     //may not use

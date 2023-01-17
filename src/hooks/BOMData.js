@@ -8,7 +8,7 @@ import {useServerUrl} from './../hooks/Urls';
 import {algorithmsInitialStructure} from './../scripts/AlgorithmVariable';
 import { set } from 'lodash';
 
-export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiDataMap, 
+export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiDataMap, updateMpnDetailsMap,
     store, currency, apiData, bomType, loadData, appLock, octopartData, updateOctopartDataMap, mpnQuantityMap,
     manufacturerDataFound){
     //const [dataProcessing, setDataProcessing] = useState([]);
@@ -500,6 +500,7 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
             const formattedApiData = formatApiData(data.refined.apis);
             //const manufacturers = data.refined.found_manufacturers;
             const rmv = refinedMpnVars(data.refined);
+            console.log(response.data);
             callback(mpn, formattedApiData, rmv, apis);
         }
     });

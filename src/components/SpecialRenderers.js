@@ -32,6 +32,7 @@ export function ManufacturerRenderer(props){
         const s = new Set([...props.value.database_strings]);
         s.add(props.value.bom.toLowerCase());
         setLowerManuStrings([...s]);
+        setOriginalManuStrings(props.value.database_strings);
     }, [props.value.database_strings]);
     useEffect(() => {
         setChosenManufacturer(props.value.linked_manufacturer);
@@ -68,27 +69,47 @@ export function ManufacturerRenderer(props){
     useEffect(() => {
         setChosenManufacturers(props.value.manufacturer_filter);
     }, [props.value.manufacturer_filter]);
-    function handleChangeManufacturer(checked){
-        const lowerChecked = new Set([...checked].map((m) => m.toLowerCase()));
-        const s = new Set([...lowerManuStrings]);
-        fullLowerManuSet.forEach((m) => {
-            if(lowerChecked.has(m)){
-                s.add(m);
-            }else{
-                s.delete(m);
+    function handleChangeManufacturer(checked, change){
+        if(chosenManufacturer){
+            //console.log(change.manufacturer);
+            if(!(change.manufacturer.toLowerCase() === props.value.bom.toLowerCase() || change.manufacturer.toLowerCase() === chosenManufacturer.name.toLowerCase())){
+                const newChecked = change.adding ? new Set([...props.value.found_manufacturers].reduce((arr, m) => {
+                    if(m.toLowerCase() === change.manufacturer.toLowerCase()){
+                        arr.push(m);
+                    }
+                    return arr;
+                }, []).concat([...checked])) : new Set([...checked].reduce((arr, m) => {
+                    if(m.toLowerCase() !== change.manufacturer.toLowerCase()){
+                        arr.push(m);
+                    }
+                    return arr;
+                }, []));
+                setChosenManufacturers(newChecked);
+
+                const lowerChecked = new Set([...newChecked].map((m) => m.toLowerCase()));
+                const s = new Set([...lowerManuStrings]);
+                fullLowerManuSet.forEach((m) => {
+                    if(lowerChecked.has(m)){
+                        s.add(m);
+                    }else{
+                        s.delete(m);
+                    }
+                });
+                setLowerManuStrings([...s]);
             }
-        });
-        setChosenManufacturers(checked);
-        setLowerManuStrings([...s]);
+        }else{
+            setChosenManufacturers(checked);
+        }
     }
     function handleUpdateStrings(strs){
         setLowerManuStrings(strs);
         const newChosen = new Set([...chosenManufacturers]);
         const strSet = new Set(strs);
         props.value.found_manufacturers.forEach(m => {
-            console.log(m);
             if(strSet.has(m.toLowerCase())){
                 newChosen.add(m);
+            }else{
+                newChosen.delete(m);
             }
         });
         setChosenManufacturers(newChosen);
@@ -157,7 +178,7 @@ export function ManufacturerRenderer(props){
     function handleDeselectManufacturer(){
         //props.functions.filterManufacturers(props.rowNum, null);
         setChosenManufacturer(null);
-        console.log(chosenManufacturers);
+        //console.log(chosenManufacturers);
         console.log(props.value.found_manufacturers);
         setChosenManufacturers(new Set(props.value.found_manufacturers))
     }
@@ -191,6 +212,8 @@ export function ManufacturerRenderer(props){
             console.log(response);
             //set
             const stringSet = new Set(response.data.strings);
+            stringSet.add(props.value.bom.toLowerCase());
+            stringSet.add(cs.name.toLowerCase());
             const found = props.value.found_manufacturers.reduce((s, m) => {
                 if(stringSet.has(m.toLowerCase())){
                     s.add(m);
@@ -202,7 +225,10 @@ export function ManufacturerRenderer(props){
             cs.strings = [...response.data.strings];
             setChosenManufacturer(cs);
             props.functions.addManufacturerData(cs);
-            setLowerManuStrings(response.data.strings);
+
+            stringSet.add(props.value.bom.toLowerCase());
+            stringSet.add(cs.name.toLowerCase());
+            setLowerManuStrings([...stringSet]);
             setOriginalManuStrings(response.data.strings);
         });
     }
@@ -259,12 +285,14 @@ function ManufacturerList(props){
                 return arr;
             }, []));*/
             const checkedSet = new Set(props.chosenManufacturers);
+            const change = {adding: true, manufacturer: manu};
             if(checkedSet.has(manu)){
+                change.adding = false;
                 checkedSet.delete(manu);
             }else{
                 checkedSet.add(manu);
             }
-            props.onChangeManufacturers(checkedSet);
+            props.onChangeManufacturers(checkedSet, change);
         }
     }
     return(
@@ -329,6 +357,7 @@ function ManufacturerStringInterface(props){
         newStrings.splice(selectedString.index, 1);
         setStrings(newStrings);
         setSelectedString(null);
+        props.onUpdateStrings(newStrings);
     }
     function enterString(){
         const toAdd = addString.string;

@@ -15,6 +15,7 @@ import BOMMain from './pages/BOMMain';
 import Excel from './pages/Excel';
 import CBom from './pages/CBom';
 import BOMScrub from './pages/BOMScrub';
+import QuotingMain from './Quoting/pages/QuotingMain';
 import Test from './pages/Test';
 import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
@@ -34,7 +35,8 @@ const currencies = [
 
 //use this
 const pages = [
-  {path: 'bomtool', title: 'BOM Tool', element: (o,l,u) => <BOMMain options={o} changeLock={l} user={u}/>},
+  {path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>},
+  {path: 'bomtool', title: 'BOM Tool', element: (params) => <BOMMain options={params.options} changeLock={params.lock} user={params.user}/>},
   {path: 'cbom', title: 'CBOM Exporter', element: () => <CBom/>},
   {path: 'partsearch', title: 'Part Search', element: () => <PartSearch/>},
   {path: 'bomscrub', title: 'BOM Scrub', element: () => <BOMScrub/>}
@@ -105,6 +107,11 @@ function App() {
     const prePath = inProduction ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
     return prePath+'/'+p;
   }
+  const pageParams = {
+    options: options,
+    lock: handleLock,
+    user: username
+  }
   return (
     <div className="App">
       <MainNavbar username={username} version={versions[0].current} pages={pages}
@@ -123,7 +130,7 @@ function App() {
         <Route path={path('bomscrub')} element={<BOMScrub/>}/>
         */}
         {pages.map((page, i) => {
-          return <Route key={i} path={path(page.path)} element={page.element(options, handleLock, username)} />
+          return <Route key={i} path={path(page.path)} element={page.element(pageParams, options, handleLock, username)} />
         })}
         <Route path={path('login')} element={<Login onLogin={handleLogin}/>}/>
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>

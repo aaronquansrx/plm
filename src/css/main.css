@@ -155,3 +155,28 @@ td.MpnHeader{
     background-color: #dc3545;
     border-color: #dc3545;
 }
+
+
+.DropFiles{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    width: 100%;
+    height: 160px;
+    border-width: 2px;
+    border-style: solid;
+    border-color: black;
+    border-radius: 5px; 
+}
+
+.Quote:hover{
+    background-color: rgb(221, 218, 218);
+}
+
+.Scrollable{
+    overflow:scroll;
+    width:100%;
+    height:100%;
+}
