@@ -5,6 +5,42 @@ import BootstrapSwitchButton from 'bootstrap-switch-button-react';
 
 import './../css/main.css';
 
+
+//high level text input able to filter with regex and enter on key input
+export function TextControl(props){
+    const [tx, setTx] = useState(props.init);
+    function handleChange(e){
+        let v = e.target.value;
+        let doSet = true;
+        if(props.regex){
+            if(e.target.value.match(props.regex)){
+                v = e.target.value;
+            }else{
+                doSet = false;
+            }
+        }
+        if(props.textFunction){
+            v = props.textFunction(v);
+        }
+        if(doSet) setTx(v);
+    }
+    function handleKeyDown(e){
+        if(e.key === "Enter"){
+            handleBlur();
+        }
+    }
+    function handleBlur(){
+        if(props.onBlur){
+            props.onBlur(tx);
+        }
+    }
+    return(
+        <Form.Control type='text' value={tx} onChange={handleChange} 
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}/>
+    )
+}
+
 export function NumberInput(props){
     const [number, setNumber] = useState(props.value ? props.value : 1);
     //const displayNumber = props.value ? props.value : number;

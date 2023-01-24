@@ -1,4 +1,5 @@
 import {useState, useEffect, useMemo} from 'react';
+import styled from 'styled-components';
 import update from 'immutability-helper';
 
 import { useTable/*, useGroupBy, useExpanded*/ } from 'react-table'
@@ -31,6 +32,75 @@ export function SimpleArrayTable(props){
         </Table>
     )
 }
+
+/*
+const CC = styled.td`
+    &&
+    {
+    background-color: ${props => props.bgc ? props.bgc : 'white'}
+    }
+`;
+
+export function HighlightRowTable(props){
+    const [hr, setHr] = useState(null);
+    const [hc, setHc] = useState(null);
+    const [hls, setHls] = useState(props.data.map((d) => d.map((c) => "")));
+    const [colours, setColours] = useState(props.data.map((d) => d.map((c) => "white")))
+    function handleClickCell(i, j){
+        return function(e){
+            
+            if(e.ctrlKey){
+                setHls(update(hls, {
+                    [i]: {$set: hls[i].map(() => "HL")}
+                }));
+            }else{
+                setHls(update(hls, {
+                    [i]: {[j]: {$set: "HLC"}}
+                }));
+            }
+            if(props.palleteColour){
+                setColours(update(colours, {
+                    [i]: {[j]: {$set: props.palleteColour}}
+                }));
+            }
+        }
+    }
+    return(
+        <Table>
+            <tbody>
+                {props.data.map((row, i) => {
+                    return(
+                    <tr key={i} >
+                        {row.map((str, j) => {
+                            //const cnc = rch && i === hc.column ? "HLC" : "";
+                            //const cnc = hls[i][j]+' SmallCell';
+                            return <ColouredCell key={j} id="ColouredCell" className={'SmallCell'} //bgc={colours[i][j]}
+                            onClick={handleClickCell(i, j)} pallete={props.palleteColour} content={str} onColourChange={}/>
+                                {<div className={"FixedCell"} bgc={colours[i][j]}>{str}</div>
+                            </ColouredCell>}
+                        }
+                        )}
+                    </tr>
+                    )}
+                )}
+            </tbody>
+        </Table>
+    )
+}
+
+function ColouredCell(props){
+    const [colour, setColour]= useState('white');
+    function handleClick(){
+        if(props.pallete !== colour){
+            setColour(props.pallete);
+            if(props.onColourChange) props.onColourChange(props.pallete);
+        }
+    }
+    return <CC id="ColouredCell" className={'SmallCell'} bgc={colour}
+        onClick={handleClick}>
+            <div className={"FixedCell"}>{props.content}</div>
+        </CC>
+}*/
 
 export function BOMAPITable(props){
     //const [init, setInit] = useState(false);
