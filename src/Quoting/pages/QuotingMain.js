@@ -6,6 +6,8 @@ import Spreadsheet from "react-spreadsheet";
 
 import { WorkbookHandler, ExcelSheetParser, excelSheetToArray } from '../../scripts/ExcelHelpers';
 import { SimpleArrayTable } from '../../components/Tables';
+import CreateQuote from './../components/CreateQuote';
+import CustomerBOM from './../components/CustomerBOM';
 import UploadTemplateEditor from './../components/UploadTemplateEditor';
 import UploadTable from './../components/UploadTable';
 import {ExcelDropzone} from '../../components/Dropzone';
@@ -19,8 +21,9 @@ import '../../css/main.css';
 const pageStates = [
     (props) => <Main {...props}/>, 
     (props) => <QuoteView {...props}/>, 
+    (props) => <CreateQuote {...props}/>,
+    (props) => <CustomerBOM {...props}/>,
     (props) => <UploadTable {...props}/>,
-    (props) => <UploadTemplateEditor {...props}/>
 ];
 
 const quoteHeaders = ["Level","Commodity","CMs","Item No.","CPN","SRX PN",
@@ -46,7 +49,7 @@ function QuotingMain(props){
             users: ["User2"]
         }
     ]);
-    const mainState = {page: 0, props: {quotes: quotes, openQuote: openQuote, droppedFile: droppedFile, toTemplates: toTemplates}};
+    const mainState = {page: 0, props: {quotes: quotes, openQuote: openQuote, droppedFile: droppedFile, createQuote: createQuoteFunction()}};
     const [pageState, setPageState] = useState(mainState);
     function handleBack(){
         setPageState(mainState);
@@ -58,13 +61,21 @@ function QuotingMain(props){
             });
         }
     }
-    function toTemplates(){
-        setPageState({page: 3, props: {}});
+    function toCustomerBom(){
+        setPageState({
+            page: 3, props: {toEditQuote: createQuoteFunction(false)}
+        });
+    }
+    function createQuoteFunction(create=true){
+        const title = create ? 'Create Quote' : 'Edit Quote';
+        return function(){
+            setPageState({page: 2, props: {back: handleBack, toCustomerBom: toCustomerBom, title: title, create: create}});
+        }
     }
     function droppedFile(sheets){
         //setUploadedData(upl);
         console.log(sheets);
-        setPageState({page: 2, props: {sheets: sheets, quoteHeaders: quoteHeaders, back: handleBack}});
+        setPageState({page: 4, props: {sheets: sheets, quoteHeaders: quoteHeaders, back: handleBack}});
     }
     return(
         <>
@@ -137,6 +148,7 @@ function Main(props){
             <ExcelDropzone class='DropFiles' onDrop={handleDrop}>
                 <p>Upload Quotes</p>
             </ExcelDropzone>
+            <Button onClick={props.createQuote}>Create Quote</Button>
             <Button onClick={props.toTemplates}>Templates</Button>
             <h2>Quote List</h2>
             <ListGroup>
@@ -170,6 +182,7 @@ function QuoteView(props){
     </div>
     )
 }
+
 function SpreadsheetTemplate(props){
 
 }

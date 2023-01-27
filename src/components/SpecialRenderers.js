@@ -30,7 +30,7 @@ export function ManufacturerRenderer(props){
     const [updater, setUpdater] = useState(0);
     useEffect(() => {
         const s = new Set([...props.value.database_strings]);
-        s.add(props.value.bom.toLowerCase());
+        if(props.value.bom) s.add(props.value.bom.toLowerCase());
         setLowerManuStrings([...s]);
         setOriginalManuStrings(props.value.database_strings);
     }, [props.value.database_strings]);

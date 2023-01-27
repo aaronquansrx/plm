@@ -33,6 +33,8 @@ const currencies = [
   {id: 'MYR', label: 'MYR'}
 ];
 
+const inProduction = process.env.NODE_ENV === 'production';
+
 //use this
 const pages = [
   {path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>},
@@ -42,7 +44,9 @@ const pages = [
   {path: 'bomscrub', title: 'BOM Scrub', element: () => <BOMScrub/>}
 ];
 
-const inProduction = process.env.NODE_ENV === 'production';
+if(!inProduction){
+  pages.push({path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>});
+}
 
 function App() {
   const serverUrl = useServerUrl();
