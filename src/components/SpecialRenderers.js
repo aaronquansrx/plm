@@ -40,11 +40,11 @@ export function ManufacturerRenderer(props){
     const suggestionSize = 5;
     const bd = (
         <div>
-        {!chosenManufacturer ? <SuggestionSearcher /*searchTerm={chosenManufacturer ? chosenManufacturer.name : null}*/ 
+        {!chosenManufacturer ? <SuggestionSearcher
         recommends={[...searchResults.keys()]} onSearch={handleSearch} 
         onClickSuggestion={handleClickSuggestion} size={suggestionSize} updater={updater}/>
         : <Button className={'ChosenManufacturerButton'} onClick={handleDeselectManufacturer}>{chosenManufacturer.name}</Button>
-        }
+    }
         <h3>Filter Manufacturers</h3>
         <ManufacturerList manufacturers={props.value.found_manufacturers} 
             chosenManufacturers={chosenManufacturers} 

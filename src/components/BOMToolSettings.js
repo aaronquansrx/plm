@@ -18,6 +18,8 @@ import {conditionCases, adjustmentCases} from '../scripts/ExcessRules';
 import axios from 'axios';
 import {useServerUrl} from './../hooks/Urls';
 
+const inProduction = process.env.NODE_ENV === 'production';
+
 function BOMToolSettings(props){
     const [openSettings, setOpenSettings] = useState(false);
     const [apiAttributesState, setApiAttributesState] = useState(
@@ -54,10 +56,14 @@ function BOMToolSettings(props){
     const tabs = [
         {name: 'API Attributes', content: <APIAttributeSelector apiAttributesState={apiAttributesState} 
         handleApiAttributesChange={handleApiAttributesChange} apiAttributes={props.apiAttributes}/>},
-        {name: 'Excess Control Rules', content: <ExcessControlRules/>}
+        //{name: 'Excess Control Rules', content: <ExcessControlRules/>}
     ];
+
+    if(!inProduction){
+        tabs.unshift({name: 'Excess Control Rules', content: <ExcessControlRules/>});
+    }
     const SettingsBody = () => (
-        <TabPages tabs={tabs} displayTab={1}/>
+        <TabPages tabs={tabs} displayTab={0}/>
     );
     const SettingsFooter = () => (
         <>

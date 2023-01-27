@@ -15,7 +15,7 @@ export function SuggestionSearcher(props){
     //const [inputHeight, setInputHeight] = useState(0);
     const textInput = useRef(null);
     useEffect(() => {
-        if(props.searchTerm !== null){
+        if(!(props.searchTerm === null || props.searchTerm === undefined)){
             setSearchText(props.searchTerm);
         }
     }, [props.searchTerm, props.updater]);
@@ -37,10 +37,11 @@ export function SuggestionSearcher(props){
     }
     const size = props.size ? props.size : 5;
     const recoLength = size < props.recommends.length ? size : props.recommends.length;
+    console.log(searchText);
     return(
         <>
         <OutsideClickFunction func={handleClickOutside}>
-        <Form.Control
+        {<Form.Control
             type='text'
             placeholder={props.placeholder ? props.placeholder : ''}
             onChange={handleChangeTerm}
@@ -48,7 +49,7 @@ export function SuggestionSearcher(props){
             value={searchText}
             //onKeyDown={handleKeyDown}
             ref={textInput}
-        />
+        />}
         {props.recommends.length > 0 && showSuggestions && 
         <ListGroup className='Pointer' style={{position: 'absolute', zIndex: 10}}>
             {[...Array(recoLength).keys()].map((i) => {

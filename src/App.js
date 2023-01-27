@@ -37,7 +37,7 @@ const inProduction = process.env.NODE_ENV === 'production';
 
 //use this
 const pages = [
-  {path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>},
+  //{path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>},
   {path: 'bomtool', title: 'BOM Tool', element: (params) => <BOMMain options={params.options} changeLock={params.lock} user={params.user}/>},
   {path: 'cbom', title: 'CBOM Exporter', element: () => <CBom/>},
   {path: 'partsearch', title: 'Part Search', element: () => <PartSearch/>},
@@ -45,7 +45,7 @@ const pages = [
 ];
 
 if(!inProduction){
-  pages.push({path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>});
+  pages.unshift({path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>});
 }
 
 function App() {
