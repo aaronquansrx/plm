@@ -3,8 +3,10 @@ import update from 'immutability-helper';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
-function easyFormElement(formId, label, type, extras={}){
-    return {formId:formId, label:label, type:type, extras:extras};
+import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
+
+function easyFormElement(formId, label, type, value, extras={}){
+    return {formId:formId, label:label, type:type, ivalue: value, extras:extras};
 }
 
 const yesNoOpt = ['Yes', 'No'];
@@ -12,42 +14,51 @@ const yesNoOpt = ['Yes', 'No'];
 const currencies = ["USD","EUR","JPY","GBP","CHF","NZD","HKD","SGD","MYR","CNY","AUD"];
 
 const quoteFormFields = [
-    easyFormElement('customer', 'Customer', 'text'),
-    easyFormElement('description', 'Product Description', 'textarea'),
-    easyFormElement('application', 'Application', 'text'),
-    easyFormElement('volume_batchsize', 'Annual Volume & Delivery Batch Sizes', 'textarea'),
-    easyFormElement('currency', 'Currency to quote in', 'select', {options: currencies})
+    easyFormElement('customer', 'Customer', 'text', ''),
+    easyFormElement('description', 'Product Description', 'textarea', ''),
+    easyFormElement('application', 'Application', 'text', ''),
+    easyFormElement('volume_batchsize', 'Annual Volume & Delivery Batch Sizes', 'textarea', ''),
+    easyFormElement('currency', 'Currency to quote in', 'select', currencies[0], {options: currencies})
 ];
 
 const productInformationFields = [
-    easyFormElement('bom', 'Bill of Materials complete with component references', 'select', {options: yesNoOpt}),
-    easyFormElement('avl', 'AVL (Approved Vendor List) with Manufacturer Part Numbers', 'select', {options: yesNoOpt}),
-    easyFormElement('savl_open', 'Strict AVL or open source', 'select', {options: ['Both', 'Strict AVL', 'Open Source']}),
-    easyFormElement('loa', 'Letter of Authorisation (LOA) for customer-negotiated parts if any', 'select', {options: yesNoOpt}),
-    easyFormElement('pcb', 'PCB fabrication drawings (Gerber preferred)', 'select', {options: yesNoOpt}),
-    easyFormElement('mad', 'Mechanical assembly drawings', 'select', {options: yesNoOpt}),
-    easyFormElement('samples', 'Samples of completed boards / assemblies (if available)', 'select', {options: yesNoOpt}),
-    easyFormElement('tests', 'Test specifications and/or times for ICT, Burn In and FCT', 'select', {options: yesNoOpt}),
-    easyFormElement('eq_details', 'Details of any equipment to be consigned', 'select', {options: yesNoOpt}),
-    easyFormElement('programming', 'Programming requirement/specifications', 'select', {options: yesNoOpt}),
-    easyFormElement('sp_details', 'Details of special processes required eg. Conformal coating, underfilling, X-Ray, potting etc.', 'select', {options: yesNoOpt}),
-    easyFormElement('packaging_delivery', 'Packaging requirement and delivery terms', 'select', {options: ['Standard']}),
-    easyFormElement('RoHS', 'RoHS Compliance (Y/N)', 'select', {options: yesNoOpt}),
-    easyFormElement('class', 'ISO and IPC 610 requirement (Class II or III)', 'select', {options: ['Class II', 'Class III']}),
+    easyFormElement('bom', 'Bill of Materials complete with component references', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('avl', 'AVL (Approved Vendor List) with Manufacturer Part Numbers', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('savl_open', 'Strict AVL or open source', 'select', 'Both', {options: ['Both', 'Strict AVL', 'Open Source']}),
+    easyFormElement('loa', 'Letter of Authorisation (LOA) for customer-negotiated parts if any', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('pcb', 'PCB fabrication drawings (Gerber preferred)', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('mad', 'Mechanical assembly drawings', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('samples', 'Samples of completed boards / assemblies (if available)', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('tests', 'Test specifications and/or times for ICT, Burn In and FCT', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('eq_details', 'Details of any equipment to be consigned', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('programming', 'Programming requirement/specifications', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('sp_details', 'Details of special processes required eg. Conformal coating, underfilling, X-Ray, potting etc.', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('packaging_delivery', 'Packaging requirement and delivery terms', 'select', 'Standard', {options: ['Standard']}),
+    easyFormElement('RoHS', 'RoHS Compliance (Y/N)', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('class', 'ISO and IPC 610 requirement (Class II or III)', 'select', 'Class II', {options: ['Class II', 'Class III']}),
 
-    easyFormElement('comments', 'Comments', 'textarea')
+    easyFormElement('comments', 'Comments', 'textarea', '')
 ];  
 
 const additionalInformationFields = [
-    easyFormElement('customer_disclose', 'Can end customer’s name be disclosed to suppliers?', 'select', {options: yesNoOpt}),
-    easyFormElement('customer_sell', 'Customer’s target sell price', 'select', {options: yesNoOpt}),
-    easyFormElement('comments', 'Comments', 'textarea')
+    easyFormElement('customer_disclose', 'Can end customer’s name be disclosed to suppliers?', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('customer_sell', 'Customer’s target sell price', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('comments', 'Comments', 'textarea', '')
 ];
 
 function CreateQuote(props){
-    const [formValues, setFormValues] = useState({});
-    const [productInformationValues, setProductInformationValues] = useState({});
+    const [formValues, setFormValues] = useState(formIdValueObject(quoteFormFields));
+    const [productInformationValues, setProductInformationValues] = useState(formIdValueObject(productInformationFields));
+
+    function formIdValueObject(fields){
+        return fields.reduce((obj, f) => {
+            obj[f.formId] = f.ivalue;
+            return obj;
+        }, {});
+    }
     function handleFormChange(value, fid){
+        //console.log(value);
+        //console.log(formValues);
         setFormValues(update(formValues, {
             [fid]: {$set: value}
         }));
@@ -63,7 +74,19 @@ function CreateQuote(props){
     function handleSubmit(){
         console.log(formValues);
         console.log(productInformationValues);
-        props.toCustomerBom();
+        const postData = {create_details: formValues, function: 'create', user: props.user};
+        if(props.user){   
+            postPLMRequest('quote', postData,
+            (res) => {
+                console.log(res.data);
+                props.toCustomerBom(res.data.quote_id, res.data.quote); // add qid
+            },
+            (res) => {
+                console.log('error');
+                console.log(res);
+            }
+            );
+        }
     }
     function quoteValueSection(title){
         return (<div style={{marginBottom: '15px', margin: '10px'}}>
@@ -79,7 +102,7 @@ function CreateQuote(props){
                 <h3>{props.title}</h3>
                 <Form>
                 {quoteFormFields.map((e, i) => 
-                    <FlexFormGroup key={i} {...e} onChange={handleFormChange}/>
+                    <FlexFormGroup key={i} {...e} value={formValues[e.formId]} onChange={handleFormChange}/>
                 )}
                 </Form>
             </div>

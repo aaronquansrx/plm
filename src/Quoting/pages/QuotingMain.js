@@ -1,6 +1,7 @@
 import {useState, useEffect} from 'react';
 
 import XLSX from 'xlsx';
+import update from 'immutability-helper';
 
 import Spreadsheet from "react-spreadsheet";
 
@@ -15,6 +16,7 @@ import ListGroup from 'react-bootstrap/ListGroup';
 import Badge from 'react-bootstrap/Badge';
 import Button from 'react-bootstrap/Button';
 
+import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 
 import '../../css/main.css';
 
@@ -31,45 +33,72 @@ const quoteHeaders = ["Level","Commodity","CMs","Item No.","CPN","SRX PN",
     "Supplier Part Number 1","Value","Footprint","Fitted","Notes","Comments","Batch Qty"
 ];
 
+/*
+[
+    {
+        id: "Quote A",
+        client: "Client",
+        users: ["User1", "User2"]
+    },
+    {
+        id: "Quote B",
+        client: "CCC",
+        users: ["User2"]
+    }
+]
+*/
+
 function myJsx(jsx){
     return (p) => null;
 }
 
 function QuotingMain(props){
     const [uploadedData, setUploadedData] = useState(null);
-    const [quotes, setQuotes] = useState([
-        {
-            name: "Quote A",
-            client: "Client",
-            users: ["User1", "User2"]
-        },
-        {
-            name: "Quote B",
-            client: "CCC",
-            users: ["User2"]
-        }
-    ]);
+    const [quotes, setQuotes] = useState([]);
+    //const [quoteList, setQuoteList]
     const mainState = {page: 0, props: {quotes: quotes, openQuote: openQuote, droppedFile: droppedFile, createQuote: createQuoteFunction()}};
     const [pageState, setPageState] = useState(mainState);
+
+    useEffect(() => {
+        const getData = {function: 'get_quotes', user: props.user}
+        getPLMRequest('quote', getData,
+        (res) => {
+            console.log(res.data);
+            setQuotes(res.data.quotes);
+            if(pageState.page === 0){
+                setPageState(update(pageState, {
+                    props: {
+                        quotes: {$set: res.data.quotes}
+                    }
+                }));
+            }
+        });
+    }, []);
     function handleBack(){
-        setPageState(mainState);
+        setPageState({page: 0, props: {quotes: quotes, openQuote: openQuote, droppedFile: droppedFile, createQuote: createQuoteFunction()}});
     }
-    function openQuote(i){
+    function openQuote(qid, quote){
         return function(){
+            /*
             setPageState({
-                page: 1, props: {quote: quotes[i], back: handleBack}
+                page: 1, props: {quote: q, back: handleBack}
+            });
+            */
+           const hb = handleBack();
+            setPageState({
+                page: 3, props: {toEditQuote: createQuoteFunction(false), quoteId: qid, quote: quote, user: props.user, back: hb}
             });
         }
     }
-    function toCustomerBom(){
+    function toCustomerBom(qid, quote){
         setPageState({
-            page: 3, props: {toEditQuote: createQuoteFunction(false)}
+            page: 3, props: {toEditQuote: createQuoteFunction(false), quoteId: qid, quote: quote, user: props.user, back: handleBack}
         });
     }
     function createQuoteFunction(create=true){
         const title = create ? 'Create Quote' : 'Edit Quote';
         return function(){
-            setPageState({page: 2, props: {back: handleBack, toCustomerBom: toCustomerBom, title: title, create: create}});
+            setPageState({page: 2, props: {back: handleBack, toCustomerBom: toCustomerBom, title: title, create: create, user: props.user}});
         }
     }
     function droppedFile(sheets){
@@ -77,6 +106,14 @@ function QuotingMain(props){
         console.log(sheets);
         setPageState({page: 4, props: {sheets: sheets, quoteHeaders: quoteHeaders, back: handleBack}});
     }
+    /*
+    function renderView(){
+        switch(pageState){
+            case 0:
+                return 
+        }
+    }
+    */
     return(
         <>
         <div className='FlexNormal Scrollable'>
@@ -153,12 +190,13 @@ function Main(props){
             <h2>Quote List</h2>
             <ListGroup>
                 {props.quotes.map((q, i) => 
-                    <ListGroup.Item key={i} onClick={props.openQuote(i)} className="Pointer Quote">
-                    <span>{q.name}</span>
-                    <Badge bg="secondary">{q.client}</Badge>
-                    {q.users.map((user) => 
-                        <Badge>{user}</Badge>
+                    <ListGroup.Item key={i} onClick={props.openQuote(q.id, q)} className="Pointer Quote">
+                    <span>{q.id}</span>
+                    <Badge bg="secondary">{q.details.customer}</Badge>
+                    {q.users.map((user, u) => 
+                        <Badge key={u}>{user}</Badge>
                     )}
+                    <Badge bg="warning">{q.details.currency}</Badge>
                     </ListGroup.Item>
                 )}
             </ListGroup>
@@ -172,8 +210,8 @@ function QuoteView(props){
     <div>
         <Button variant="secondary" onClick={props.back}>Quote List</Button>
         <div>
-        <h3>{props.quote.name}</h3>
-        <h5>Client: {props.quote.client}</h5>
+        <h3>{props.quote.id}</h3>
+        <h5>Customer: {props.quote.details.customer}</h5>
         <h6>Users: {props.quote.users.map(u => <Badge>{u}</Badge>)}</h6>
         <div>
             Contents goes here
