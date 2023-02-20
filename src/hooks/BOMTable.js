@@ -354,18 +354,25 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
             const lowerLineManu = lineManu.toLowerCase();
             if(lowerLineManu in stringToManufacturer.get){
                 const manuName = stringToManufacturer.get[lowerLineManu];
+                console.log(manufacturerData);
+                console.log(foundManufacturers);
                 if(manufacturerData.get.has(manuName)){
                     const md = manufacturerData.get.get(manuName);
-                    out.linked_manufacturer = md;
-                    const stringSet = new Set([...md.strings]);
-                    const found = foundManufacturers.reduce((s, m) => {
-                        if(stringSet.has(m.toLowerCase())){
-                            s.add(m);
-                        }
-                        return s;
-                    }, new Set());
-                    out.database_strings = md.strings;
-                    out.filtered_manufacturers = found;
+                    if(foundManufacturers.reduce((bool, mn) => {
+                        if (bool) return bool;
+                        return md.strings.includes(mn.toLowerCase());
+                    }, false)){
+                        out.linked_manufacturer = md;
+                        const stringSet = new Set([...md.strings]);
+                        const found = foundManufacturers.reduce((s, m) => {
+                            if(stringSet.has(m.toLowerCase())){
+                                s.add(m);
+                            }
+                            return s;
+                        }, new Set());
+                        out.database_strings = md.strings;
+                        out.filtered_manufacturers = found;
+                    }
                 }
             }
         }
@@ -409,10 +416,12 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
         const newLine = {...line};
         const mpn = newLine.mpns.current;
         function doProcess(dt){
+            console.log(dt);
             const quantity = newLine.quantities.multi;
             let fm = newLine.manu.manufacturer_filter;
             if(changeManufacturer){
                 const bomManu = overwriteManufacturer ? null : newLine.manu.bom;
+                console.log(newManufacturer);
                 const gmf = getManufacturerFilter(dt.found_manufacturers, newManufacturer, bomManu);
                 newLine.manu.linked_manufacturer = gmf.linked_manufacturer;
                 newLine.manu.found_manufacturers = dt.found_manufacturers;
@@ -421,6 +430,7 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
                 fm = gmf.filtered_manufacturers;
             }
             const ea = evalApisV2(dt, apis, quantity, fm);
+            console.log(ea);
             Object.assign(newLine, ea);
             const best = findBestOffer(newLine);
             changeBestOffer(newLine, best, algorithmMode);
@@ -446,11 +456,14 @@ export function useTableBOM(bom, tableHeaders, apis, apiData,
     }
     function changeMPNLine(row, line, mpn, data=null){
         line.mpns.current = mpn;
-        const newLine = processBomLine(line, data);
+        const d = data === null ? null : data.get(mpn).data;
+        const newLine = processBomLine(line, d, apisList, true);
         if(apiData.has(mpn) || data !== null){
             const newBOM = update(tableBOM, {
                 [row]: {$set: newLine}
             });
+            console.log(newLine);
+            console.log(newBOM);
             setTableBOM(newBOM);
             runBomAlgorithms(newBOM);
         }

@@ -146,7 +146,9 @@ export function bomEditParseV2(table, columnAttrs, rowChecked, tableHeaders, hea
     
     const bomAttrs = headerOrder.reduce((arr, attr) => {
         if(attr.accessor === 'quantity' || columnAttrs.includes(attr.Header)){
-            arr.push(attr);
+            if(attr.accessor !== 'manufacturer'){ // remove manufacturer from headers
+                arr.push(attr);
+            }
         }
         return arr;
     }, []);
