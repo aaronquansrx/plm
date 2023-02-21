@@ -32,6 +32,9 @@ function decodeRef(sheet){
 }
 
 export function excelSheetToArray(sheet){
+    if(!('!ref' in sheet)){
+        return [];
+    }
     const colRange = XLSX.utils.decode_range(sheet['!ref']).e.c+1;
     const data = XLSX.utils.sheet_to_json(sheet, {header: 1});
     const sheetData = data.reduce((arr,l) => {

@@ -26,13 +26,13 @@ export function PalleteTable(props){
                     return(
                     <tr key={j}>
                         {row.map((str, i) => {
+                            const cc = props.colourChanges ? props.colourChanges[j][i] : null;
                             return <ColouredCell key={i} id="ColouredCell" className={'SmallCell'}
                             pallete={props.pallete.colour} content={str} 
                             onColourChange={handleClickCell(i, j)}
-                            changeColour={props.colourChanges[j][i]}
+                            changeColour={props.colourChanges ? props.colourChanges[j][i] : null}
                             />
-                        }
-                        )}
+                        })}
                     </tr>
                     )}
                 )}

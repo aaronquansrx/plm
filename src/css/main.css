@@ -181,12 +181,17 @@ td.MpnHeader{
     height:100%;
 }
 
+
 td.HL{
     background-color: #94baf1;
 }
 
 td.HLC{
     background-color: #f1c694;
+}
+
+td.NHL{
+    background-color: #f19494;
 }
 
 .Primary{
@@ -207,4 +212,33 @@ td.SmallCell{
     max-height: 40px;
     max-width: 40px;
     overflow: hidden;
+}
+
+td.RowSelector{
+    background-color: #c8cfc9;
+    border-right-width: 5px;
+}
+
+td.RowSelector:hover{
+    background-color: #a6b1a8;
+}
+
+tr.RowSelector:hover{
+    background-color: #cdd6cf;
+}
+
+td.RowSelector:active{
+    background-color: #60e278;
+}
+
+a#Grey{
+    background-color: #dde6de;
+}
+
+tr.HighlightedRow{
+    background-color: #a3c3f1;
+}
+
+.WideModal{
+    max-width: 80%;
 }

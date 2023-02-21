@@ -18,6 +18,6 @@ export function IdCheckbox(props){
         props.onChange(props.i);
     }
     return (
-        <input className="form-check-input" type="checkbox" value={props.key} checked={props.checked} onChange={handleChange}/>
+        <input className="form-check-input" type="checkbox" checked={props.checked} onChange={handleChange}/>
     );
 }

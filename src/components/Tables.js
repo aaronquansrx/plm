@@ -5,6 +5,7 @@ import update from 'immutability-helper';
 import { useTable/*, useGroupBy, useExpanded*/ } from 'react-table'
 
 import Table from 'react-bootstrap/Table';
+import Nav from 'react-bootstrap/Nav';
 import {SimpleDropdown} from './Dropdown';
 import {PartRow, EmptyOffer} from './Offer';
 import {IdCheckbox} from './Checkbox';
@@ -16,6 +17,36 @@ import './../css/temp.css';
 import './../css/offer.css';
 import { slice } from 'lodash';
 
+
+export function TabbedSheetTable(props){
+    //const [activeSheetIndex, setActiveSheetIndex] = useState(null);
+    //useEffect(() => {
+    //    setActiveSheetIndex(0);
+    //}, [props.sheets]);
+    const activeSheet = useMemo(() => {
+        if(props.sheets === null) return [];
+        return props.sheets.length > 0 ? props.sheets[props.sheetId].array : [];
+    }, [props.sheetId]);
+    function handleSheetChange(i){
+        return function(){
+            //setActiveSheetIndex(i);
+            if(props.onChangeSheet) props.onChangeSheet();
+        }
+    }
+    //console.log(props.sheets);
+    return(
+        <>
+        {<Nav variant="tabs" activeKey={props.sheetId}>
+            {props.sheets && props.sheets.map((sheet, i) => 
+                <Nav.Item key={i} onClick={handleSheetChange(i)}>
+                    <Nav.Link id={i === props.sheetId ? 'Grey' : ''}>{sheet.name}</Nav.Link>
+                </Nav.Item>
+            )}
+        </Nav>}
+        {props.table({sheet: activeSheet, index: props.sheetId, ...props.tableProps})}
+        </>
+    );
+}
 
 export function SimpleArrayTable(props){
     return(

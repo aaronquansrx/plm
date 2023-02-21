@@ -3,11 +3,14 @@ import update from 'immutability-helper';
 
 import Button from 'react-bootstrap/Button';
 import Nav from 'react-bootstrap/Nav';
+import Table from 'react-bootstrap/Table';
 import styled from 'styled-components';
 
+import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { PalleteTable } from '../components/PalleteTable';
 
 import './../../css/main.css';
+import { ListGroup } from 'react-bootstrap';
 
 const S1 = styled.div`
     width: 30px;
@@ -15,11 +18,13 @@ const S1 = styled.div`
     background-color: ${props => props.bgc ? props.bgc : 'white'};
 `;
 
-function UploadTable(props){
+export function UploadTable(props){
+    console.log(props.sheets);
     const [colour, setColour] = useState(null);
     const [palleteSetting, setPalleteSetting] = useState('single');
     const [pallete, setPallete] = useState({colour: null, setting: 'single'});
     const sheetNames = useMemo(() => {
+        if(!props.sheets) return [];
         return props.sheets.map((sheet) => sheet.name);
     }, [props.sheets]);
     //const [displaySheet, setDisplaySheet] = useState(props.sheets[0].array);
@@ -28,9 +33,9 @@ function UploadTable(props){
     const selectedRow = useRef(null);
     const greys = useRef([]);
 
-    const [colourChanges, setColourChanges] = useState(props.sheets[activeSheetIndex].array.map((row) => row.map(() => null)));
+    const [colourChanges, setColourChanges] = useState(null/*props.sheets[activeSheetIndex].array.map((row) => row.map(() => null))*/);
     const headerMatch = useRef(null); // null for no match
-    const activeSheet = props.sheets[activeSheetIndex].array;
+    const activeSheet = props.sheets ? props.sheets[activeSheetIndex].array : null;
     //console.log(colourChanges);
     function changeColour(c){
         return function(){
@@ -94,12 +99,13 @@ function UploadTable(props){
                 objArray.push(obj);
             }
             console.log(objArray);
+            
         }
     }
     function handleSheetChange(i){
         return function(){
             //setDisplaySheet(props.sheets[i].array);
-            setActiveSheetIndex(i)
+            setActiveSheetIndex(i);
         }
     }
     return(
@@ -135,12 +141,237 @@ function UploadTable(props){
                     )}
                 </Nav>
             <div ref={tableDiv}>
-            <PalleteTable data={props.sheets[activeSheetIndex].array} pallete={pallete} onClickCell={handleSelectCell}
-            colourChanges={colourChanges}/>
+                {props.sheets &&
+                    <PalleteTable data={props.sheets[activeSheetIndex].array} pallete={pallete} onClickCell={handleSelectCell}
+                    colourChanges={colourChanges}/>
+                }
             </div>
             </div>
         </div>
     )
 }
 
-export default UploadTable;
+export function UploadTableSingle(props){
+    const sheetNames = useMemo(() => {
+        if(!props.sheets) return [];
+        return props.sheets.map((sheet) => sheet.name);
+    }, [props.sheets]);
+    const [activeSheetIndex, setActiveSheetIndex] = useState(null);
+    const [selectedRow, setSelectedRow] = useState(null);
+    const activeSheet = activeSheetIndex !== null ? props.sheets[activeSheetIndex].array : null;
+    function handleSheetChange(i){
+        return function(){
+            setActiveSheetIndex(i);
+        }
+    }
+    function handleSheetRowSelect(i){
+        setSelectedRow(i);
+    }
+    function handleSubmit(){
+        if(selectedRow !== null){
+
+            //find correct headers
+            const headerSet = new Set(props.productSheetHeaders.map(h => h.label));
+            const headerMap = props.productSheetHeaders.reduce((mp, h) => {
+                mp[h.label] = h.accessor;
+                return mp;
+            }, {});
+            const sheetRow = activeSheet[selectedRow];
+            const headers = sheetRow.reduce((arr, h, n) => {
+                if(headerSet.has(h)){
+                    arr.push({accessor: headerMap[h], index: n});
+                }
+                return arr;
+            }, []);
+            console.log(headers);
+
+            //re do headers into objects
+            const objs = [];
+            for(let r=selectedRow+1; r < activeSheet.length; r++){
+                const obj = headers.reduce((o, h) => {
+                    o[h.accessor] = activeSheet[r][h.index];
+                    return o;
+                }, {});
+                objs.push(obj);
+            }
+            const postData = {product_sheet: objs, function: 'add_product_sheet', user: props.user, 
+            product_id: props.product.id, quote_id: props.quoteId};
+            postPLMRequest('quote', postData,
+                (res) => {
+                    console.log(res.data);
+                    props.changeQuotePageState(2);
+                    props.setProducts(res.data.products);
+                },
+                (res) => {
+                    console.log(res.data);
+                }
+            );
+        }
+    }
+    return(
+        <>
+        <div className='FlexNormal'>
+            <h3>{props.product && props.product.name}</h3>
+            <Button onClick={handleSubmit}>Submit</Button>
+            <Nav variant="tabs" activeKey={activeSheetIndex}>
+                {sheetNames.map((tab, i) => 
+                    <Nav.Item key={i} onClick={handleSheetChange(i)}>
+                        <Nav.Link id={i === activeSheetIndex ? 'Grey' : ''}>{tab}</Nav.Link>
+                    </Nav.Item>
+                )}
+            </Nav>
+            </div>
+
+            <HeaderTable data={activeSheet} selectedRow={selectedRow} 
+            productSheetHeaders={props.productSheetHeaders} 
+            onRowSelect={handleSheetRowSelect}/>
+        </>
+    )
+}
+
+export function UploadTableV2(props){
+    const sheetNames = useMemo(() => {
+        if(!props.sheets) return [];
+        return props.sheets.map((sheet) => sheet.name);
+    }, [props.sheets]);
+    const unlinkedProducts = useMemo(() => {
+        return props.products.reduce((arr, p) => {
+            if(!p.has_sheet) arr.push(p);
+            return arr;
+        }, []);
+    }, [props.products]);
+    const [activeSheetIndex, setActiveSheetIndex] = useState(null);
+    const [linkedProducts, setLinkedProducts] = useState(unlinkedProducts.map((p) => null));
+    const [linkedSheets, setLinkedSheets] = useState(null);
+
+    useEffect(() => {
+        if(props.sheets){
+            setActiveSheetIndex(0);
+            setLinkedSheets(props.sheets.map(() => null));
+            console.log(props.sheets);
+        }
+    }, [props.sheets]);
+    useEffect(() => {
+        const newLP = unlinkedProducts.map((p, i) => {
+            if(linkedProducts[i] !== null) return linkedProducts[i];
+            return null;
+        });
+        setLinkedProducts(newLP);
+    }, [props.products]);
+    function handleSheetChange(i){
+        return function(){
+            setActiveSheetIndex(i);
+        }
+    }
+    const activeSheet = activeSheetIndex !== null ? props.sheets[activeSheetIndex].array : null;
+    const selectedRow = activeSheetIndex !== null && linkedSheets[activeSheetIndex] ? linkedSheets[activeSheetIndex].row : null;
+    function handleSheetRowSelect(i){
+        const headerSet = new Set(props.productSheetHeaders);
+        const sheetRow = activeSheet[i];
+        const headers = sheetRow.reduce((arr, h, n) => {
+            if(headerSet.has(h)){
+                arr.push({header: h, index: n});
+            }
+            return arr;
+        }, []);
+        console.log(headers);
+        const obj = {row: i, product: null};
+        setLinkedSheets(update(linkedSheets, {
+            [activeSheetIndex]: {$set: obj}
+        }));
+    }
+    function handleSelectProduct(p, i){
+        return function(){
+            if(activeSheetIndex !== null){
+                if(linkedSheets[activeSheetIndex] !== null){
+                    console.log(p);
+                }
+                setLinkedSheets(update(linkedSheets, {
+                    [activeSheetIndex]: {
+                        product: {$set: i}
+                    }
+                }));
+            }
+        }
+    }
+    console.log(linkedSheets);
+    //console.log(props.productSheetHeaders);
+    return(
+        <>
+            <div className='FlexNormal'>
+                {!props.product &&
+                <>
+                Unlinked Products
+                <ListGroup className='Pointer'>
+                {props.products.map((p, i) => {
+                    return <ListGroup.Item key={i} onClick={handleSelectProduct(p, i )}>{p.name}</ListGroup.Item>
+                })}
+                </ListGroup>
+                </>
+                }
+            </div>
+            <div className='FlexNormal'>
+            <Nav variant="tabs" activeKey={activeSheetIndex}>
+                {sheetNames.map((tab, i) => 
+                    <Nav.Item key={i} onClick={handleSheetChange(i)}>
+                        <Nav.Link id={i === activeSheetIndex ? 'Grey' : ''}>{tab}</Nav.Link>
+                    </Nav.Item>
+                )}
+            </Nav>
+            </div>
+
+            <HeaderTable data={activeSheet} selectedRow={selectedRow} 
+            productSheetHeaders={props.productSheetHeaders} 
+            onRowSelect={handleSheetRowSelect}/>
+        </>
+    );
+}
+
+function ProductSheetHeaderModal(props){
+
+}
+
+function HeaderTable(props){
+    const [selectedRow, setSelectedRow] = useState(null);
+    function handleRowSelect(j){
+        return function(){
+            setSelectedRow(j);
+            props.onRowSelect(j);
+        }
+    }
+    const productHeaderSet = new Set(props.productSheetHeaders.map(h => h.label));
+    //console.log(productHeaderSet);
+    return(
+        <div className='MainTable'>
+        <Table>
+        <tbody>
+        {props.data && props.data.map((row, j) => {
+            let cn = '';
+            if(props.selectedRow !== null){
+                if(props.selectedRow === j){
+                    cn = 'HL';
+                }else if(props.selectedRow < j){
+                    cn = 'HLC';
+                }
+            }
+            return(
+            <tr key={j}>
+                <td className='RowSelector' onClick={handleRowSelect(j)}> </td>
+                {row.map((str, i) => {
+                    //const productHeaderSet = new Set(props.productSheetHeaders);
+                    if(cn === 'HL' && !productHeaderSet.has(str)){
+                        cn = 'NHL';
+                    }
+                    return <td key={i} className={cn}>{str}</td>
+                }
+                )}
+            </tr>
+            )}
+        )}
+        </tbody>
+        </Table>
+        </div>
+    );
+}
+
+//export default UploadTable;

@@ -27,7 +27,7 @@ export function getPLMRequest(url, params, callback, errorCallback=null, control
         signal: controller ? controller.signal : null
     }).then(response => {
         if(typeof response.data !== 'object'){
-            if(errorCallback) errorCallback();
+            if(errorCallback) errorCallback(response);
         }else{
             callback(response);
         }
