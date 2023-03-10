@@ -2,6 +2,8 @@ import React, {useState} from 'react';
 
 import { TextInput } from './Forms';
 import { Dropdown } from 'react-bootstrap';
+import { OutsideClickFunction } from '../hooks/InterfaceHelpers';
+import { ListGroup } from 'react-bootstrap';
 
 import './../css/main.css'
 
@@ -42,6 +44,38 @@ export function BomDropdown(props){
                 })}
             </Dropdown.Menu>
         </Dropdown>
+    );
+}
+
+/**
+ * 
+ * @param {items {name}, onSelect(itemIndex)} props 
+ * @returns 
+ */
+
+export function ListSelectDropdown(props){
+    const [open, setOpen] = useState(false);
+    function handleClickOutside(){
+        setOpen(false);
+    }
+    function handleOpen(){
+        setOpen(true);
+    }
+    function handleSelect(e){
+        const id = parseInt(e.target.id);
+        //console.log(id);
+        if(props.onSelect) props.onSelect(id);
+        setOpen(false);
+    }
+    return (
+        <OutsideClickFunction func={handleClickOutside}>
+            <ListGroup className='Pointer' style={{position: 'absolute', zIndex: 10}}>
+                {open ? props.items.map((it, i) => {
+                    return <ListGroup.Item key={i} id={i} onClick={handleSelect}>{it.name}</ListGroup.Item>;
+                }) : props.selected && <ListGroup.Item onClick={handleOpen} className='Pointer'>{props.selected.name}</ListGroup.Item>
+                }
+            </ListGroup>
+        </OutsideClickFunction>
     );
 }
 
