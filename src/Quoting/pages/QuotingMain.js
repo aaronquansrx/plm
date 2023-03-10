@@ -14,12 +14,14 @@ import UploadTable from './../components/UploadTable';
 import LinkProductUpload from '../components/LinkProductUpload';
 import {ExcelDropzone} from '../../components/Dropzone';
 import {IdCheckbox} from '../../components/Checkbox';
+import { HeaderArrayTable } from '../../components/Tables';
 
 import ListGroup from 'react-bootstrap/ListGroup';
 import Badge from 'react-bootstrap/Badge';
 import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
 import Modal from 'react-bootstrap/Modal';
+import Form from 'react-bootstrap/Form';
 
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 
@@ -146,9 +148,12 @@ function QuotingMain(props){
                 return <CreateQuote changePageState={changePageState} onCreateQuote={handleCreateProduct} 
                 lastPageState={pageState.last} user={props.user} setQuotes={setQuotes}/>
             case 3:
-                return <EditQuote quote={activeQuote}/>
+                return <EditQuote quote={activeQuote} user={props.user} changePageState={changePageState}
+                lastPageState={pageState.last} setQuotes={setQuotes}/>
             case 4:
                 return <LinkProductUpload quote={activeQuote}/>
+            case 5:
+                return <ManufacturerMasterList changePageState={changePageState}/>
                 //return <UploadTable sheets={sheets} quoteHeaders={quoteHeaders} changePageState={changePageState}/>
 
         }
@@ -223,7 +228,10 @@ function Main(props){
         props.changePageState(2);
     }
     function handleTemplates(){
-        props.changePageState(4)
+        props.changePageState(4);
+    }
+    function handleToMaster(){
+        props.changePageState(5);
     }
     return(
         <div>
@@ -251,6 +259,7 @@ function Main(props){
             */}
             {<QuoteTable quotes={props.quotes} user={props.user} onOpenQuote={props.onOpenQuote} setQuotes={props.setQuotes}/>}
             {/*<UploadTemplateEditor />*/}
+            <Button onClick={handleToMaster}>Manufacturer Master List</Button>
         </div>
     )
 }
@@ -383,6 +392,77 @@ function QuoteView(props){
     </div>
     )
 }*/
+
+//Manufacturer Master List
+function ManufacturerMasterList(props){
+    const [manuInputs, setManuInputs] = useState({manufacturer: '', string: ''});
+    const [masterManufacturerData, setMasterManufacturerData] = useState([]);
+    const [manufacturerMap, setManufacturerMap] = useState({});
+    useState(() => {
+        getManufacturers();
+    }, []);
+    const headers = [{label: 'Manufacturer', accessor: 'name'}, {label: 'Alias', accessor: 'string'}];
+    function handleBack(){
+        props.changePageState(0);
+    }
+    function getManufacturers(){
+        const getData = {function: 'manufacturer_string'};
+        getPLMRequest('srx_records', getData, 
+        (res) => {
+            console.log(res.data);
+            updateDatas(res.data);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
+    function updateDatas(data){
+        setMasterManufacturerData(data.manufacturer_master);
+        setManufacturerMap(data.manufacturer_map);
+    }
+    function handleChangeInputs(inp){
+        return function(e){
+            setManuInputs(update(manuInputs, {
+                [inp]: {$set: e.target.value}
+            }));
+        }
+    }
+    function handleAddManufacturer(){
+        console.log(manuInputs);
+        setManuInputs(update(manuInputs, {
+            string: {$set: ''}
+        }));
+        const hasManufacturerString = manuInputs.manufacturer in manufacturerMap && 
+        manufacturerMap[manuInputs.manufacturer].includes(manuInputs.string);
+        if(!hasManufacturerString){
+            const postData = {function: 'manufacturer_string', 
+            details: {manufacturer: manuInputs.manufacturer, string: manuInputs.string}};
+            postPLMRequest('srx_records', postData, 
+            (res)=>{
+                console.log(res.data);
+                updateDatas(res.data);
+            },
+            (res)=>{
+                console.log(res.data);
+            });
+        }
+    }
+    return (
+        <div>
+        <Button variant='secondary' onClick={handleBack}>Back</Button>
+        <HeaderArrayTable data={masterManufacturerData} headers={headers}/>
+        <Form>
+            <Form.Label>Manufacturer</Form.Label>
+            <Form.Control type='text' value={manuInputs.manufacturer} onChange={handleChangeInputs('manufacturer')}/>
+        </Form>
+        <Form>
+            <Form.Label>Alias</Form.Label>
+            <Form.Control type='text' value={manuInputs.string} onChange={handleChangeInputs('string')}/>
+        </Form>
+        <Button onClick={handleAddManufacturer}>Add Manufacturer</Button>
+        </div>
+    );
+}
 
 function SpreadsheetTemplate(props){
 

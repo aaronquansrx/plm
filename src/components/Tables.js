@@ -24,18 +24,19 @@ export function TabbedSheetTable(props){
     //    setActiveSheetIndex(0);
     //}, [props.sheets]);
     const activeSheet = useMemo(() => {
-        if(props.sheets === null) return [];
+        if(props.sheets === null || props.sheetId === null) return [];
         return props.sheets.length > 0 ? props.sheets[props.sheetId].array : [];
-    }, [props.sheetId]);
+    }, [props.sheetId, props.sheets]);
     function handleSheetChange(i){
         return function(){
             //setActiveSheetIndex(i);
-            if(props.onChangeSheet) props.onChangeSheet();
+            if(props.onChangeSheet) props.onChangeSheet(i);
         }
     }
     //console.log(props.sheets);
     return(
         <>
+        <div className={props.tabsClass}>
         {<Nav variant="tabs" activeKey={props.sheetId}>
             {props.sheets && props.sheets.map((sheet, i) => 
                 <Nav.Item key={i} onClick={handleSheetChange(i)}>
@@ -43,7 +44,10 @@ export function TabbedSheetTable(props){
                 </Nav.Item>
             )}
         </Nav>}
-        {props.table({sheet: activeSheet, index: props.sheetId, ...props.tableProps})}
+        </div>
+        <div className={props.tableClass}>
+        {props.table && props.table({sheet: activeSheet, index: props.sheetId, ...props.tableProps})}
+        </div>
         </>
     );
 }
@@ -56,6 +60,29 @@ export function SimpleArrayTable(props){
                     <tr key={i}>
                         {row.map((str, j) =>
                             <td key={j}>{str}</td>
+                        )}
+                    </tr>
+                )}
+            </tbody>
+        </Table>
+    )
+}
+
+export function HeaderArrayTable(props){
+    return(
+        <Table>
+            <thead>
+                <tr>
+                {props.headers.map((h, i) => 
+                <th key={i}>{h.label}</th>
+                )}
+                </tr>
+            </thead>
+            <tbody>
+                {props.data.map((row, i) => 
+                    <tr key={i}>
+                        {props.headers.map((h, j) =>
+                            <td key={j}>{row[h.accessor]}</td>
                         )}
                     </tr>
                 )}

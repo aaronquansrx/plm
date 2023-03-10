@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useRef} from 'react';
 import update from 'immutability-helper';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
@@ -6,12 +6,15 @@ import Table from 'react-bootstrap/Table';
 
 import { ExcelDropzone } from '../../components/Dropzone';
 import {TemplateModal} from '../../components/Modals';
+import {ListSelectDropdown} from '../../components/Dropdown';
 
 import { excelSheetToArray } from '../../scripts/ExcelHelpers';
 import { useMousePosition } from '../../hooks/Mouse';
 
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { TabbedSheetTable } from '../../components/Tables';
+import { SimplePopover, HoverOverlay } from '../../components/Tooltips';
+import { ListGroup } from 'react-bootstrap';
 
 function easyFormElement(formId, label, type='text', value='', extras={}){
     return {formId:formId, label:label, type:type, ivalue: value, extras:extras};
@@ -63,8 +66,8 @@ const productInformationFields = [
 ];  
 
 const additionalInformationFields = [
-    easyFormElement('customer_disclose', 'Can end customer’s name be disclosed to suppliers?', 'select', yesNoOpt[0], {options: yesNoOpt}),
-    easyFormElement('customer_sell', 'Customer’s target sell price', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('customer_disclose', 'Can end customer\'s name be disclosed to suppliers?', 'select', yesNoOpt[0], {options: yesNoOpt}),
+    easyFormElement('customer_sell', 'Customer\'s target sell price', 'select', yesNoOpt[0], {options: yesNoOpt}),
     easyFormElement('comments', 'Comments', 'textarea', '')
 ];
 
@@ -231,7 +234,9 @@ function ChangeQuoteTemplate(props){
             );
         }
     }
-    //to use
+    function handleSubmitUploadDetails(uploadedDetails={}){
+        setFormValues({...formValues, ...uploadedDetails});
+    }
     function quoteValueSection(title, fields){
         return (<div style={{marginBottom: '15px', margin: '10px'}}>
             {title}
@@ -251,7 +256,7 @@ function ChangeQuoteTemplate(props){
     //console.log(formValues.structure);
     return(
         <div>
-            <UploadModal show={showUploadForm} onClose={handleUploadClose}/>
+            <UploadModal show={showUploadForm} onClose={handleUploadClose} onSubmit={handleSubmitUploadDetails}/>
             <h3>Create Quote</h3> <Button onClick={handleUpload}>Upload</Button>
             {/*<Form>
             <FormIndexSelect formId='structure' value={formValues.structure.value} label='Structure' 
@@ -302,86 +307,231 @@ function ChangeQuoteTemplate(props){
     )
 }
 
-const fieldUploadButtons = quoteFormFieldsRight.concat(quoteFormFieldsLeft).map((v) => v.label);
-
+const fieldUploadButtons = quoteFormFieldsRight.concat(quoteFormFieldsLeft).map((v) => {
+    return {label: v.label, id: v.formId}
+});
+const uploadButtonIdLabelMap = fieldUploadButtons.reduce((obj, b) => {
+    obj[b.id] = b.label;
+    return obj;
+}, {});
+//console.log(uploadButtonIdLabelMap);
 
 function UploadModal(props){
     const [sheets, setSheets] = useState(null);
-    const [formLabels, setFormLabels] = useState(fieldUploadButtons);
     const [labelsUsed, setLabelsUsed] = useState(new Set());
-    const [isButtonDropped, setIsButtonDropped] = useState(false);
+    const [formLabels, setFormLabels] = useState(fieldUploadButtons);
     const [chosenButton, setChosenButton] = useState(null)
     const [sheetValues, setSheetValues] = useState([]);
     const [sheetId, setSheetId] = useState(null);
+
+    const add = {id: null, name: 'add'};
+    const [selectedTemplate, setSelectedTemplate] = useState(add);
+    const [uploadTemplates, setUploadTemplates] = useState([]);
+    const firstRender = useRef(true);
+
+    const changeSheets = useRef(false);
     useEffect(() => {
-        if(sheets === null) {
-            setSheetValues([]);
-        }else{
-            setSheetValues(sheets.map((sheet) => {
-                return sheet.array.map((r) => r.map(() => null));
-            }));
-            setSheetId(0);
+        if(!firstRender.current && changeSheets.current){
+            if(sheets === null) {
+                setSheetValues([]);
+            }else{
+                setSheetValues(nullSheetValues());
+                setSheetId(0);
+            }
+            changeSheets.current = false;
         }
+        firstRender.current = false;
+        //setFormLabels(fieldUploadButtons.filter((e => !labelsUsed.has(e.label))));
     }, [sheets]);
+    useEffect(() => {
+        const getData = {function: 'quote_detail'};
+        getPLMRequest('templates', getData,
+        (res) => {
+            console.log(res.data);
+            setUploadTemplates(res.data.templates);
+        },
+        (res) => {
+            console.log(res.data);
+        }
+        );
+    }, []);
+
+    useEffect(() => {
+        console.log(labelsUsed);
+        setFormLabels(fieldUploadButtons.filter((e => !labelsUsed.has(e.label))));
+    }, [labelsUsed])
+
+    function nullSheetValues(){
+        if(sheets === null) return [];
+        return sheets.map((sheet) => {
+            return sheet.array.map((r) => r.map(() => null));
+        });
+    }
     function handleChangeSheet(i){
         setSheetId(i);
     }
     function handleFileDrop(wb, file){
         const sheetNames = wb.SheetNames;
-        console.log(wb);
         const sheets = sheetNames.map((sn) => {
             const sheetArray = excelSheetToArray(wb.Sheets[sn]);
             return {name: sn, array: sheetArray};
         });
         setSheets(sheets);
+        changeSheets.current = true;
     }
     function handleHoldButton(b){
-        //console.log(b);
         const newLabels = formLabels.filter(e => e !== b);
         setFormLabels(newLabels);
         setChosenButton(b);
-        setIsButtonDropped(false);
     }
-    function handleDropButton(b){
-        setIsButtonDropped(true);
-        //setChosenButton(null);
-        setFormLabels(fieldUploadButtons.filter((e => !labelsUsed.has(e))));
-        setTimeout(() => {
-            //setIsButtonDropped(false);
-            //setFormLabels(fieldUploadButtons.filter((e => !labelsUsed.has(e))));
-        }, 10);
-    }
-    function handleChosen(x, y){
-        if(isButtonDropped){
-            console.log('x: '+x+', y: '+y);
-            console.log(chosenButton);
-            setIsButtonDropped(false);
-            setSheetValues(update(sheetValues, {
-                [sheetId]: {
-                    [y]: {
-                        [x]: {$set: chosenButton}
-                    }
+    function handleDropButton(e){
+        if(e.target.id === 'DropButton'){
+            e.target.hidden = true;
+            const eBelow = document.elementFromPoint(e.clientX, e.clientY);
+            if(eBelow.id === 'DropCell'){
+                const x = parseInt(eBelow.attributes.x.value), y = parseInt(eBelow.attributes.y.value);
+                const labelUpdateObj = {
+                    $add: [chosenButton.label]
                 }
-            }));
-            const newLabelsUsed = update(labelsUsed, {
-                $add: [chosenButton]
-            })
-            setLabelsUsed(newLabelsUsed);
-            setFormLabels(fieldUploadButtons.filter((e => !newLabelsUsed.has(e))));
-            setChosenButton(null);
+                //console.log(sheetValues[sheetId][y][x]);
+                if(sheetValues[sheetId][y][x] !== null){
+                    labelUpdateObj.$remove = [sheetValues[sheetId][y][x].label];
+                }
+                setSheetValues(update(sheetValues, {
+                    [sheetId]: {
+                        [y]: {
+                            [x]: {$set: chosenButton}
+                        }
+                    }
+                }));
+                const newLabels = update(labelsUsed, labelUpdateObj);
+                setLabelsUsed(newLabels);
+                //setFormLabels(newFormLabels(newLabels));
+            }else{
+                setFormLabels(newFormLabels());
+            }
+        }
+        setChosenButton(null);
+    }
+    function newFormLabels(newLabels=null){
+        const nl = newLabels ? newLabels : labelsUsed;
+        return fieldUploadButtons.filter((e => !nl.has(e.label)));
+    }
+    function handleRemoveButton(e){
+        const et = e.target;
+        const x = parseInt(et.attributes.x.value), y = parseInt(et.attributes.y.value);
+        const b = sheetValues[sheetId][y][x];
+        setSheetValues(update(sheetValues, {
+            [sheetId]: {
+                [y]: {
+                    [x]: {$set: null}
+                }
+            }
+        }));
+        const newLabels = update(labelsUsed, {
+            $remove: [b.label]
+        });
+        setLabelsUsed(newLabels);
+        setFormLabels(newFormLabels(newLabels));
+    }
+    function getFormValues(){
+        return sheetValues.reduce((valObj, sheet, i) => {
+            const sheetVals = sheet.reduce((rObj, row, y) => {
+                const rowVals = row.reduce((cObj, col, x) => {
+                    if(col !== null){
+                        cObj.form[col.id] = sheets[i].array[y][x];
+                        cObj.cells.push({assoc: col.id, sheetname: sheets[i].name, sheetid: i, x: x, y: y});
+                    }
+                    return cObj;
+                }, {form: {}, cells: []});
+                return {form: {...rObj.form, ...rowVals.form}, cells: rObj.cells.concat(rowVals.cells)};
+            }, {form: {}, cells: []});
+            return {form: {...valObj.form, ...sheetVals.form}, cells: valObj.cells.concat(sheetVals.cells)};
+        }, {form: {}, cells: []});
+    }
+    function handleSaveTemplate(){
+        const formValues = getFormValues();
+        const td = {name: 'template'+uploadTemplates.length.toString(), cells: formValues.cells};
+        const postData = {function: 'upload_quote_detail', template_details: td};
+        postPLMRequest('templates', postData,
+        (res) => {
+            console.log(res.data);
+            setUploadTemplates(res.data.templates);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
+    function handleSelectTemplate(i){
+        if(i === 0){
+            setSelectedTemplate(add);
+        }else{
+            const temp = uploadTemplates[i-1];
+            setSelectedTemplate(temp);
+            const getData = {function: 'quote_detail_cells', template_id: temp.id};
+            getPLMRequest('templates', getData,
+            (res)=>{
+                console.log(res.data);
+                const newSheetValues = nullSheetValues();
+                const newLabels = new Set();
+                console.log(newSheetValues);
+                res.data.cells.forEach((cell) => {
+                    if(cell.sheetid < newSheetValues.length){
+                        //const sheet = 
+                        if(cell.y < newSheetValues[cell.sheetid].length && cell.x < newSheetValues[cell.sheetid][cell.y].length){
+                            const lab = uploadButtonIdLabelMap[cell.assoc];
+                            const but = {label: lab, id: cell.assoc};
+                            newSheetValues[cell.sheetid][cell.y][cell.x] = but;
+                            newLabels.add(lab);
+                        }
+                    }
+                });
+                console.log(newSheetValues);
+                setSheetValues(newSheetValues);
+                setLabelsUsed(newLabels);
+                //setFormLabels(fieldUploadButtons.filter((e => !newLabels.has(e))));
+            },
+            (res)=>{
+                console.log(res.data);
+            });
         }
     }
-    const body = <div>
-        <ExcelDropzone class='DropFiles' onDrop={handleFileDrop}>
+    function handleSubmit(){
+        //console.log(sheetValues);
+        const formValues = getFormValues();
+        if(props.onSubmit) props.onSubmit(formValues.form);
+        props.onClose();
+    }
+    const body = <div className='ColumnFlexBox' style={{height: '87vh'}}>
+        <div className='FlexNormal'>
+        <ExcelDropzone class='DropFilesSmall' onDrop={handleFileDrop}>
             <p>Upload</p>
         </ExcelDropzone>
+        </div>
+        <div className='FlexNormal'>
+            <div style={{display: 'flex', flexDirection:'row'}}>
+            <Button onClick={handleSaveTemplate}>Save Template</Button>
+            <ListSelectDropdown items={[add].concat(uploadTemplates)} selected={selectedTemplate} onSelect={handleSelectTemplate}/>
+            </div>
+        </div>
+        <div className='FlexNormal'>
         <DragButtonGroup buttons={formLabels} selectedButton={chosenButton}
         onDrop={handleDropButton} 
         onHold={handleHoldButton}/>
-        <TabbedSheetTable sheets={sheets} sheetId={sheetId} onChangeSheet={handleChangeSheet} tableProps={{sheetValues:sheetValues}} table={(props) => 
-            <TestTable {...props} isDropped={isButtonDropped} onChosen={handleChosen} chosenButton={chosenButton}
+        </div>
+        {sheets &&
+        <TabbedSheetTable sheets={sheets} sheetId={sheetId} 
+        onChangeSheet={handleChangeSheet} tableProps={{sheetValues:sheetValues}}
+        tabsClass='FlexNormal' tableClass='FlexNormal Overflow'
+        table={(props) => 
+            <TestTable {...props}
+            chosenButton={chosenButton} onRemove={handleRemoveButton}
             />
         }/>
+        }
+        <div className='FlexNormal' style={{}}>
+            <Button onClick={handleSubmit}>Submit</Button>
+        </div>
     </div>
     return(
         <TemplateModal show={props.show}
@@ -394,24 +544,24 @@ function UploadModal(props){
 }
 
 function DragButtonGroup(props){
-    const [selectedButton, setSelectedButton] = useState(null);
+    //const [selectedButton, setSelectedButton] = useState(null);
     //const [mouse, setMouse] = useState({x: 0, y: 0});
     const [buttonMousePos, setButtonMousePos] = useState(0);
-    function deselectButton(){
-        if(props.onDrop()) props.onDrop();
-        setSelectedButton(null);
+    function deselectButton(e){
+        if(props.onDrop) props.onDrop(e);
+        //setSelectedButton(null);
     }
     useEffect(() => {
-        window.addEventListener('mouseup', deselectButton);
+        //window.addEventListener('mouseup', deselectButton);
         return () => {
-            window.removeEventListener('mouseup', deselectButton);
+            //window.removeEventListener('mouseup', deselectButton);
         }
     }, []);
     const mouse = useMousePosition();
     function handleHoldButton(i){
         return function(e){
             if(props.onHold) props.onHold(props.buttons[i]);
-            setSelectedButton(props.buttons[i]);
+            //setSelectedButton(props.buttons[i]);
             const mx = e.nativeEvent.offsetX;
             const my = e.nativeEvent.offsetY;
             setButtonMousePos({x: mx, y: my});
@@ -423,53 +573,41 @@ function DragButtonGroup(props){
         left: (mouse.x-buttonMousePos.x).toString()+'px'
     }
     return(
-        <div>
-            {selectedButton && 
-                <Button onClick={() => console.log('Ghost')}
+        <>
+            {props.selectedButton && 
+                <Button variant='info' id='DropButton' onMouseUp={deselectButton}
                 style={sty} 
-                >{selectedButton}</Button>
+                >{props.selectedButton.label}</Button>
             }
             {props.buttons.map((but, i) => {
-                return <Button key={i} onMouseDown={handleHoldButton(i)}>{but}</Button>
+                return <Button variant='info' key={i} onMouseDown={handleHoldButton(i)}>{but.label}</Button>
             })}
-        </div>
+        </>
     );
 }
 
 function TestTable(props){
-    //console.log(props);
-    //const [cellClasses, setCellClasses] = useState([]);
-    //const [cellHoverValues, setHoverValues] = useState([]);
     const sheetValues = props.index !== null ? props.sheetValues[props.index] : [];
-    //console.log(sheetValues);
-    useEffect(() => {
-        /*
-        setCellClasses(props.sheet.map((row) => {
-            return row.map(() => null);
-        }));
-        setHoverValues(props.sheet.map((row) => {
-            return row.map(() => null);
-        }));*/
-    }, [props.sheet])
-    function handleHover(e){
-        //if(props.isDropped){
-        const spId = e.target.id.split(':');
 
-        const x = parseInt(spId[0]), y = parseInt(spId[1]);
-        //console.log('x: '+x+', y: '+y);
-        /*
-        setHoverValues(update(hoverValues, {
-            [y]: {
-                [x]: {$set: 'HL'}
-            }
-        }));
-        */
-        props.onChosen(x, y, props.chosenButton);
-        //}
-    }
-    function handleClick(e){
-        console.log(e.target.id);
+    function handleRemove(e){
+        //console.log(e.target.id);
+        props.onRemove(e);
+        //const x = parseInt(e.target.attributes.x.value), y = parseInt(e.target.attributes.y.value);
     }   
+    //console.log(sheetValues);
+    function Cell(p){
+        return <>{p.sheetVal ? 
+            <SimplePopover key={p.j} className={p.cn} popoverBody={p.sheetVal.label} trigger={['hover', 'focus']} placement='auto'>
+                <td id={'DropCell'} x={p.j} y={p.i} key={p.j} className={p.cn} 
+                onClick={handleRemove}>
+                    {p.col}
+                </td>
+            </SimplePopover> :
+            <td id={'DropCell'} x={p.j} y={p.i} key={p.j} className={p.cn}>{p.col}</td>
+            }
+        </>;
+    }
+
     return(
         <Table>
             <tbody>
@@ -478,8 +616,12 @@ function TestTable(props){
                     {row.map((col, j) => {
                         //const cn = (cellClasses.length > 0 && cellClasses[i][j]) ? cellClasses[i][j] : '';
                         //const cn = cellHoverValues.length > 0 && cellHoverValues[i][j] ? 'HL' : '';
-                        const cn = sheetValues.length > 0 && sheetValues[i][j] !== null ? 'HL' : '';
-                        return <td id={j+':'+i} key={j} className={cn} onClick={handleClick} onMouseOver={handleHover}>{col}</td>
+                        const sheetVal = sheetValues && i < sheetValues.length && 
+                        j < sheetValues[i].length && sheetValues[i][j] !== null ? sheetValues[i][j] : null;
+                        const cn = sheetVal ? 'HL Pointer' : '';
+                        //const inner = sheetVal ? <HoverOverlay popover={sheetVal} placement='auto'>{col}</HoverOverlay> : <>{col}</>
+                        return <Cell key={j} i={i} j={j} cn={cn} sheetVal={sheetVal} col={col}/>
+
                     })}
                 </tr>
             })}

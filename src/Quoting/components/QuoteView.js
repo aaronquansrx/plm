@@ -8,18 +8,24 @@ import Form from 'react-bootstrap/Form';
 import Table from 'react-bootstrap/Table';
 
 
-import {UploadTable, UploadTableV2, UploadTableSingle} from '../components/UploadTable';
+import { UploadTableSingle, UploadMain } from '../components/UploadTable';
 import {ExcelDropzone} from '../../components/Dropzone';
+import { SimpleArrayTable, HeaderArrayTable } from '../../components/Tables';
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { excelSheetToArray } from '../../scripts/ExcelHelpers';
+import { ObjectSuggestionSearcher } from '../../components/Searcher';
+
 
 function QuoteView(props){
-    console.log(props.user);
-    const [products, setProducts] = useState([]);
+    const [products, setProducts] = useState([]); //products with child data
+    const [productsList, setProductsList] = useState([]); // list of products, regardless of child status (no child info)
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [highlightedProduct, setHighlightedProduct] = useState(null);
     const [pageState, setPageState] = useState({current:0, last: null});
     const [minBatches, setMinBatches] = useState(1);
+
+    const [consolidatedData, setConsolidatedData] = useState({data: [], headers: []});
+
     useEffect(() => {
         console.log(props.quote);
         //const getData = {function: 'get_products', quote_id: props.quote.id, user: props.user}
@@ -30,7 +36,9 @@ function QuoteView(props){
         getPLMRequest('quote', getData,
         (res) => {
             console.log(res.data);
-            setProducts(res.data.children);
+            //setProducts(res.data.children);
+            //setProductsList()
+            updateProducts(res.data)
             setMinBatches(res.data.num_batches);
 
         },
@@ -38,6 +46,10 @@ function QuoteView(props){
             console.log(res.data);
         });
     }, []);
+    function updateProducts(data){
+        setProducts(data.products);
+        setProductsList(data.product_list);
+    }
     function changeQuotePageState(i){
         setPageState(update(pageState, {
             current: {$set: i}
@@ -53,37 +65,30 @@ function QuoteView(props){
         console.log(p);
         setSelectedProduct(p);
     }
-    /*
-    function handleAddProduct(){
-        if(productName !== ''){
-            const pd = {name: 'Product '+productName};
-            setProductName('');
-            const postData = {product_details: pd, function: 'add_product', user: props.user, quote_id:props.quoteId};
-            postPLMRequest('quote', postData,
-                (res) => {
-                    console.log(res.data);
-                    setProducts(res.data.products);
-                },
-                (res) => {
-                    console.log('error');
-                    console.log(res.data);
-                }
-            );
-        }
-    }*/
+
+    function handleConsolidate(data){
+        setConsolidatedData(data);
+    }
 
     function renderView(){
         switch(pageState.current){
             case 0:
-                return <MainQuoteView quote={props.quote} setProducts={setProducts} products={products} user={props.user}
+                return <MainQuoteView quote={props.quote} updateProducts={updateProducts} products={products} 
+                productsList={productsList} user={props.user}
                 changeMainPageState={props.changePageState} changeQuotePageState={changeQuotePageState} 
-                selectProduct={selectProduct} minBatches={minBatches}/>
+                selectProduct={selectProduct} minBatches={minBatches} onConsolidate={handleConsolidate}/>
             case 1:
                 return <UploadQuoteView products={products} quote={props.quote} user={props.user}
-                setProducts={setProducts} changeQuotePageState={changeQuotePageState} product={selectedProduct}/>
+                update={updateProducts} changeQuotePageState={changeQuotePageState} product={selectedProduct}
+                productsList={productsList} updateProducts={updateProducts}
+                />
             case 2:
                 return <ViewProduct product={selectedProduct} changeQuotePageState={changeQuotePageState} 
                 quote={props.quote} user={props.user}/>
+            case 3:
+                return <ConsolidateView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
+            case 4:
+                return <PartUsageView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
         }
     }
     //console.log(props.quote);
@@ -98,6 +103,7 @@ function MainQuoteView(props){
     const [highlightedProduct, setHighlightedProduct] = useState(null);
     const [parentProduct, setParentProduct] = useState(false);
     const [numBatches, setNumBatches] = useState(0);
+    const [userRecommends, setUserRecommends] = useState([]);
     useEffect(() => {
         if(numBatches < props.minBatches){
             setNumBatches(props.minBatches);
@@ -105,7 +111,7 @@ function MainQuoteView(props){
     }, [props.minBatches])
     //const 
     function handleEditQuote(){
-        props.changeMainPageState(4);
+        props.changeMainPageState(3);
     }
     function handleBack(){
         props.changeMainPageState(0);
@@ -124,38 +130,64 @@ function MainQuoteView(props){
         }
     }
     function handleHighlightProduct(p){
-        //return function(){
-            //console.log(p);
         if(p === null){
             setHighlightedProduct(null);
         }else{
-            console.log(p.id);
             if(p.id === highlightedProduct){
-                //props.onHighlightProduct(p);
                 setHighlightedProduct(null);
             }else{
                 setHighlightedProduct(p.id);
             }
         }
-        //}
     }
-    //console.log(highlightedProduct);
-    function displayTable(){
-        switch(props.quote.structure){
-            case 0:
-                return <SubAssemblyProductTable products={props.products} onViewProduct={handleViewProduct} 
-                onUpload={handleUpload} user={props.user}
-                onHighlightProduct={handleHighlightProduct} highlightedProduct={highlightedProduct} numBatches={numBatches}/>
-            case 1:
-                return <MultipleProductTable products={props.products} onViewProduct={handleViewProduct} onUpload={handleUpload}/>
-        }
-    }
+
     function handleChangeBatches(e){
         //console.log(e.target.value);
         const val = parseInt(e.target.value);
         if(val > props.minBatches && val < 10){
             setNumBatches(val);
         }
+    }
+    function handleConsolidate(){
+        const getData = highlightedProduct === null ? {function: 'consolidate_quote', user: props.user, quote_id: props.quote.id} 
+        : {function: 'consolidate_product', user: props.user, product_id: highlightedProduct};
+        getPLMRequest('quote', getData,
+        (res)=>{
+            console.log(res.data);
+            props.onConsolidate({data: res.data.data, headers: res.data.headers});
+            props.changeQuotePageState(3);
+        },
+        (res)=>{
+            console.log(res.data);
+        });
+    }
+    function handlePartUsage(){
+        const getData = {function: 'part_usage', user: props.user, quote_id: props.quote.id};
+        getPLMRequest('quote', getData,
+        (res)=>{
+            console.log(res.data);
+            props.onConsolidate({data: res.data.data, headers: res.data.headers});
+            props.changeQuotePageState(4);
+        },
+        (res)=>{
+            console.log(res.data);
+        });
+    }
+    function handleMainUpload(){
+        props.changeQuotePageState(1);
+        props.selectProduct(null);
+    }
+    function handleSearchUser(search){
+        console.log(search);
+        const getData = {function: 'users', search: search, limit: 5};
+        getPLMRequest('srx_records', getData,
+        (res) => {
+            console.log(res.data);
+            setUserRecommends(res.data.users);
+        },
+        (res) => {
+            console.log(res.data);
+        });
     }
     return(
         <div className='Vert'>
@@ -173,35 +205,30 @@ function MainQuoteView(props){
                 <h5>Customer: {props.quote.formatted.customer}</h5>
                 <h6>Owner: {props.quote.formatted.owner}</h6>
                 <div>
-                    {
-                    props.quote.structure === 0 ? 
-                        <div>
-                            Product Sub-assembly 
-                            Parent: {/*<Form.Control type={'text'} onChange={handleProductNameChange} value={productName}/>*/}
-                            Batch1: x, EAU: x
-                        </div>
-                        : <div>
-                            Multiple Products
-                        </div>
-                    }
-                    <Form.Control style={{width:'100px'}} type='number' value={numBatches} onChange={handleChangeBatches}/>
+                <ObjectSuggestionSearcher recommends={userRecommends} onSearch={handleSearchUser}/>
+                </div>
+                <div className='Hori'>
+                    <div className='FlexNormal' style={{display: 'flex', justifyContent: 'center'}}>
+                    <Form>
+                        <Form.Label>Number of Batches</Form.Label>
+                        <Form.Control style={{width:'100px'}} type='number' value={numBatches} onChange={handleChangeBatches}/>
+                    </Form>
+                    </div>
+                    <div className='FlexNormal'>
+                        <Button onClick={handleConsolidate}>Consolidate</Button>
+                        <Button onClick={handlePartUsage}>Part Usage</Button>
+                    </div>
                 </div>
                 </div>
             </div>
             <h3>{props.quote.structure === 0 && 'Child'} Products</h3>
-            {displayTable()}
-
-            {/*props.products.map((p, i) => {
-
-                return <div key={i}>
-                    {p.name} {p.has_sheet ? <Button onClick={handleViewProduct(p)}>View</Button> : 
-                    <Button variant='danger' onClick={handleUpload(p)}>No Sheet</Button>}
-                    </div>
-            })*/}
-            <ProductAdder setProducts={props.setProducts} user={props.user} quoteId={props.quote.id} 
+            <ProductTable products={props.products} onViewProduct={handleViewProduct} 
+                onUpload={handleUpload} user={props.user} productsList={props.productsList}
+                onHighlightProduct={handleHighlightProduct} highlightedProduct={highlightedProduct} numBatches={numBatches}/>
+            <ProductAdder updateProducts={props.updateProducts} user={props.user} quoteId={props.quote.id} 
             highlightedProduct={highlightedProduct}/>
             </div>
-            <Button onClick={handleUpload}>Upload</Button>
+            <Button onClick={handleMainUpload}>Upload</Button>
         </div>
     );
 }
@@ -274,7 +301,7 @@ function ProductRow(props){
     return(
         <>
         <tr className={props.cn} onClick={handleHighlightProduct}>
-            <td>{props.idValue}</td>
+            <td>{props.product && props.idValue}</td>
             <td>{edit ? <Form.Control type='text' value={name} onChange={handleChangeName}/> : name}</td>
             <td>
                 {p.has_sheet ? <Button onClick={props.onViewProduct(p)}>View</Button> : 
@@ -305,9 +332,10 @@ function ProductRow(props){
     );
 }
 
-function SubAssemblyProductTable(props){
+function ProductTable(props){
     const batchesArr = [...Array(props.numBatches).keys()];
-    //console.log(batchesArr);
+    console.log(props.productsList);
+    console.log(props.highlightedProduct);
     return(
         <Table>
         <thead>
@@ -319,13 +347,22 @@ function SubAssemblyProductTable(props){
         </tr>
         </thead>
         <tbody>
-        {props.products.map((c, i) => {
+        {props.productsList.map((product, pid) => {
+            const cn = product.id === props.highlightedProduct ? 'HighlightedRow' : '';
+            return <ProductRow key={pid} user={props.user} onHighlightProduct={props.onHighlightProduct} onViewProduct={props.onViewProduct}
+            onUpload={props.onUpload} product={product} cn={cn} idValue={product.id_string} batchesArr={batchesArr}/>
+        })}
+        
+        {/*
+        //old code for generating product list with products and children
+        props.products.map((c, pid) => {
+            const pi = pid+1;
             const p = c.product;
             //let childs = c;
             const cn = p.id === props.highlightedProduct ? 'HighlightedRow' : '';
 
             const childs = c.children.map((child, i) => {
-                return {child: child, id: [i]}
+                return {child: child, id: [pi, i+1]}
             });
             let childrenRows = [];
             while(childs.length > 0){
@@ -336,48 +373,21 @@ function SubAssemblyProductTable(props){
                 //onUpload={props.onUpload} />
                 //console.log(child);
                 child.children.forEach((ch, i) => {
-                    childs.push({child: ch, id: c.id.concat([i])});
+                    childs.push({child: ch, id: c.id.concat([i+1])});
                 })
                 //console.log(c.id);
                 const idStr = c.id.reduce((str, ind) => {
-                    return str+' '+ind
-                }, '');
-                childrenRows.push({product: child.product, cn:cn, idValue: 'Child'+idStr});
+                    if(str === 'Child ') return str+ind;
+                    return str+'.'+ind;
+                }, 'Child ');
+                childrenRows.push({product: child.product, cn:cn, idValue: idStr});
                 //childs.
                 //console.log(c);
                 //childs = childs.children;
             }
-            return (<ProductRow key={i} user={props.user} onHighlightProduct={props.onHighlightProduct} onViewProduct={props.onViewProduct}
-                onUpload={props.onUpload} product={p} cn={cn} idValue={'Parent '+i.toString()} batchesArr={batchesArr} children={childrenRows}/>);
-        })}
-        </tbody>
-        </Table>
-    );
-}
-function MultipleProductTable(props){
-    return(
-        <Table>
-        <thead>
-        <tr>
-            <th>Name</th><th>Status</th><th>Batch 1</th><th>Batch N</th><th>EAU</th>
-        </tr>
-        </thead>
-        <tbody>
-        {props.products.map((p, i) => {
-            return (
-            <tr key={i}>
-                <td>{p.name}</td>
-                <td>
-                    {p.has_sheet ? <Button onClick={props.onViewProduct(p)}>View</Button> : 
-                    <Button variant='danger' onClick={props.onUpload(p)}>No Sheet</Button>}
-                </td>
-                <td>x</td><td>x</td>
-                <td>
-                    x
-                </td>
-            </tr>
-            )
-        })}
+            return (<ProductRow key={pi} user={props.user} onHighlightProduct={props.onHighlightProduct} onViewProduct={props.onViewProduct}
+                onUpload={props.onUpload} product={p} cn={cn} idValue={'Parent '+(pi).toString()} batchesArr={batchesArr} children={childrenRows}/>);
+        })*/}
         </tbody>
         </Table>
     );
@@ -420,7 +430,6 @@ function UploadQuoteView(props){
         });
         setSheets(sheets);
     }
-    console.log(props.quote);
     return(
         <>
             <div className='FlexNormal'>
@@ -432,9 +441,13 @@ function UploadQuoteView(props){
             <div className='FlexNormal'>
             {/*<ProductAdder setProducts={props.setProducts} user={props.user} quoteId={props.quote.id}/>*/}
             </div>
+            {props.product ?
             <UploadTableSingle sheets={sheets} productSheetHeaders={productSheetHeaders} user={props.user}
-            products={props.products} setProducts={props.setProducts} quoteId={props.quote.id}
+            products={props.products} updateProducts={props.updateProducts} quoteId={props.quote.id}
             product={props.product} changeQuotePageState={props.changeQuotePageState}/>
+            : <UploadMain user={props.user} sheets={sheets} productsList={props.productsList} 
+            productSheetHeaders={productSheetHeaders} quoteId={props.quote.id} updateProducts={props.updateProducts}
+            changeQuotePageState={props.changeQuotePageState}/>}
         </>
     );
 }
@@ -449,14 +462,15 @@ function ProductAdder(props){
                 pd = {type: 'product', details: {name: productName}, parent_type:'product', child_type: 'product', 
                 parent: props.highlightedProduct};
             }else{
-                pd = {type: 'product', details: {name: productName}, parent_type:'quote', child_type: 'product'};
+                pd = {type: 'product', details: {name: productName}, parent_type:'quote', child_type: 'product',
+            parent: props.quoteId};
             }
-            console.log(pd);
+            //console.log(pd);
             const postData = {child_details: pd, function: 'add_child', user: props.user, quote_id:props.quoteId};
             postPLMRequest('quote', postData,
                 (res) => {
                     console.log(res.data);
-                    props.setProducts(res.data.products)
+                    props.updateProducts(res.data);
                 },
                 (res) => {
                     console.log(res.data);
@@ -470,9 +484,11 @@ function ProductAdder(props){
     }
     return (
         <div className='Hori'>
+            <div className='Hori'>
             <div>Product Name:</div>
             <Form.Control type={'text'} onChange={handleProductNameChange} value={productName}/>
             <Button onClick={handleAddProduct}>Add Product</Button>
+            </div>
         </div>
     );
 }
@@ -520,6 +536,40 @@ function ViewProduct(props){
         </tbody>
         </Table>
         }
+        </div>
+    );
+}
+
+const consolidateHeaders = [
+    {label: 'Description', accessor: 'description'},
+    {label: 'Manufacturer', accessor: 'manufacturer'},
+    {label: 'MPN', accessor: 'mpn'},
+    {label: 'Total', accessor: 'total'}
+]
+
+function ConsolidateView(props){
+    const headers = consolidateHeaders.concat(props.consolidatedData.headers);
+    function handleBack(){
+        props.changeQuotePageState(0);
+    }
+
+    //<SimpleArrayTable data={props.data}/>
+    return(
+        <div>
+        <Button variant='secondary' onClick={handleBack}>Back</Button>
+        <HeaderArrayTable data={props.consolidatedData.data} headers={headers}/>
+        </div>
+    );
+}
+
+function PartUsageView(props){
+    function handleBack(){
+        props.changeQuotePageState(0);
+    }
+    return(
+        <div>
+        <Button variant='secondary' onClick={handleBack}>Back</Button>
+        <HeaderArrayTable data={props.consolidatedData.data} headers={props.consolidatedData.headers}/>
         </div>
     );
 }
