@@ -45,7 +45,7 @@ const pages = [
 ];
 
 if(!inProduction){
-  pages.unshift({path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>});
+  //pages.unshift({path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>});
 }
 
 function App() {
@@ -127,12 +127,6 @@ function App() {
       {showVersionModal && <VersionModal show={showVersionModal} versions={versions} hideAction={handleHideVersion}/>}
       <Routes>
         <Route path={path('')} element={<Index/>}/>
-        {/*
-        <Route path={path('bomtool')} element={<BOMMain options={options} changeLock={handleLock} user={username}/>}/>
-        <Route path={path('cbom')} element={<CBom/>}/>
-        <Route path={path('partsearch')} element={<PartSearch/>}/>
-        <Route path={path('bomscrub')} element={<BOMScrub/>}/>
-        */}
         {pages.map((page, i) => {
           return <Route key={i} path={path(page.path)} element={page.element(pageParams, options, handleLock, username)} />
         })}
@@ -140,7 +134,7 @@ function App() {
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
         <Route path={path('excel')} element={<Excel/>}/>
         <Route path={path('test')} element={<Test/>}/>
-        {/*!inProduction && <Route path={path('circular')} element={<CircularBufferTest/>}/>*/}
+        {inProduction && <Route path={path('quoting')} element={<QuotingMain user={username}/>}/>}
       </Routes>
     </div>
   );
