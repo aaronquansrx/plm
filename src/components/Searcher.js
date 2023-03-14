@@ -25,7 +25,7 @@ export function SuggestionSearcher(props){
             setShowSuggestions(true);
         }
         setSearchText(term);
-        props.onSearch(term);
+        if(props.onSearch) props.onSearch(term);
     }
     function handleClickSuggestion(reco){
         return function(){
