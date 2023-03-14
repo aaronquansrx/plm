@@ -16,6 +16,7 @@ import Excel from './pages/Excel';
 import CBom from './pages/CBom';
 import BOMScrub from './pages/BOMScrub';
 import QuotingMain from './Quoting/pages/QuotingMain';
+import QuotingTables from './Quoting/pages/QuotingTables'
 import Test from './pages/Test';
 import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
@@ -45,7 +46,7 @@ const pages = [
 ];
 
 if(!inProduction){
-  //pages.unshift({path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>});
+  pages.unshift({path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>});
 }
 
 function App() {
@@ -134,6 +135,7 @@ function App() {
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
         <Route path={path('excel')} element={<Excel/>}/>
         <Route path={path('test')} element={<Test/>}/>
+        <Route path={path('')} element={<QuotingTables/>}/>
         {inProduction && <Route path={path('quoting')} element={<QuotingMain user={username}/>}/>}
       </Routes>
     </div>
