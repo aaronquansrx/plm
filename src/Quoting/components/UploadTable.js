@@ -16,6 +16,7 @@ import { PalleteTable } from '../components/PalleteTable';
 
 import './../../css/main.css';
 import { ListGroup } from 'react-bootstrap';
+import { TemplateModal } from '../../components/Modals';
 
 const S1 = styled.div`
     width: 30px;
@@ -33,23 +34,36 @@ const batchUploadHeaders = [
     {label: 'EAU', accessor: 'eau', type: 'integer'}
 ];
 
+const defaultHeaders = [
+    {label: 'Level', accessor: 'level'},
+    {label: 'Commodity', accessor: 'commodity'},
+    {label: 'CMs', accessor: 'cms'},
+    {label: 'Item No.', accessor: 'item_no'}, 
+    {label: 'CPN', accessor: 'cpn'},
+    {label: 'SRX PN', accessor: 'srx_pn'},
+    {label: 'Description', accessor: 'description'},
+    {label: 'Usage Per', accessor: 'usage_per'},
+    {label: 'UOM', accessor: 'uom'},
+    {label: 'Designator', accessor: 'designator'},
+    {label: 'Approved MFR', accessor: 'mfr'},
+    {label: 'Approved MPN', accessor: 'mpn'},
+    {label: 'Supplier 1', accessor: 'supplier'},
+    {label: 'Supplier Part Number 1', accessor: 'spn'},
+    {label: 'Value', accessor: 'value'},
+    {label: 'Footprint', accessor: 'footprint'},
+    {label: 'Fitted', accessor: 'fitted'},
+    {label: 'Notes', accessor: 'notes'},
+    {label: 'Comments', accessor: 'comments'},
+    {label: 'Batch Qty', accessor: 'batch_qty'}
+];
+
 export function UploadMain(props){
     const [sheetId, setSheetId] = useState(null);
-    //const [sheetValues, setSheetValues] = useState([]);
-    //const [selectedProduct, setSelectedProduct] = useState(null);
     const [productIndex, setProductIndex] = useState(null);
     const [selectedRow, setSelectedRow] = useState(null);
-    //const [productValues, setProductValues] = useState(nullProductSheetValues());
-    //const [batchValues, setBatchValues] = useState();
     const [linkMode, setLinkMode] = useState(linkModes[0]); // 0 for 
-    /*const activeSheet = useMemo(() => {
-        if(props.sheets === null) return null;
-        return props.sheets[sheetId].array;
-    }, [sheetId]);*/
-    // const activeValues = useMemo(() => {
-
-    // }, [productValues, productIndex]);
-    // const changeSheets = useRef(false);
+    const [headers, setHeaders] = useState(batchUploadHeaders);
+    const [showHeaderModal, setShowHeaderModal] = useState(false);
     useEffect(() => {
         //if(changeSheets.current){
             if(props.sheets !== null){
@@ -85,13 +99,12 @@ export function UploadMain(props){
             const productChildrenVals = productHeaderIndex !== -1 ? getProductChildrenValues(activeSheet, productHeaderIndex, rowIndex) : null;
             //const productChildrenVals = productHeaderIndex !== -1 ? getProductChildrenValues(activeSheet.map((row) => row[productHeaderIndex]))
             // : null;
-            const headerSet = new Set(batchUploadHeaders.map(h => h.label));
+            const headerSet = new Set(headers.map(h => h.label));
             const headersFound = sheetRow.map((str) => {
                 const matches = headerSet.has(str) || str.startsWith("Batch ");
                 return matches;
             });
-
-            console.log(productChildrenVals);
+            //console.log(productChildrenVals);
             setSelectedRow({sheetId: sheetId, row: rowIndex, productValues: productChildrenVals, headersFound: headersFound});
         }
         /*
@@ -150,15 +163,15 @@ export function UploadMain(props){
     }
     function handleUpload(){
         if(selectedRow !== null){
-            const headerSet = new Set(batchUploadHeaders.map(h => h.label));
-            const headerLabelMap = batchUploadHeaders.reduce((mp, h) => {
+            const headerSet = new Set(headers.map(h => h.label));
+            const headerLabelMap = headers.reduce((mp, h) => {
                 mp[h.label] = {accessor: h.accessor, type: h.type};
                 return mp;
             }, {});
             const activeSheet = props.sheets[selectedRow.sheetId].array;
             const sheetRow = activeSheet[selectedRow.row];
             let nBatches = 0;
-            const headers = sheetRow.reduce((arr, h, n) => {
+            const hs = sheetRow.reduce((arr, h, n) => {
                 if(headerSet.has(h)){
                     const header = headerLabelMap[h];
                     arr.push({accessor: header.accessor, index: n, type: header.type});
@@ -170,7 +183,7 @@ export function UploadMain(props){
             }, []);
             const objs = [];
             for(let r=selectedRow.row+1; r < activeSheet.length; r++){
-                const obj = headers.reduce((o, h) => {
+                const obj = hs.reduce((o, h) => {
                     const val = activeSheet[r][h.index];
                     if(h.accessor === 'batches'){
                         const batchSize = parseInt(val);
@@ -210,7 +223,15 @@ export function UploadMain(props){
             );
         }
     }
-    //console.log(selectedRow);
+    function handleChangeHeaders(newHeaders){
+        setHeaders(newHeaders);
+    }
+    function handleHeaderModal(){
+        setShowHeaderModal(true);
+    }
+    function handleCloseModal(){
+        setShowHeaderModal(false);
+    }
     return(
         <>
         <div className='FlexNormal'>
@@ -225,20 +246,91 @@ export function UploadMain(props){
                 <div>
                     Types
                 </div>
+                <Button onClick={handleHeaderModal}>Headers</Button>
             </div>
-        </div>
-        <div className='FlexNormal'>
-            <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}
-            onChangeSheet={handleChangeSheet}
-            table={(props) =>
-            <HeaderTableWithRowSelectorV2 {...props} selectedRow={selectedRow && selectedRow.sheetId == sheetId ? selectedRow.row : null} />}
-            tableProps={{onRowSelect:handleSheetRowSelect, 
-                sheetHeaders:batchUploadHeaders, 
-                selectedHeadersFound: selectedRow ? selectedRow.headersFound : []}}
-            />
             <Button onClick={handleUpload}>Upload</Button>
         </div>
+        <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}
+        onChangeSheet={handleChangeSheet}
+        tableClass={'FlexNormal Overflow'} tabsClass={'FlexNormal'}
+        table={(props) =>
+        <HeaderTableWithRowSelectorV2 {...props} 
+        selectedRow={selectedRow && selectedRow.sheetId == sheetId ? selectedRow.row : null} />}
+        tableProps={{
+            onRowSelect:handleSheetRowSelect, 
+            sheetHeaders:headers, 
+            selectedHeadersFound: selectedRow ? selectedRow.headersFound : []
+        }}
+        />
+        <HeaderModal show={showHeaderModal} onClose={handleCloseModal} headers={headers} 
+        onChangeHeaders={handleChangeHeaders}/>
         </>
+    );
+}
+
+function HeaderModal(props){
+    const [editingHeaders, setEditingHeaders] = useState(props.headers);
+    const [editHeader, setEditHeader] = useState({index: null, value: ''});
+    useEffect(() => {
+        setEditingHeaders(props.headers);
+    }, [props.show]);
+    const body = <div>
+        <Table>
+        <thead>
+            <tr><th>Accessor</th><th>Labels</th></tr>
+        </thead>
+        <tbody>
+        {editingHeaders.map((header, i) => {
+            const isEditing = editHeader.index === i;
+            return(
+            <tr key={i}>
+                <td>{header.accessor}</td>
+                <td onClick={handleSelectLabel(i)}>
+                    {isEditing ? 
+                    <OutsideClickFunction func={handleHeaderLabel}>
+                        <Form.Control type='text' autoFocus value={editHeader.value} onChange={handleEditTextChange} 
+                        onKeyDown={handleEnterLabel}/>
+                    </OutsideClickFunction>
+                        : header.label
+                    }
+                </td>
+            </tr>
+            );
+        })}
+        </tbody>
+        </Table>
+    </div>
+    const footer = <Button onClick={handleSubmitHeaders}>Submit</Button>
+    function handleEditTextChange(e){
+        setEditHeader(update(editHeader, {
+            value: {$set: e.target.value}
+        }));
+    }
+    function handleEnterLabel(e){
+        if(e.key == 'Enter'){
+            handleHeaderLabel();
+        }
+    }
+    function handleHeaderLabel(){
+        setEditingHeaders(update(editingHeaders, {
+            [editHeader.index]: {
+                label: {$set: editHeader.value}
+            }
+        }));
+        setEditHeader({index: null, value: ''});
+    }
+    function handleSelectLabel(i){
+        return function(){
+            setEditHeader({index: i, value: editingHeaders[i].label});
+        }
+    }
+    function handleSubmitHeaders(){
+        if(props.onChangeHeaders) props.onChangeHeaders(editingHeaders);
+        if(props.onClose) props.onClose();
+    }
+    return(
+        <TemplateModal show={props.show} body={body} footer={footer}
+        onClose={props.onClose} title={'Headers'}/>
     );
 }
 
@@ -289,7 +381,6 @@ function HeaderTableWithRowSelectorV2(props){
         }
     }
     return(
-        <div className='MainTable'>
         <Table>
         <tbody>
         {props.sheet && props.sheet.map((row, j) => {
@@ -318,47 +409,62 @@ function HeaderTableWithRowSelectorV2(props){
         )}
         </tbody>
         </Table>
-        </div>
     );
 }
 
 
 export function UploadTableSingle(props){
-    const sheetNames = useMemo(() => {
-        if(!props.sheets) return [];
-        return props.sheets.map((sheet) => sheet.name);
-    }, [props.sheets]);
-    const [activeSheetIndex, setActiveSheetIndex] = useState(null);
+    const [sheetId, setSheetId] = useState(null);
     const [selectedRow, setSelectedRow] = useState(null);
-    const activeSheet = activeSheetIndex !== null ? props.sheets[activeSheetIndex].array : null;
-    function handleSheetChange(i){
-        return function(){
-            setActiveSheetIndex(i);
-        }
+    const [showHeaderModal, setShowHeaderModal] = useState(false);
+    const [headers, setHeaders] = useState(defaultHeaders);
+    function handleChangeSheet(i){
+        setSheetId(i);
+        console.log(i);
     }
-    function handleSheetRowSelect(i){
+    function handleChangeHeaders(newHeaders){
+        console.log(newHeaders);
+        setHeaders(newHeaders);
+    }
+    function handleSheetRowSelect(rowIndex){
         //reference this row for more detail (can use HeaderTableWithRowSelectorV2 and TabbedTable)
         //setSelectedRow({sheetId: sheetId, row: rowIndex, productValues: productChildrenVals, headersFound: headersFound});
-        setSelectedRow(i);
+        if(selectedRow && selectedRow.row === rowIndex && selectedRow.sheetId === sheetId){
+            setSelectedRow(null);
+        }else{
+            const activeSheet = props.sheets[sheetId].array;
+            const sheetRow = activeSheet[rowIndex];
+            const headerSet = new Set(headers.map(h => h.label));
+            console.log(headers);
+            const headersFound = sheetRow.map((str) => {
+                const matches = headerSet.has(str);
+                return matches;
+            });
+            setSelectedRow({sheetId: sheetId, row: rowIndex, headersFound: headersFound});
+        }
     }
     function handleSubmit(){
-        if(selectedRow !== null){
+        console.log(headers);
+        if(selectedRow.row !== null){
             //find correct headers
-            const headerSet = new Set(props.productSheetHeaders.map(h => h.label));
-            const headerMap = props.productSheetHeaders.reduce((mp, h) => {
+            console.log(headers);
+            const headerSet = new Set(headers.map(h => h.label));
+            const headerMap = headers.reduce((mp, h) => {
                 mp[h.label] = h.accessor;
                 return mp;
             }, {});
-            const sheetRow = activeSheet[selectedRow];
-            const headers = sheetRow.reduce((arr, h, n) => {
+            const activeSheet = props.sheets[selectedRow.sheetId].array;
+            console.log(activeSheet);
+            const sheetRow = activeSheet[selectedRow.row];
+            const hs = sheetRow.reduce((arr, h, n) => {
                 if(headerSet.has(h)){
                     arr.push({accessor: headerMap[h], index: n});
                 }
                 return arr;
             }, []);
             const objs = [];
-            for(let r=selectedRow+1; r < activeSheet.length; r++){
-                const obj = headers.reduce((o, h) => {
+            for(let r=selectedRow.row+1; r < activeSheet.length; r++){
+                const obj = hs.reduce((o, h) => {
                     o[h.accessor] = activeSheet[r][h.index];
                     return o;
                 }, {});
@@ -378,23 +484,34 @@ export function UploadTableSingle(props){
             );
         }
     }
+    function handleHeaderModal(){
+        setShowHeaderModal(true);
+    }
+    function handleCloseModal(){
+        setShowHeaderModal(false);
+    }
     return(
         <>
         <div className='FlexNormal'>
             <h3>{props.product && props.product.name}</h3>
+            <Button onClick={handleHeaderModal}>Headers</Button>
             <Button onClick={handleSubmit}>Submit</Button>
-            <Nav variant="tabs" activeKey={activeSheetIndex}>
-                {sheetNames.map((tab, i) => 
-                    <Nav.Item key={i} onClick={handleSheetChange(i)}>
-                        <Nav.Link id={i === activeSheetIndex ? 'Grey' : ''}>{tab}</Nav.Link>
-                    </Nav.Item>
-                )}
-            </Nav>
-            </div>
-
-            <HeaderTable data={activeSheet} selectedRow={selectedRow} 
-            productSheetHeaders={props.productSheetHeaders} 
-            onRowSelect={handleSheetRowSelect}/>
+        </div>
+        <div className='FlexNormal'>
+            <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}
+            onChangeSheet={handleChangeSheet}
+            tableClass={'FlexNormal Overflow'} tabsClass={'FlexNormal'}
+            table={(props) =>
+                <HeaderTableWithRowSelectorV2 {...props} 
+                selectedRow={selectedRow && selectedRow.sheetId == sheetId ? selectedRow.row : null} />}
+                tableProps={{
+                    onRowSelect:handleSheetRowSelect, 
+                    selectedHeadersFound: selectedRow ? selectedRow.headersFound : []
+                }}
+            />
+        </div>
+        <HeaderModal show={showHeaderModal} onClose={handleCloseModal} 
+        headers={headers} onChangeHeaders={handleChangeHeaders}/>
         </>
     )
 }

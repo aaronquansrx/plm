@@ -12,10 +12,13 @@ import {IdCheckbox} from './Checkbox';
 import {HoverOverlay} from './Tooltips';
 import {PageInterface} from './Pagination';
 
+import { OutsideClickFunction } from '../hooks/InterfaceHelpers';
+
 import './../css/table.css';
 import './../css/temp.css';
 import './../css/offer.css';
 import { slice } from 'lodash';
+import { Form } from 'react-bootstrap';
 
 
 export function TabbedSheetTable(props){
@@ -49,6 +52,65 @@ export function TabbedSheetTable(props){
         {props.table && props.table({sheet: activeSheet, index: props.sheetId, ...props.tableProps})}
         </div>
         </>
+    );
+}
+
+export function EditTable(props){
+    const [editValue, setEditValue] = useState(null);
+    const [editCell, setEditCell] = useState(null);
+    function handleEdit(i, j, val){
+        return function(){
+            if(editCell !== null){
+                if(editCell.x !== i && editCell.y !== j){
+                    submitCellValue();
+                    setEditCell({x: i, y: j});
+                    setEditValue(val);
+                }
+            }else{
+                setEditCell({x: i, y: j});
+                setEditValue(val);
+            }
+        }
+    }
+    function handleEditChange(e){
+        setEditValue(e.target.value);
+    }
+    function handleSubmit(e){
+        if(e.key === 'Enter'){
+            submitCellValue();
+        }
+    }
+    function submitCellValue(){
+        if(props.onSubmit) props.onSubmit(editCell, editValue);
+        setEditCell(null);
+        console.log('sub?');
+    }
+    return(
+        <Table>
+        <thead>
+            <tr>
+            {props.headers.map((h, i) => <th key={i}>{h.label}</th>)}
+            </tr>
+        </thead>
+        <tbody>
+        {props.data.map((l, j) => {
+            return <tr key={j}>
+                {props.headers.map((h, i) => {
+                    const isEditCell = editCell ? i === editCell.x && j === editCell.y : false;
+                    return <td key={i} onMouseDown={handleEdit(i, j, l[h.accessor])}>
+                        {isEditCell ? 
+                        <OutsideClickFunction func={() => {}}>
+                        <Form.Control style={{minWidth: '100px'}} autoFocus type='text' 
+                        value={editValue} onChange={handleEditChange} onKeyDown={handleSubmit}/> 
+                        </OutsideClickFunction>
+                        : l[h.accessor]}
+                    </td>
+                })}
+            </tr>
+        })}
+        </tbody>
+        </Table>
+        
     );
 }
 

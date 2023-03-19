@@ -10,7 +10,7 @@ import Table from 'react-bootstrap/Table';
 
 import { UploadTableSingle, UploadMain } from '../components/UploadTable';
 import {ExcelDropzone} from '../../components/Dropzone';
-import { SimpleArrayTable, HeaderArrayTable } from '../../components/Tables';
+import { SimpleArrayTable, HeaderArrayTable, EditTable } from '../../components/Tables';
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { excelSheetToArray } from '../../scripts/ExcelHelpers';
 import { ObjectSuggestionSearcher } from '../../components/Searcher';
@@ -84,7 +84,7 @@ function QuoteView(props){
                 />
             case 2:
                 return <ViewProduct product={selectedProduct} changeQuotePageState={changeQuotePageState} 
-                quote={props.quote} user={props.user}/>
+                quote={props.quote} user={props.user} />
             case 3:
                 return <ConsolidateView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
             case 4:
@@ -144,7 +144,7 @@ function MainQuoteView(props){
     function handleChangeBatches(e){
         //console.log(e.target.value);
         const val = parseInt(e.target.value);
-        if(val > props.minBatches && val < 10){
+        if(val >= props.minBatches && val < 10){
             setNumBatches(val);
         }
     }
@@ -205,7 +205,7 @@ function MainQuoteView(props){
                 <h5>Customer: {props.quote.formatted.customer}</h5>
                 <h6>Owner: {props.quote.formatted.owner}</h6>
                 <div>
-                <ObjectSuggestionSearcher recommends={userRecommends} onSearch={handleSearchUser}/>
+                {/*<ObjectSuggestionSearcher recommends={userRecommends} onSearch={handleSearchUser}/>*/}
                 </div>
                 <div className='Hori'>
                     <div className='FlexNormal' style={{display: 'flex', justifyContent: 'center'}}>
@@ -221,7 +221,7 @@ function MainQuoteView(props){
                 </div>
                 </div>
             </div>
-            <h3>{props.quote.structure === 0 && 'Child'} Products</h3>
+            <h3>Products</h3>
             <ProductTable products={props.products} onViewProduct={handleViewProduct} 
                 onUpload={handleUpload} user={props.user} productsList={props.productsList}
                 onHighlightProduct={handleHighlightProduct} highlightedProduct={highlightedProduct} numBatches={numBatches}/>
@@ -341,7 +341,7 @@ function ProductTable(props){
         <thead>
         <tr>
             <th>Id</th><th>Name</th><th>Status</th><th>Qty</th>
-            {batchesArr.map((n) => <th key={n}>Batch {n}</th>)}
+            {batchesArr.map((n) => <th key={n}>Batch {n+1}</th>)}
             <th>EAU</th>
             <th>Edit</th>
         </tr>
@@ -514,29 +514,39 @@ function ViewProduct(props){
     function handleBack(){
         props.changeQuotePageState(0);
     }
+    function handleSubmitEdit(cell, value){
+        const row = cell.y;
+        const header = productSheetHeaders[cell.x].accessor;
+        const postData = {function: 'edit_sheet_value',
+            user: props.user, product_id: props.product.id, value_details: {
+            index: row, header: header, value, value
+        }};
+        postPLMRequest('quote', postData, 
+        (res)=>{
+            if(res.data.success){
+                setProductSheet(res.data.product_sheet);
+            }
+        },
+        (res)=> {
+            console.log(res.data);
+        });
+    }
+    function handleOverwrite(){
+        props.changeQuotePageState(1);
+    }
     return(
-        <div>
+        <>
+        <div className={'FlexNormal'}>
+        <Button onClick={handleOverwrite}>Upload Overwrite</Button>
         <Button variant='secondary' onClick={handleBack}>Back to Quote</Button>
         <h3>{props.product.name}</h3>
-        {productSheet &&
-        <Table>
-        <thead>
-            <tr>
-            {productSheetHeaders.map((h, i) => <td key={i}>{h.label}</td>)}
-            </tr>
-        </thead>
-        <tbody>
-        {productSheet.map((l, j) => {
-            return <tr key={j}>
-                {productSheetHeaders.map((h, i) => {
-                    return <td key={i}>{l[h.accessor]}</td>
-                })}
-            </tr>
-        })}
-        </tbody>
-        </Table>
-        }
         </div>
+        {productSheet &&
+        <div className='MainTable'>
+        <EditTable headers={productSheetHeaders} data={productSheet} onSubmit={handleSubmitEdit}/>
+        </div>
+        }
+        </>
     );
 }
 
@@ -557,9 +567,39 @@ function ConsolidateView(props){
     return(
         <div>
         <Button variant='secondary' onClick={handleBack}>Back</Button>
-        <HeaderArrayTable data={props.consolidatedData.data} headers={headers}/>
+        <CustomHeaderArrayTable data={props.consolidatedData.data} headers={headers}/>
         </div>
     );
+}
+
+function CustomHeaderArrayTable(props){
+    console.log(props.data);
+    return(
+        <Table>
+            <thead>
+                <tr>
+                {props.headers.map((h, i) => 
+                <th key={i}>{h.label}</th>
+                )}
+                </tr>
+            </thead>
+            <tbody>
+                {props.data.map((row, i) => {
+                    let cn = '';
+                    if(!row.manu_found){
+                        cn = 'NHL';
+                    }
+                    return(
+                    <tr key={i}>
+                        {props.headers.map((h, j) =>
+                            <td key={j} className={cn}>{row[h.accessor]}</td>
+                        )}
+                    </tr>
+                    )}
+                )}
+            </tbody>
+        </Table>
+    )
 }
 
 function PartUsageView(props){

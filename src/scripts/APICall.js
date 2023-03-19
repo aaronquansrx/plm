@@ -19,7 +19,7 @@ function clientUrl(){
 const serverUrl = getServerUrl();
 console.log(serverUrl);
 
-export function getPLMRequest(url, params, callback, errorCallback=null, controller=null){
+export function getPLMRequest(url, params, callback=null, errorCallback=null, controller=null){
     axios({
         method: 'GET',
         url: serverUrl+'api/'+url,
@@ -29,13 +29,13 @@ export function getPLMRequest(url, params, callback, errorCallback=null, control
         if(typeof response.data !== 'object'){
             if(errorCallback) errorCallback(response);
         }else{
-            callback(response);
+            if(callback) callback(response);
         }
 
     });
 }
 
-export function postPLMRequest(url, data, callback, errorCallback=null, controller=null){
+export function postPLMRequest(url, data, callback=null, errorCallback=null, controller=null){
     axios({
         method: 'POST',
         url: serverUrl+'api/'+url,
@@ -45,7 +45,7 @@ export function postPLMRequest(url, data, callback, errorCallback=null, controll
         if(typeof response.data !== 'object'){
             if(errorCallback) errorCallback(response);
         }else{
-            callback(response);
+            if(callback) callback(response);
         }
 
     });
