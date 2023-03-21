@@ -150,7 +150,7 @@ export function HeaderArrayTable(props){
                 )}
             </tbody>
         </Table>
-    )
+    );
 }
 
 /*

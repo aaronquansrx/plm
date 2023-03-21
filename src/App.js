@@ -135,7 +135,7 @@ function App() {
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
         <Route path={path('excel')} element={<Excel/>}/>
         <Route path={path('test')} element={<Test/>}/>
-        <Route path={path('')} element={<QuotingTables/>}/>
+        <Route path={path('tables')} element={<QuotingTables/>}/>
         {inProduction && <Route path={path('quoting')} element={<QuotingMain user={username}/>}/>}
       </Routes>
     </div>

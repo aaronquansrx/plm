@@ -404,7 +404,27 @@ export function SaveBom(props){
 export function Login(props){
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const handleClose = () => props.hideAction();
+    const handleClose = () => {
+        props.hideAction();
+        //document.removeEventListener('keydown', handleKey);
+    }
+    useEffect(() => {
+        function handleKey(e){
+            if(e.key === 'Enter'){
+                handleLogin();
+            }
+        }
+        if(props.show){
+            setUsername('');
+            setPassword('');
+            document.addEventListener('keydown', handleKey);
+        }else{
+            //document.removeEventListener('keydown', handleKey);
+        }
+        return () => {
+            document.removeEventListener('keydown', handleKey);
+        };
+    }, [props.show]);
     function changeUN(un){
         setUsername(un);
     }
@@ -412,8 +432,10 @@ export function Login(props){
         setPassword(pw);
     }
     function handleLogin(){
-        props.login(username, password);
-        props.hideAction();
+        if(username !== ''){
+            props.login(username, password);
+            props.hideAction();
+        }
     }
     return(
         <Modal show={props.show} onHide={handleClose}>

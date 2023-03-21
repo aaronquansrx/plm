@@ -1,5 +1,7 @@
 import {useState, useEffect} from 'react';
 
+import { Link } from 'react-router-dom';
+
 import XLSX from 'xlsx';
 import update from 'immutability-helper';
 
@@ -152,9 +154,6 @@ function QuotingMain(props){
                 lastPageState={pageState.last} setQuotes={setQuotes}/>
             case 4:
                 return <LinkProductUpload quote={activeQuote}/>
-            case 5:
-                return <ManufacturerMasterList changePageState={changePageState}/>
-                //return <UploadTable sheets={sheets} quoteHeaders={quoteHeaders} changePageState={changePageState}/>
 
         }
     }
@@ -259,7 +258,10 @@ function Main(props){
             */}
             {<QuoteTable quotes={props.quotes} user={props.user} onOpenQuote={props.onOpenQuote} setQuotes={props.setQuotes}/>}
             {/*<UploadTemplateEditor />*/}
-            <Button onClick={handleToMaster}>Manufacturer Master List</Button>
+            <Link to="/tables">
+                <Button>Tables</Button>
+            </Link>
+            {/*<Button onClick={handleToMaster}>Manufacturer Master List</Button>*/}
         </div>
     )
 }
@@ -393,6 +395,7 @@ function QuoteView(props){
     )
 }*/
 
+/*
 //Manufacturer Master List
 function ManufacturerMasterList(props){
     const [manuInputs, setManuInputs] = useState({manufacturer: '', string: ''});
@@ -463,6 +466,7 @@ function ManufacturerMasterList(props){
         </div>
     );
 }
+*/
 
 function SpreadsheetTemplate(props){
 
