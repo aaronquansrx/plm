@@ -39,6 +39,7 @@ export function MainNavbar(props){
     const [pingCount, setPingCount] = useState(0);
     const clientUrl = useClientUrl();
     const serverUrl = useServerUrl();
+    const inProduction = process.env.NODE_ENV === 'production';
     function path(p){
         //const prePath = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_CLIENT_PATH : process.env.REACT_APP_TEST_PATH;
         //const server = process.env.NODE_ENV === 'production' ? process.env.REACT_APP_SERVER : process.env.REACT_APP_SERVER_TEST;
@@ -115,6 +116,11 @@ export function MainNavbar(props){
             </Form>
             */}
             {/*<Nav className='nav-link' onClick={handlePing}>Ping</Nav>*/}
+            {!inProduction &&
+            <Nav className='nav-link'>
+                <Nav.Link href={path('feedback')} active={lastPath==='feedback'}>Feedback</Nav.Link>
+            </Nav>
+            }
             <Nav className='nav-link Help' >
             <HoverOverlay tooltip='Help (in development)' placement='auto'><BiHelpCircle size={30}/></HoverOverlay>
             </Nav>

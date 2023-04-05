@@ -9,6 +9,13 @@
     flex-basis: auto;
 }
 
+.TableHeading{
+    background: rgb(202, 205, 207);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
 .Pointer{
     cursor: pointer;
 }

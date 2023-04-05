@@ -8,7 +8,7 @@ import './../css/main.css';
 
 //high level text input able to filter with regex and enter on key input
 export function TextControl(props){
-    const [tx, setTx] = useState(props.init);
+    const [tx, setTx] = useState(props.init ? props.init : '');
     function handleChange(e){
         let v = e.target.value;
         let doSet = true;
@@ -23,6 +23,7 @@ export function TextControl(props){
             v = props.textFunction(v);
         }
         if(doSet) setTx(v);
+        if(props.onChange) props.onChange(v);
     }
     function handleKeyDown(e){
         if(e.key === "Enter"){
@@ -35,7 +36,7 @@ export function TextControl(props){
         }
     }
     return(
-        <Form.Control type='text' value={tx} onChange={handleChange} 
+        <Form.Control type={props.type ? props.type : 'text'} value={tx} onChange={handleChange} 
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}/>
     )
@@ -59,6 +60,18 @@ export function NumberInput(props){
             }
         }
     }
+    function handleKey(e){
+        if(e.key === 'Enter'){
+            /*
+            const blur = props.onBlur(e.target.value);
+            if(!isNaN(blur)){
+                setNumber(blur);
+            }*/
+            //console.log(e);
+            e.target.blur();
+            //if(props.id) document.getElementById(props.id).blur();
+        }
+    }
     useEffect(() => {
         setNumber(props.value);
     }, [props.value]);
@@ -69,8 +82,9 @@ export function NumberInput(props){
         {props.label && 
         <Form.Label>{props.label}</Form.Label>
         }
-        <Form.Control className='SmallText' type="text" 
+        <Form.Control className='SmallText' type="text"
         onChange={handleChange} onBlur={handleBlur} value={number}
+        onKeyDown={handleKey}
         disabled={disabled}/>
         </>
     );

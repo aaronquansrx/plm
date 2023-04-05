@@ -1,8 +1,4 @@
-.TableHeading{
-    background: rgb(202, 205, 207);
-    position: sticky;
-    top: 0;
-}
+
 
 .MainTable {
     flex-grow: 1;
