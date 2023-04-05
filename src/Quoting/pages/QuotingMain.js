@@ -25,6 +25,7 @@ import Table from 'react-bootstrap/Table';
 import Modal from 'react-bootstrap/Modal';
 import Form from 'react-bootstrap/Form';
 
+import { useClientUrl } from '../../hooks/Urls';
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 
 import '../../css/main.css';
@@ -70,7 +71,6 @@ function QuotingMain(props){
     //const [quoteList, setQuoteList]
     //const mainState = {page: 0, props: {quotes: quotes, openQuote: openQuote, droppedFile: droppedFile, createQuote: createQuoteFunction()}};
     const [pageState, setPageState] = useState({current:0, last: null});
-
     useEffect(() => {
         const getData = {function: 'get_quotes', user: props.user}
         getPLMRequest('quote', getData,
@@ -167,6 +167,7 @@ function QuotingMain(props){
 }
 
 function Main(props){
+    const clientUrl = useClientUrl();
     function handleDrop(wb, file){
         console.log(wb);
         const sheetNames = wb.SheetNames;
@@ -258,9 +259,9 @@ function Main(props){
             */}
             {<QuoteTable quotes={props.quotes} user={props.user} onOpenQuote={props.onOpenQuote} setQuotes={props.setQuotes}/>}
             {/*<UploadTemplateEditor />*/}
-            <Link to="/tables">
+            <a href={clientUrl+"/tables"}>
                 <Button>Tables</Button>
-            </Link>
+            </a>
             {/*<Button onClick={handleToMaster}>Manufacturer Master List</Button>*/}
         </div>
     )
