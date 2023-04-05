@@ -917,7 +917,7 @@ function OctopartRenderer(props){
             console.log('req octo');
             //setOctoRequested(true);
         }
-        console.log(modalOn);
+        //console.log(modalOn);
     }, [modalOn]);
     function callbackOctoRequest(od){
         //setOctoData(od);

@@ -16,7 +16,8 @@ import Excel from './pages/Excel';
 import CBom from './pages/CBom';
 import BOMScrub from './pages/BOMScrub';
 import QuotingMain from './Quoting/pages/QuotingMain';
-import QuotingTables from './Quoting/pages/QuotingTables'
+import QuotingTables from './Quoting/pages/QuotingTables';
+import Feedback from './pages/Feedback';
 import Test from './pages/Test';
 import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
@@ -136,6 +137,7 @@ function App() {
         <Route path={path('excel')} element={<Excel/>}/>
         <Route path={path('test')} element={<Test/>}/>
         <Route path={path('tables')} element={<QuotingTables/>}/>
+        <Route path={path('feedback')} element={<Feedback/>}/>
         {inProduction && <Route path={path('quoting')} element={<QuotingMain user={username}/>}/>}
       </Routes>
     </div>
