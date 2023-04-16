@@ -117,9 +117,7 @@ export function MainNavbar(props){
             </Form>
             */}
             {/*<Nav className='nav-link' onClick={handlePing}>Ping</Nav>*/}
-            {!inProduction &&
             <FeedbackModalNav/>
-            }
             <Nav className='nav-link Help' >
             <HoverOverlay tooltip='Help (in development)' placement='auto'><BiHelpCircle size={30}/></HoverOverlay>
             </Nav>
