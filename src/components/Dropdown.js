@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 
 import { TextInput } from './Forms';
 import { Dropdown } from 'react-bootstrap';
@@ -8,15 +8,23 @@ import { ListGroup } from 'react-bootstrap';
 import './../css/main.css'
 
 export function SimpleDropdown(props){
+    const [selected, setSelected] = useState(props.items.length > 0 ? props.items[0] : null);
+    useEffect(() => {
+        setSelected(props.selected);
+    }, [props.selected]);
+    function handleChange(item, i){
+        setSelected(item);
+        if(props.onChange) props.onChange(item, i);
+    }
     return (
         <Dropdown>
             <Dropdown.Toggle variant="success" id="dropdown-basic">
-                {props.selected}
+                {selected}
             </Dropdown.Toggle>
 
             <Dropdown.Menu>
                 {props.items.map((item, i) => 
-                    <Dropdown.Item key={i} onClick={() => props.onChange(item)}>{item}</Dropdown.Item>
+                    <Dropdown.Item key={i} onClick={() => handleChange(item, i)}>{item}</Dropdown.Item>
                 )}
             </Dropdown.Menu>
         </Dropdown>

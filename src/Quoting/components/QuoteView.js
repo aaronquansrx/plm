@@ -7,6 +7,7 @@ import Modal from 'react-bootstrap/Modal';
 import Form from 'react-bootstrap/Form';
 import Table from 'react-bootstrap/Table';
 
+import XLSX from 'xlsx';
 
 import { UploadTableSingle, UploadMain } from '../components/UploadTable';
 import {ExcelDropzone} from '../../components/Dropzone';
@@ -14,6 +15,7 @@ import { SimpleArrayTable, HeaderArrayTable, EditTable } from '../../components/
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { excelSheetToArray } from '../../scripts/ExcelHelpers';
 import { ObjectSuggestionSearcher } from '../../components/Searcher';
+import { Notification } from './Notifications';
 
 
 function QuoteView(props){
@@ -36,8 +38,6 @@ function QuoteView(props){
         getPLMRequest('quote', getData,
         (res) => {
             console.log(res.data);
-            //setProducts(res.data.children);
-            //setProductsList()
             updateProducts(res.data)
             setMinBatches(res.data.num_batches);
 
@@ -189,6 +189,22 @@ function MainQuoteView(props){
             console.log(res.data);
         });
     }
+    function handleDeleteProduct(){
+        if(highlightedProduct !== null){
+            console.log(highlightedProduct);
+            const getData = {function: 'delete_product', user: props.user, product_id: highlightedProduct, 
+            quote_id: props.quote.id};
+            getPLMRequest('quote', getData, 
+            (res) => {
+                console.log(res.data);
+                props.updateProducts(res.data);
+                setHighlightedProduct(null);
+            },
+            (res) => {
+                console.log(res.data);
+            });
+        }
+    }
     return(
         <div className='Vert'>
             <div className='FlexNormal'>
@@ -222,11 +238,17 @@ function MainQuoteView(props){
                 </div>
             </div>
             <h3>Products</h3>
-            <ProductTable products={props.products} onViewProduct={handleViewProduct} 
+            <ProductTable products={props.products} onViewProduct={handleViewProduct} quote={props.quote} 
                 onUpload={handleUpload} user={props.user} productsList={props.productsList}
-                onHighlightProduct={handleHighlightProduct} highlightedProduct={highlightedProduct} numBatches={numBatches}/>
+                onHighlightProduct={handleHighlightProduct} highlightedProduct={highlightedProduct} numBatches={numBatches}
+                updateProducts={props.updateProducts}/>
+            <div className='Hori'>
+            <div className='Hori'>
             <ProductAdder updateProducts={props.updateProducts} user={props.user} quoteId={props.quote.id} 
             highlightedProduct={highlightedProduct}/>
+            <Button variant='danger' onClick={handleDeleteProduct}>Delete</Button>
+            </div>
+            </div>
             </div>
             <Button onClick={handleMainUpload}>Upload</Button>
         </div>
@@ -242,8 +264,17 @@ function ProductRow(props){
     const [qty, setQty] = useState(p.qty ? p.qty : undefined);
     const [eau, setEau] = useState(p.eau ? p.eau : undefined);
     useEffect(() => {
+        refreshProduct(p);
+    }, [p]);
+    useEffect(() => {
         //setBatches(props.batchesArr.map(() => undefined));
     }, [props.batchesArr]);
+    function refreshProduct(newProduct){
+        setName(newProduct.name);
+        setQty(newProduct.qty ? newProduct.qty : undefined);
+        setEau(newProduct.eau ? newProduct.eau : undefined);
+        setBatches(newProduct.batches);
+    }
     function handleChangeBatchValue(i){
         return function(e){
             if(!isNaN(e.target.value)){
@@ -284,10 +315,13 @@ function ProductRow(props){
             batches: batches
         }
         //console.log(p.id);
-        const postData = {function: 'modify_batch', user: props.user, product_id: p.id, batch_details: bd};
+        console.log(props.quoteId);
+        const postData = {function: 'modify_batch', quote_id: props.quoteId, user: props.user, 
+        product_id: p.id, batch_details: bd};
         postPLMRequest('quote', postData,
         (res) => {
             console.log(res.data);
+            props.updateProducts(res.data);
         },
         (res) => {
             console.log(res.data);
@@ -298,6 +332,7 @@ function ProductRow(props){
         //console.log(e.target.id);
         if(!edit && e.target.id !== 'edit') props.onHighlightProduct(p);
     }
+    console.log(name);
     return(
         <>
         <tr className={props.cn} onClick={handleHighlightProduct}>
@@ -326,7 +361,8 @@ function ProductRow(props){
         {props.children && props.children.map((child, i) => {
             //console.log(child);
             return <ProductRow key={i} onHighlightProduct={props.onHighlightProduct} onViewProduct={props.onViewProduct}
-            onUpload={props.onUpload} batchesArr={props.batchesArr} user={props.user} {...child}/>
+            onUpload={props.onUpload} batchesArr={props.batchesArr} quoteId={props.quoteId} user={props.user} {...child}
+            updateProducts={props.updateProducts}/>
         })}
         </>
     );
@@ -350,7 +386,8 @@ function ProductTable(props){
         {props.productsList.map((product, pid) => {
             const cn = product.id === props.highlightedProduct ? 'HighlightedRow' : '';
             return <ProductRow key={pid} user={props.user} onHighlightProduct={props.onHighlightProduct} onViewProduct={props.onViewProduct}
-            onUpload={props.onUpload} product={product} cn={cn} idValue={product.id_string} batchesArr={batchesArr}/>
+            onUpload={props.onUpload} product={product} cn={cn} quoteId={props.quote.id} idValue={product.id_string} batchesArr={batchesArr}
+            updateProducts={props.updateProducts}/>
         })}
         
         {/*
@@ -483,13 +520,11 @@ function ProductAdder(props){
         setProductName(e.target.value);
     }
     return (
-        <div className='Hori'>
-            <div className='Hori'>
+        <>
             <div>Product Name:</div>
             <Form.Control type={'text'} onChange={handleProductNameChange} value={productName}/>
             <Button onClick={handleAddProduct}>Add Product</Button>
-            </div>
-        </div>
+        </>
     );
 }
 
@@ -534,9 +569,17 @@ function ViewProduct(props){
     function handleOverwrite(){
         props.changeQuotePageState(1);
     }
+    function handleDownloadTemplate(){
+        const headers = productSheetHeaders.map((v) => v.label);
+        const sheet = XLSX.utils.aoa_to_sheet([headers]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, 'Sheet');
+        XLSX.writeFile(wb, 'headers.xlsx');
+    }
     return(
         <>
         <div className={'FlexNormal'}>
+        <Button onClick={handleDownloadTemplate}>Download Template</Button>
         <Button onClick={handleOverwrite}>Upload Overwrite</Button>
         <Button variant='secondary' onClick={handleBack}>Back to Quote</Button>
         <h3>{props.product.name}</h3>
@@ -567,6 +610,7 @@ function ConsolidateView(props){
     return(
         <div>
         <Button variant='secondary' onClick={handleBack}>Back</Button>
+        <Notification data={props.consolidatedData}/>
         <CustomHeaderArrayTable data={props.consolidatedData.data} headers={headers}/>
         </div>
     );

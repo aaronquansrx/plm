@@ -36,9 +36,12 @@ export function TextControl(props){
         }
     }
     return(
-        <Form.Control type={props.type ? props.type : 'text'} value={tx} onChange={handleChange} 
-                onKeyDown={handleKeyDown}
-                onBlur={handleBlur}/>
+        <Form.Control type={props.type ? props.type : 'text'} 
+        as={props.type === 'textarea' ? 'textarea' : props.type} 
+        value={tx} onChange={handleChange} 
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        />
     )
 }
 

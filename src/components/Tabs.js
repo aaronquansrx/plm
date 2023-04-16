@@ -12,7 +12,8 @@ export function TabPages(props){
         }
     }
     return(
-    <div>
+    <>
+    <div className={props.tabClass}>
     <Nav variant="tabs">
         {tabs.map((tab, i) => 
             <Nav.Item key={i} onClick={handleChangeTab(i)}>
@@ -20,9 +21,8 @@ export function TabPages(props){
             </Nav.Item>
         )}
     </Nav>
-    <div>
-        {content && content}
     </div>
-    </div>
+    {content && content}
+    </>
     )
 }

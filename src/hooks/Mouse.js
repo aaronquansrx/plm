@@ -22,5 +22,5 @@ export const useMouseUp = (mf) => {
         return () => {
         window.removeEventListener('mouseup', mf);
         };
-    }, [])
+    }, []);
 }

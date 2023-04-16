@@ -7,7 +7,7 @@ import {useClientUrl, useServerUrl} from './../hooks/Urls';
 import styled from 'styled-components';
 import axios from 'axios';
 
-import Nav from 'react-bootstrap/Nav'
+import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 
 
@@ -20,6 +20,7 @@ import { HoverOverlay } from '../components/Tooltips';
 
 import {StoreCurrencyOptions} from './../components/Options';
 import {Login} from './../components/Modals';
+import { FeedbackModalNav } from '../components/FeedbackModal';
 
 import './../css/main.css';
 
@@ -117,9 +118,7 @@ export function MainNavbar(props){
             */}
             {/*<Nav className='nav-link' onClick={handlePing}>Ping</Nav>*/}
             {!inProduction &&
-            <Nav className='nav-link'>
-                <Nav.Link href={path('feedback')} active={lastPath==='feedback'}>Feedback</Nav.Link>
-            </Nav>
+            <FeedbackModalNav/>
             }
             <Nav className='nav-link Help' >
             <HoverOverlay tooltip='Help (in development)' placement='auto'><BiHelpCircle size={30}/></HoverOverlay>

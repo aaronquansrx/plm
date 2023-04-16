@@ -5,6 +5,7 @@ import Pagination from 'react-bootstrap/Pagination';
 import {NumberInput} from './Forms';
 
 export function PageInterface(props){
+    const [currentPage, setCurrentPage] = useState();
     //const [entriesPerPage, setEntriesPerPage] = useState(5);
     const current = props.current + 1;
     function prePages(){
@@ -57,6 +58,73 @@ export function PageInterface(props){
             </Pagination>
             <NumberInput value={props.pageSize} onBlur={props.onChangePageSize} label='Page Size'/>
         </div>
+    );
+}
+
+export function PaginationInterface(props){
+    const [currentPage, setCurrentPage] = useState(0);
+    //const [pageSize, setPageSize] = useState(props.initPageSize);
+    //const current = currentPage + 1;
+    useEffect(() => {
+        setCurrentPage(0);
+    }, [props.resetPage]);
+    function prePages(){
+        const pages = [];
+        for(let i=props.displayWidth; i>0; i--){
+            const val = currentPage+1-i;
+            if(val > 0){
+                pages.push(val);
+            }
+        }
+        return pages;
+    }
+    function postPages(){
+        const pages = [];
+        for(let i=1; i<=props.displayWidth; i++){
+            const val = currentPage+1+i;
+            if(val <= props.max){
+                pages.push(val);
+            }
+        }
+        return pages;
+    }
+    function handlePageClick(i){
+        return function(){
+            if(i !== currentPage){ 
+                setCurrentPage(i);
+                props.onPageClick(i)
+            };
+        }
+    }
+    function handlePageChangeSize(n){
+        //console.log(n);
+        if(props.onPageChangeSize) props.onPageChangeSize(n);
+    }
+    return(
+        <>
+            <Pagination>
+                <Pagination.First onClick={handlePageClick(0)}/>
+                {prePages().map(pn => {
+                    return(
+                        <Pagination.Item key={pn} onClick={handlePageClick(pn-1)}>
+                            {pn}
+                        </Pagination.Item>
+                    );
+                })}
+                <Pagination.Item active>
+                    {currentPage+1}
+                </Pagination.Item>
+                {postPages().map(pn => {
+                    return(
+                        <Pagination.Item key={pn} onClick={handlePageClick(pn-1)}>
+                            {pn}
+                        </Pagination.Item>
+                    );
+                })}
+                <Pagination.Last onClick={handlePageClick(props.max-1)}/>
+            </Pagination>
+            <NumberInput value={props.pageSize} onBlur={handlePageChangeSize} label='Page Size'/>
+        </>
     );
 }
 

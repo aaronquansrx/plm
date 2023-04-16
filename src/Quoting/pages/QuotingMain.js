@@ -67,7 +67,6 @@ function QuotingMain(props){
     const [uploadedData, setUploadedData] = useState(null);
     const [quotes, setQuotes] = useState([]);
     const [activeQuote, setActiveQuote] = useState(null);
-    //const [quoteList, setQuoteList]
     //const mainState = {page: 0, props: {quotes: quotes, openQuote: openQuote, droppedFile: droppedFile, createQuote: createQuoteFunction()}};
     const [pageState, setPageState] = useState({current:0, last: null});
 

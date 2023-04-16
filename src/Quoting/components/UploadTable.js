@@ -12,6 +12,7 @@ import { OutsideClickFunction } from '../../hooks/InterfaceHelpers';
 import { TabbedSheetTable } from '../../components/Tables';
 import {ListSelectDropdown} from '../../components/Dropdown';
 import { PalleteTable } from '../components/PalleteTable';
+import { SimpleDropdown } from '../../components/Dropdown';
 
 
 import './../../css/main.css';
@@ -373,7 +374,7 @@ function ProductDropdown(props){
 
 function HeaderTableWithRowSelectorV2(props){
     //const [selectedRow, setSelectedRow] = useState(null);
-    console.log(props.selectedHeadersFound);
+    //console.log(props.selectedHeadersFound);
     function handleRowSelect(j){
         return function(){
             //setSelectedRow(j);
@@ -414,10 +415,22 @@ function HeaderTableWithRowSelectorV2(props){
 
 
 export function UploadTableSingle(props){
+    const usingDropdown = true;
     const [sheetId, setSheetId] = useState(null);
     const [selectedRow, setSelectedRow] = useState(null);
     const [showHeaderModal, setShowHeaderModal] = useState(false);
-    const [headers, setHeaders] = useState(defaultHeaders);
+    const [headers, setHeaders] = useState(
+        [{label: '_remove', accessor: '_remove'}].concat(defaultHeaders)
+    );
+    const [dropdownHeaders, setDropdownHeaders] = useState(headers.map(() => '_remove'));
+
+    const labelHeaders = headers.map((h) => h.label);
+    const headerMap = headers.reduce((mp, h) => {
+        mp[h.label] = h.accessor;
+        return mp;
+    }, {});
+
+
     function handleChangeSheet(i){
         setSheetId(i);
         console.log(i);
@@ -432,46 +445,92 @@ export function UploadTableSingle(props){
         if(selectedRow && selectedRow.row === rowIndex && selectedRow.sheetId === sheetId){
             setSelectedRow(null);
         }else{
-            const activeSheet = props.sheets[sheetId].array;
-            const sheetRow = activeSheet[rowIndex];
-            const headerSet = new Set(headers.map(h => h.label));
-            console.log(headers);
-            const headersFound = sheetRow.map((str) => {
-                const matches = headerSet.has(str);
-                return matches;
-            });
-            setSelectedRow({sheetId: sheetId, row: rowIndex, headersFound: headersFound});
+            if(usingDropdown){
+                const activeSheet = props.sheets[sheetId].array;
+                const sheetRow = activeSheet[rowIndex];
+                const headerSet = new Set(defaultHeaders.map(h => h.label));
+                const headerFound = new Set();
+                const headersFound = sheetRow.map((str) => {
+                    const matches = headerSet.has(str);
+                    if(matches){
+                        if(headerFound.has(str)){
+                            return '_remove';
+                        }
+                        headerFound.add(str);
+                        return str;
+                    }
+                    return '_remove';
+                });
+                console.log(headerSet);
+                console.log(headersFound);
+                setDropdownHeaders(headersFound);
+                setSelectedRow({sheetId: sheetId, row: rowIndex});
+            }else{
+                const activeSheet = props.sheets[sheetId].array;
+                const sheetRow = activeSheet[rowIndex];
+                const headerSet = new Set(headers.map(h => h.label));
+                console.log(headers);
+                const headersFound = sheetRow.map((str) => {
+                    const matches = headerSet.has(str);
+                    return matches;
+                });
+                setSelectedRow({sheetId: sheetId, row: rowIndex, headersFound: headersFound});
+            }
         }
     }
     function handleSubmit(){
-        console.log(headers);
-        if(selectedRow.row !== null){
-            //find correct headers
-            console.log(headers);
-            const headerSet = new Set(headers.map(h => h.label));
-            const headerMap = headers.reduce((mp, h) => {
-                mp[h.label] = h.accessor;
-                return mp;
-            }, {});
-            const activeSheet = props.sheets[selectedRow.sheetId].array;
-            console.log(activeSheet);
-            const sheetRow = activeSheet[selectedRow.row];
-            const hs = sheetRow.reduce((arr, h, n) => {
-                if(headerSet.has(h)){
-                    arr.push({accessor: headerMap[h], index: n});
+        //find correct headers
+        const headerSet = new Set(headers.map(h => h.label));
+        const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
+        if(usingDropdown){
+            if(selectedRow && selectedRow.row !== null){
+                const sheetRow = activeSheet[selectedRow.row];
+                const hs = sheetRow.reduce((arr, h, n) => {
+                    if(headerSet.has(h)){
+                        arr.push({accessor: headerMap[h], index: n});
+                    }
+                    return arr;
+                }, []);
+                const objs = [];
+                for(let r=selectedRow.row+1; r < activeSheet.length; r++){
+                    const obj = hs.reduce((o, h) => {
+                        o[h.accessor] = activeSheet[r][h.index];
+                        return o;
+                    }, {});
+                    objs.push(obj);
+                }
+                const postData = {product_sheet: objs, function: 'add_product_sheet', user: props.user, 
+                product_id: props.product.id, quote_id: props.quoteId};
+                
+                postPLMRequest('quote', postData,
+                    (res) => {
+                        console.log(res.data);
+                        props.changeQuotePageState(2);
+                        props.updateProducts(res.data);
+                    },
+                    (res) => {
+                        console.log(res.data);
+                    }
+                );
+            }
+        }else{
+            const startRow = selectedRow ? selectedRow.row+1 : 0;
+            const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
+                if(h !== '_remove'){
+                    arr.push({accessor: headerMap[h], index: i});
                 }
                 return arr;
             }, []);
-            const objs = [];
-            for(let r=selectedRow.row+1; r < activeSheet.length; r++){
-                const obj = hs.reduce((o, h) => {
+            const objs2 = [];
+            for(let r=startRow; r < activeSheet.length; r++){
+                const obj = headerIndexes.reduce((o, h) => {
                     o[h.accessor] = activeSheet[r][h.index];
                     return o;
                 }, {});
-                objs.push(obj);
+                objs2.push(obj);
             }
-            const postData = {product_sheet: objs, function: 'add_product_sheet', user: props.user, 
-            product_id: props.product.id, quote_id: props.quoteId};
+            const postData = {product_sheet: objs2, function: 'add_product_sheet', user: props.user, 
+                product_id: props.product.id, quote_id: props.quoteId};  
             postPLMRequest('quote', postData,
                 (res) => {
                     console.log(res.data);
@@ -483,6 +542,7 @@ export function UploadTableSingle(props){
                 }
             );
         }
+        
     }
     function handleHeaderModal(){
         setShowHeaderModal(true);
@@ -490,6 +550,15 @@ export function UploadTableSingle(props){
     function handleCloseModal(){
         setShowHeaderModal(false);
     }
+    function handleColumnChange(i, item){
+        console.log(i);
+        console.log(item);
+        setDropdownHeaders(update(dropdownHeaders, {
+            [i]: {$set: item}
+        }));
+    }
+    console.log(props.sheets);
+    console.log(sheetId);
     return(
         <>
         <div className='FlexNormal'>
@@ -498,7 +567,18 @@ export function UploadTableSingle(props){
             <Button onClick={handleSubmit}>Submit</Button>
         </div>
         <div className='FlexNormal'>
-            <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}
+        {usingDropdown ? <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}
+        onChangeSheet={handleChangeSheet}
+        tableClass={'FlexNormal Overflow'} tabsClass={'FlexNormal'}
+        table={(props) => 
+        <DropdownHeaderTable {...props} 
+        /*sheet={sheetId < props.sheets.length ? props.sheets[sheetId].array : []} */
+        columnOptions={labelHeaders} 
+        columnAttributes={dropdownHeaders}
+        onRowSelect={handleSheetRowSelect}
+        onColumnChange={handleColumnChange}
+        selectedRow={selectedRow ? selectedRow.row : null}/>}/>
+        : <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}
             onChangeSheet={handleChangeSheet}
             tableClass={'FlexNormal Overflow'} tabsClass={'FlexNormal'}
             table={(props) =>
@@ -509,12 +589,64 @@ export function UploadTableSingle(props){
                     selectedHeadersFound: selectedRow ? selectedRow.headersFound : []
                 }}
             />
+        }
         </div>
         <HeaderModal show={showHeaderModal} onClose={handleCloseModal} 
         headers={headers} onChangeHeaders={handleChangeHeaders}/>
         </>
     )
 }
+
+export function DropdownHeaderTable(props){
+    //const [selectedRow, setSelectedRow] = useState(null);
+    //console.log(props.selectedHeadersFound);
+    const numCols = props.sheet.length > 0 ? props.sheet[0].length : 0;
+    function handleRowSelect(j){
+        return function(){
+            //setSelectedRow(j);
+            if(props.onRowSelect) props.onRowSelect(j);
+        }
+    }
+    function handleColumnChange(i, item){
+        if(props.onColumnChange) props.onColumnChange(i, item);
+    }
+    //console.log(props.sheet);
+    const headerRow = (
+        <tr>
+            {numCols > 0 &&
+            <td></td>
+            }
+            {[...Array(numCols)].map((e, i) => 
+            <td key={i}>
+                <SimpleDropdown items={props.columnOptions} 
+                selected={props.columnAttributes[i]} onChange={(item) => handleColumnChange(i, item)}/>
+            </td>
+            )}
+        </tr>
+        );
+        return (
+            <Table bordered hover>
+                <thead className='TableHeading'>
+                    {headerRow}
+                </thead>
+                <tbody>
+                {props.sheet.map((row,i) => {
+                    const exStyles = props.selectedRow === i ? {backgroundColor: '#94baf1'} : {};
+                    return(
+                    <tr key={i}>
+                        <td className={'RowSelector'} style={exStyles} onClick={handleRowSelect(i)}> </td>
+                        {row.map((val, j) => 
+                        <td key={j}>{val}</td>
+                        )}
+                    </tr>
+                    );
+                }
+                )}
+                </tbody>
+            </Table>
+        );
+}
+
 
 //old test upload components
 
@@ -660,7 +792,6 @@ function HeaderTable(props){
         </div>
     );
 }
-
 export function UploadTable(props){
     console.log(props.sheets);
     const [colour, setColour] = useState(null);

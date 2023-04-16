@@ -10,15 +10,16 @@ import {SimpleDropdown} from './Dropdown';
 import {PartRow, EmptyOffer} from './Offer';
 import {IdCheckbox} from './Checkbox';
 import {HoverOverlay} from './Tooltips';
-import {PageInterface} from './Pagination';
+import {PageInterface, PaginationInterface} from './Pagination';
 
 import { OutsideClickFunction } from '../hooks/InterfaceHelpers';
 
 import './../css/table.css';
 import './../css/temp.css';
 import './../css/offer.css';
-import { slice } from 'lodash';
+import { filter, slice } from 'lodash';
 import { Form } from 'react-bootstrap';
+import { TextControl } from './Forms';
 
 
 export function TabbedSheetTable(props){
@@ -133,7 +134,7 @@ export function SimpleArrayTable(props){
 export function HeaderArrayTable(props){
     return(
         <Table>
-            <thead>
+            <thead className={props.headerClass}>
                 <tr>
                 {props.headers.map((h, i) => 
                 <th key={i}>{h.label}</th>
@@ -150,6 +151,97 @@ export function HeaderArrayTable(props){
                 )}
             </tbody>
         </Table>
+    );
+}
+
+export function PaginationHeaderTable(props){
+    const [pageSize, setPageSize] = useState(10);
+    const [maxPages, setMaxPages] = useState(0);
+    const [filteredData, setFilteredData] = useState(props.data);
+    
+    useEffect(() => {
+        const fd = props.data.slice(0, pageSize);
+        setMaxPages(Math.floor(props.data.length/pageSize));
+        setFilteredData(fd);
+    }, [props.data]);
+    function handlePageClick(pn){
+        const fd = props.data.slice(pn*pageSize, +(pn*pageSize) + +pageSize);
+        setFilteredData(fd);
+        //setCurrPage(pn);
+    }
+    function handlePageSizeChange(nps){
+        //nps = parseInt(nps);
+        setPageSize(nps);
+        setMaxPages(Math.floor(props.data.length/nps));
+        const fd = props.data.slice(0, nps);
+        setFilteredData(fd);
+    }
+    return(
+        <>
+        <div className='MainTable'>
+            <HeaderArrayTable data={filteredData} headers={props.headers} 
+            headerClass={props.headerClass}/>
+        </div>
+        <div className='PageInterface'>
+            <div>
+                <PaginationInterface resetPage={props.reset} displayWidth={2} onPageClick={handlePageClick} 
+                pageSize={pageSize} max={maxPages} onPageChangeSize={handlePageSizeChange}/>
+            </div>
+        </div>
+        </>
+    );
+}
+
+export function SearchPaginationTable(props){
+    const [filteredData, setFilteredData] = useState(props.data);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchField, setSearchField] = useState(props.searchField);
+    const [resetPage, setResetPage] = useState(0);
+    useEffect(() => {
+        //const upperSearch = searchTerm.toUpperCase();
+        const fd = props.data.reduce((arr, v) => {
+            if(v[searchField].toUpperCase().startsWith(searchTerm)){
+                arr.push(v);
+            }
+            return arr;
+        }, []);
+        setFilteredData(fd);
+    }, [props.data]);
+    function handleChangeSearch(s, sf=null){
+        const sea = sf ? sf : searchField;
+        if(s !== ''){
+            const upperSearch = s.toUpperCase();
+            const fd = props.data.reduce((arr, v) => {
+                //console.log(v);
+                if(v[sea].toUpperCase().startsWith(upperSearch)){
+                    arr.push(v);
+                }
+                return arr;
+            }, []);
+            setSearchTerm(upperSearch);
+            setFilteredData(fd);
+        }else{
+            setSearchTerm('');
+            setFilteredData(props.data);
+        }
+        setResetPage(resetPage+1);
+    }
+    function handleFieldChange(v, i){
+        handleChangeSearch(searchTerm, props.headers[i].accessor);
+        setSearchField(props.headers[i].accessor);
+        setResetPage(resetPage+1);
+    }
+    //console.log(filteredData);
+    return(
+        <>
+        <div className='Hori'>
+            <TextControl onChange={handleChangeSearch}/>
+            {props.fieldOptions && <SimpleDropdown items={props.headers.map((h) => h.label)} 
+            selected={searchField} onChange={handleFieldChange}/>}
+        </div>
+        <PaginationHeaderTable headers={props.headers} data={filteredData} headerClass={props.headerClass}
+        reset={resetPage}/>
+        </>
     );
 }
 
