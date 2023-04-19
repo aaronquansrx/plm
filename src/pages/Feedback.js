@@ -26,7 +26,7 @@ function Feedback(props){
     }
     function handleSubmit(){
         setMessage('Sending feedback...');
-        postPLMRequest('errorreport', {type: 'debug', body: feedbackContents.body,
+        postPLMRequest('errorreport', {type: 'feedback', body: feedbackContents.body,
         subject: feedbackContents.subject}, 
         (res)=> {
             console.log(res.data);

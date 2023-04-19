@@ -34,6 +34,7 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                 updateApiDataMap(apiDataMap);
                 //dataProcessing
             }
+            
             function errorCallback(mpn){
                 const now = Date.now();
                 const errorApiData = apisList.reduce((obj, api) => {
@@ -133,10 +134,32 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                 setSingleRetryData({data: singData, api: api, row: rowNum});
                 onComplete(newData);
             }
-
+        }
+        function errorCallback(mpn, apis){
+            const mpnDt = apiData.get(mpn);
+            //const nm = new Map();
+            //nm.set(mpn, {data:newDa, date: mpnDt.date});
+            const now = Date.now();
+            const errorApiData = apis.reduce((obj, api) => {
+                obj[api] = {
+                    offers: [],
+                    message: 'Server Error',
+                    offer_order: algorithmsInitialStructure(),
+                    retry: true
+                }
+                return obj;
+            }, {});
+            const merged = {...mpnDt, ...errorApiData}
+            const da = {
+                apis: merged,
+                ...refinedMpnVars()
+            }
+            const nm = new Map();
+            nm.set(mpn, {data: da, date: now});
+            updateApiDataMap(nm);
         }
         const quantity = mpnQuantityMap.get(cmpn);
-        callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, () => {}, store, currency, quantity);
+        callApi(cmpn, serverUrl, controller, [api], apiCallbackSingle, errorCallback, store, currency, quantity);
     }
     function callApisRetry(mpnRetrys, onComplete=null){
         setMultiRetryData(new Map());
@@ -166,9 +189,35 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
                 onComplete(mpn, mpnsComplete, apiRetryDataMap);
             }
         }
+        function errorCallback(mpn, apis){
+            if(apiData.has(mpn)){
+                const mpnDt = apiData.get(mpn);
+                const now = Date.now();
+                const errorApiData = apis.reduce((obj, api) => {
+                    obj[api] = {
+                        offers: [],
+                        message: 'Server Error',
+                        offer_order: algorithmsInitialStructure(),
+                        retry: true
+                    }
+                    return obj;
+                }, {});
+                const merged = {...mpnDt, ...errorApiData}
+                const da = {
+                    apis: merged,
+                    ...refinedMpnVars()
+                }
+                //const nm = new Map();
+                apiRetryDataMap.set(mpn, {data: da, date: now});
+                updateApiDataMap(apiRetryDataMap);
+                mpnsComplete.add(mpn);
+                setMultiRetryData(apiRetryDataMap);
+                onComplete(mpn, mpnsComplete, apiRetryDataMap);
+            }
+        }
         mpnRetrys.forEach((mr) => {
             const quantity = mpnQuantityMap.get(mr.mpn);
-            callApi(mr.mpn, serverUrl, controller, mr.apis, apiCallbackMulti, () => {onComplete(mr.mpn)}, store, currency, quantity);
+            callApi(mr.mpn, serverUrl, controller, mr.apis, apiCallbackMulti, errorCallback, store, currency, quantity);
         })
     }
     //api param used for single to check for other retries
@@ -200,8 +249,31 @@ export function useApiData(mpnList, mpnListWithQuantity, apisList, updateApiData
             const newData = updateApiDataMap(apiDataMap);
             onComplete(newData);
         }
+        function errorCallback(mpn, apis){
+            const mpnDt = apiData.get(mpn);
+            //const nm = new Map();
+            //nm.set(mpn, {data:newDa, date: mpnDt.date});
+            const now = Date.now();
+            const errorApiData = apis.reduce((obj, api) => {
+                obj[api] = {
+                    offers: [],
+                    message: 'Server Error',
+                    offer_order: algorithmsInitialStructure(),
+                    retry: true
+                }
+                return obj;
+            }, {});
+            const merged = {...mpnDt, ...errorApiData}
+            const da = {
+                apis: merged,
+                ...refinedMpnVars()
+            }
+            const nm = new Map();
+            nm.set(mpn, {data: da, date: now});
+            updateApiDataMap(nm);
+        }
         if(!apiData.has(cmpn)){
-            callApi(cmpn, serverUrl, controller, apisList, apiCallbackSingle , () => {}, store, currency);
+            callApi(cmpn, serverUrl, controller, apisList, apiCallbackSingle , errorCallback, store, currency);
         }
     }
     function callOctopart(mpn, row, octopartLineChange){
@@ -487,11 +559,11 @@ function callApi(mpn, serverUrl, controller, apis, callback, errorCallback, stor
         //console.log(response.data);
         if(typeof response.data !== 'object'){
             console.log(mpn); //catch problematic mpns
-            errorCallback(mpn);
+            errorCallback(mpn, apis);
             axios({
                 method: 'POST',
                 url: serverUrl+'api/errorreport',
-                data: {report: response.data, mpn: mpn}
+                data: {report: response.data, mpn: mpn, type: 'debug'}
             }).then(res => {
                 console.log(res);
             });
@@ -516,7 +588,6 @@ function callParts(parts, serverUrl, controller, apis, callback, errorCallback, 
         console.log(response.data);
     });
 }
-
 function formatApiData(rawApiData){
     const formattedData = Object.entries(rawApiData).reduce((obj, [k,v]) => {
         const success = v.status === 'success';
