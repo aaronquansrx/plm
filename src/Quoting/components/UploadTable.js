@@ -483,6 +483,34 @@ export function UploadTableSingle(props){
         const headerSet = new Set(headers.map(h => h.label));
         const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
         if(usingDropdown){
+            const startRow = selectedRow ? selectedRow.row+1 : 0;
+            const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
+                if(h !== '_remove'){
+                    arr.push({accessor: headerMap[h], index: i});
+                }
+                return arr;
+            }, []);
+            const objs2 = [];
+            for(let r=startRow; r < activeSheet.length; r++){
+                const obj = headerIndexes.reduce((o, h) => {
+                    o[h.accessor] = activeSheet[r][h.index];
+                    return o;
+                }, {});
+                objs2.push(obj);
+            }
+            const postData = {product_sheet: objs2, function: 'add_product_sheet', user: props.user, 
+                product_id: props.product.id, quote_id: props.quoteId};  
+            postPLMRequest('quote', postData,
+                (res) => {
+                    console.log(res.data);
+                    props.changeQuotePageState(2);
+                    props.updateProducts(res.data);
+                },
+                (res) => {
+                    console.log(res.data);
+                }
+            );
+        }else{
             if(selectedRow && selectedRow.row !== null){
                 const sheetRow = activeSheet[selectedRow.row];
                 const hs = sheetRow.reduce((arr, h, n) => {
@@ -513,34 +541,6 @@ export function UploadTableSingle(props){
                     }
                 );
             }
-        }else{
-            const startRow = selectedRow ? selectedRow.row+1 : 0;
-            const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
-                if(h !== '_remove'){
-                    arr.push({accessor: headerMap[h], index: i});
-                }
-                return arr;
-            }, []);
-            const objs2 = [];
-            for(let r=startRow; r < activeSheet.length; r++){
-                const obj = headerIndexes.reduce((o, h) => {
-                    o[h.accessor] = activeSheet[r][h.index];
-                    return o;
-                }, {});
-                objs2.push(obj);
-            }
-            const postData = {product_sheet: objs2, function: 'add_product_sheet', user: props.user, 
-                product_id: props.product.id, quote_id: props.quoteId};  
-            postPLMRequest('quote', postData,
-                (res) => {
-                    console.log(res.data);
-                    props.changeQuotePageState(2);
-                    props.updateProducts(res.data);
-                },
-                (res) => {
-                    console.log(res.data);
-                }
-            );
         }
         
     }

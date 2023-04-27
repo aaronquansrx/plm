@@ -17,6 +17,8 @@ import { excelSheetToArray } from '../../scripts/ExcelHelpers';
 import { ObjectSuggestionSearcher } from '../../components/Searcher';
 import { Notification } from './Notifications';
 
+import { ConsolidatePricesView, ConsolidateView } from './ConsolidateViews';
+
 
 function QuoteView(props){
     const [products, setProducts] = useState([]); //products with child data
@@ -26,7 +28,9 @@ function QuoteView(props){
     const [pageState, setPageState] = useState({current:0, last: null});
     const [minBatches, setMinBatches] = useState(1);
 
-    const [consolidatedData, setConsolidatedData] = useState({data: [], headers: []});
+    const [consolidatedData, setConsolidatedData] = useState({data: [], headers: [], totals: null});
+    const [editedConsolidateData, setEditedConsolidatedData] = useState({});
+    const [consolidateStatus, setConsolidateStatus] = useState(null);
 
     useEffect(() => {
         console.log(props.quote);
@@ -39,7 +43,7 @@ function QuoteView(props){
         (res) => {
             console.log(res.data);
             updateProducts(res.data)
-            setMinBatches(res.data.num_batches);
+            //setMinBatches(res.data.num_batches);
 
         },
         (res) => {
@@ -49,6 +53,7 @@ function QuoteView(props){
     function updateProducts(data){
         setProducts(data.products);
         setProductsList(data.product_list);
+        setMinBatches(data.num_batches);
     }
     function changeQuotePageState(i){
         setPageState(update(pageState, {
@@ -68,6 +73,19 @@ function QuoteView(props){
 
     function handleConsolidate(data){
         setConsolidatedData(data);
+        setConsolidateStatus('Consolidate completed');
+        setTimeout(() => {
+            setConsolidateStatus(null);
+        }, 2000);
+    }
+    function handleConsolidateError(){
+        setConsolidateStatus('Consolidate error');
+        setTimeout(() => {
+            setConsolidateStatus(null);
+        }, 2000);
+    }
+    function handleStartConsolidate(){
+        setConsolidateStatus('Consolidate running');
     }
 
     function renderView(){
@@ -76,7 +94,8 @@ function QuoteView(props){
                 return <MainQuoteView quote={props.quote} updateProducts={updateProducts} products={products} 
                 productsList={productsList} user={props.user}
                 changeMainPageState={props.changePageState} changeQuotePageState={changeQuotePageState} 
-                selectProduct={selectProduct} minBatches={minBatches} onConsolidate={handleConsolidate}/>
+                selectProduct={selectProduct} minBatches={minBatches} onConsolidate={handleConsolidate}
+                onStartConolidate={handleStartConsolidate} onConsolidateError={handleConsolidateError}/>
             case 1:
                 return <UploadQuoteView products={products} quote={props.quote} user={props.user}
                 update={updateProducts} changeQuotePageState={changeQuotePageState} product={selectedProduct}
@@ -86,9 +105,12 @@ function QuoteView(props){
                 return <ViewProduct product={selectedProduct} changeQuotePageState={changeQuotePageState} 
                 quote={props.quote} user={props.user} />
             case 3:
-                return <ConsolidateView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
+                return <ConsolidateView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}
+                consolidateStatus={consolidateStatus}/>
             case 4:
                 return <PartUsageView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
+            case 5:
+                return <ConsolidatePricesView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
         }
     }
     //console.log(props.quote);
@@ -154,11 +176,12 @@ function MainQuoteView(props){
         getPLMRequest('quote', getData,
         (res)=>{
             console.log(res.data);
-            props.onConsolidate({data: res.data.data, headers: res.data.headers});
+            props.onConsolidate(res.data);
             props.changeQuotePageState(3);
         },
         (res)=>{
             console.log(res.data);
+            props.onConsolidateError();
         });
     }
     function handlePartUsage(){
@@ -593,59 +616,6 @@ function ViewProduct(props){
     );
 }
 
-const consolidateHeaders = [
-    {label: 'Description', accessor: 'description'},
-    {label: 'Manufacturer', accessor: 'manufacturer'},
-    {label: 'MPN', accessor: 'mpn'},
-    {label: 'Total', accessor: 'total'}
-]
-
-function ConsolidateView(props){
-    const headers = consolidateHeaders.concat(props.consolidatedData.headers);
-    function handleBack(){
-        props.changeQuotePageState(0);
-    }
-
-    //<SimpleArrayTable data={props.data}/>
-    return(
-        <div>
-        <Button variant='secondary' onClick={handleBack}>Back</Button>
-        <Notification data={props.consolidatedData}/>
-        <CustomHeaderArrayTable data={props.consolidatedData.data} headers={headers}/>
-        </div>
-    );
-}
-
-function CustomHeaderArrayTable(props){
-    console.log(props.data);
-    return(
-        <Table>
-            <thead>
-                <tr>
-                {props.headers.map((h, i) => 
-                <th key={i}>{h.label}</th>
-                )}
-                </tr>
-            </thead>
-            <tbody>
-                {props.data.map((row, i) => {
-                    let cn = '';
-                    if(!row.manu_found){
-                        cn = 'NHL';
-                    }
-                    return(
-                    <tr key={i}>
-                        {props.headers.map((h, j) =>
-                            <td key={j} className={cn}>{row[h.accessor]}</td>
-                        )}
-                    </tr>
-                    )}
-                )}
-            </tbody>
-        </Table>
-    )
-}
-
 function PartUsageView(props){
     function handleBack(){
         props.changeQuotePageState(0);
@@ -680,5 +650,6 @@ function AddProductModal(props){
         </Modal>
     )
 }
+
 
 export default QuoteView;

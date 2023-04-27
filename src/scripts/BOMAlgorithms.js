@@ -36,7 +36,7 @@ export function offerEvaluation(offer, min_quantity){
     };  */
 }
 
-function best_price_finder_offer(offer, min_quantity, include_available=true){
+export function best_price_finder_offer(offer, min_quantity, include_available=true){
     //console.log(offer);
     const ret = best_price_finder_full(offer.pricing, offer.moq, offer.spq, min_quantity, offer.available, offer.fees ? offer.fees.total : 0, include_available);
     return ret;

@@ -14,10 +14,10 @@ import '../../css/main.css';
 
 function QuotingTables(props){
     const tabsContent = [
-        {name: 'Manufacturer', content: <MasterManufacturers/>},
-        {name: 'Manufacturer Reference Strings', content: <ManufacturerMasterReference/>},
+        {name: 'Master Manufacturer', content: <MasterManufacturers/>},
+        {name: 'Alternative Manufacturer Names', content: <ManufacturerMasterReference/>},
         {name: 'Supplier', content: <SupplierTable/>},
-        {name: 'Manufacturer Suppliers', content: <ManufacturerSupplierTable/>}
+        {name: 'Manufacturer Supplier Link', content: <ManufacturerSupplierTable/>}
     ];
     return(
         <>

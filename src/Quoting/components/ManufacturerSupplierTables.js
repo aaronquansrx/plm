@@ -10,11 +10,13 @@ import Form from 'react-bootstrap/Form';
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 
 import { HeaderArrayTable, PaginationHeaderTable, SearchPaginationTable } from '../../components/Tables';
+import { TabPages } from '../../components/Tabs';
 import { ButtonChooseSearcher } from '../../components/Searcher';
 
 //Manufacturer Master List
 export function ManufacturerMasterReference(props){
     const [manuInputs, setManuInputs] = useState({manufacturer: '', string: ''});
+    const [addMasterInputs, setAddMasterInputs] = useState({name: '', website: ''});
     const [chosenManufacturer, setChosenManufacturer] = useState(null);
     const [manufacturerResults, setManufacturerResults] = useState([]);
     const [masterManufacturerData, setMasterManufacturerData] = useState([]);
@@ -23,9 +25,9 @@ export function ManufacturerMasterReference(props){
         getManufacturers();
     }, []);
     const headers = [
-        {label: 'Manufacturer', accessor: 'name'}, 
+        {label: 'Master Manufacturer', accessor: 'name'}, 
         {label: 'Website', accessor: 'website'}, 
-        {label: 'Alias', accessor: 'string'}
+        {label: 'Alternative Manufacturer Name', accessor: 'string'}
     ];
     function handleBack(){
         props.changePageState(0);
@@ -113,19 +115,49 @@ export function ManufacturerMasterReference(props){
         setChosenManufacturer(manufacturerResults[i]);
         setManufacturerResults([]);
     }
+    /*
+    const tabPages = [
+        {name: 'Add Master Manufacturer',
+        content: <>
+            <Form>
+                <Form.Label>Manufacturer Name</Form.Label>
+                <Form.Control type='text' value={addMasterInputs.name} onChange={handleChangeMasterName}/>
+            </Form>
+            <Form>
+                <Form.Label>Website</Form.Label>
+                <Form.Control type='text' value={addMasterInputs.website} onChange={handleChangeMasterWebsite}/>
+            </Form>
+            <Button onClick={handleAddMasterManufacturer}>Add</Button>
+        </>
+        },
+        {name: 'Add Alternative Manufacturer',
+        content:<><span>Master Manufacturer</span>
+            <ButtonChooseSearcher searchResults={manufacturerResults.map((r)=>r.name)} chosen={chosenManufacturer} 
+            onDeselect={handleDeselectManufacturer} name={chosenManufacturer ? chosenManufacturer.name : ''}
+            onClick={handleSelectManufacturer} onSearch={handleSearch}/>
+            <Form>
+                <Form.Label>Alternative Manufacturer Name</Form.Label>
+                <Form.Control type='text' value={manuInputs.string} onChange={handleChangeInputs('string')}/>
+            </Form>
+            <Button onClick={handleAddManufacturer}>Add Manufacturer</Button>
+            </>
+        }
+    ];*/
+
     return (
         <>
         {/*<Button variant='secondary' onClick={handleBack}>Back</Button>*/}
         <div className='FlexNormal'>
+            {/*<TabPages tabs={tabPages}/>*/}
             <span>Manufacturer</span>
             <ButtonChooseSearcher searchResults={manufacturerResults.map((r)=>r.name)} chosen={chosenManufacturer} 
             onDeselect={handleDeselectManufacturer} name={chosenManufacturer ? chosenManufacturer.name : ''}
             onClick={handleSelectManufacturer} onSearch={handleSearch}/>
             <Form>
-                <Form.Label>Alias</Form.Label>
+                <Form.Label>Alternative Manufacturer Name</Form.Label>
                 <Form.Control type='text' value={manuInputs.string} onChange={handleChangeInputs('string')}/>
             </Form>
-            <Button onClick={handleAddManufacturer}>Add Manufacturer</Button>
+            <Button onClick={handleAddManufacturer}>Add</Button>
         </div>
         <SearchPaginationTable data={masterManufacturerData} headers={headers} 
         headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}/>
@@ -133,8 +165,11 @@ export function ManufacturerMasterReference(props){
     );
 }
 
+
+
 export function MasterManufacturers(props){
     const [masterManufacturerData, setMasterManufacturerData] = useState([]);
+    const [addMasterInputs, setAddMasterInputs] = useState({name: '', website: ''});
     useEffect(() => {
         getManufacturers();
     }, []);
@@ -150,13 +185,49 @@ export function MasterManufacturers(props){
             console.log(res.data);
         });
     }
+    function handleAddMasterManufacturer(){
+        const postData = {function: 'master_manufacturer', name: addMasterInputs.name, website: addMasterInputs.website};
+        postPLMRequest('srx_records', postData,
+        (res) => {
+            console.log(res.data);
+            setMasterManufacturerData(res.data.manufacturers);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+        setAddMasterInputs({
+            name: '', website: ''
+        });
+    }
+    function handleChangeMasterName(e){
+        setAddMasterInputs(update(addMasterInputs, {
+            name: {$set: e.target.value}
+        }));
+    }
+    function handleChangeMasterWebsite(e){
+        setAddMasterInputs(update(addMasterInputs, {
+            website: {$set: e.target.value}
+        }));
+    }
     return (
+        <>
+            <Form>
+                <Form.Label>Manufacturer Name</Form.Label>
+                <Form.Control type='text' value={addMasterInputs.name} onChange={handleChangeMasterName}/>
+            </Form>
+            <Form>
+                <Form.Label>Website</Form.Label>
+                <Form.Control type='text' value={addMasterInputs.website} onChange={handleChangeMasterWebsite}/>
+            </Form>
+            <Button onClick={handleAddMasterManufacturer}>Add</Button>
         <HeaderArrayTable data={masterManufacturerData} headers={headers}/>
+        </>
     );
 }
 
 export function SupplierTable(props){
     const [supplierData, setSupplierData] = useState([]);
+    const [addSupplier, setAddSupplier] = useState({name: '', phone: '', email: ''});
     const hasData = useRef(false);
     useEffect(() => {
         if(!hasData.current){
@@ -177,8 +248,39 @@ export function SupplierTable(props){
         {label: 'Phone', accessor: 'phone'},
         {label: 'Email', accessor: 'email'}
     ];
+    function handleChangeSupplier(attr){
+        return function(e){
+            setAddSupplier(update(addSupplier, {
+                [attr]: {$set: e.target.value}
+            }));
+        }
+    }
+    function handleAddSupplier(){
+        const postData = {function: 'add_supplier'};
+        Object.assign(postData, addSupplier);
+        postPLMRequest('srx_records', postData, 
+        (res) => {
+            console.log(res.data);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
     return(
         <>
+        <Form>
+            <Form.Label>Name</Form.Label>
+            <Form.Control type='text' value={addSupplier.name} onChange={handleChangeSupplier('name')}/>
+        </Form>
+        <Form>
+            <Form.Label>Phone</Form.Label>
+            <Form.Control type='text' value={addSupplier.phone} onChange={handleChangeSupplier('phone')}/>
+        </Form>
+        <Form>
+            <Form.Label>Email</Form.Label>
+            <Form.Control type='text' value={addSupplier.email} onChange={handleChangeSupplier('email')}/>
+        </Form>
+        <Button onClick={handleAddSupplier}>Add</Button>
         <div className='FlexNormal'></div>
         <HeaderArrayTable data={supplierData} headers={headers}/>
         </>
