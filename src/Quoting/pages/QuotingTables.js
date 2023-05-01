@@ -4,10 +4,10 @@ import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 
 import { TabPages } from '../../components/Tabs';
 import { 
-    ManufacturerMasterReference, 
-    ManufacturerSupplierTable, 
     MasterManufacturers, 
-    SupplierTable 
+    AlternateManufacturerReference, 
+    SupplierTable,
+    ManufacturerSupplierTable
 } from '../components/ManufacturerSupplierTables';
 
 import '../../css/main.css';
@@ -15,7 +15,7 @@ import '../../css/main.css';
 function QuotingTables(props){
     const tabsContent = [
         {name: 'Master Manufacturer', content: <MasterManufacturers/>},
-        {name: 'Alternative Manufacturer Names', content: <ManufacturerMasterReference/>},
+        {name: 'Alternative Manufacturer Names', content: <AlternateManufacturerReference/>},
         {name: 'Supplier', content: <SupplierTable/>},
         {name: 'Manufacturer Supplier Link', content: <ManufacturerSupplierTable/>}
     ];

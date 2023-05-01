@@ -106,7 +106,7 @@ function QuoteView(props){
                 quote={props.quote} user={props.user} />
             case 3:
                 return <ConsolidateView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}
-                consolidateStatus={consolidateStatus}/>
+                consolidateStatus={consolidateStatus} setConsolidatedData={setConsolidatedData}/>
             case 4:
                 return <PartUsageView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
             case 5:

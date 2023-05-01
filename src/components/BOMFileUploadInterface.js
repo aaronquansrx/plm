@@ -80,13 +80,18 @@ function BOMFileUploadInterface(props){
         const colRange = XLSX.utils.decode_range(ws['!ref']).e.c+1;
         //console.log(range);
         const data = XLSX.utils.sheet_to_json(ws, {header:1});
-        const passData = data.reduce((arr,l) => {
+        const first500Lines = data.slice(0, 500);
+        const passData = first500Lines.reduce((arr,l) => {
             const line = [];
+            let hasData = false;
             for(let i=0; i<colRange; i++){
                 const v = l[i] ? l[i].toString() : '';
+                if(v !== ''){
+                    hasData = true;
+                }
                 line.push(v);
             }
-            if(line.length > 0) arr.push(line);
+            if(line.length > 0 && hasData) arr.push(line);
             return arr;
         }, []);
         //console.log(passData);

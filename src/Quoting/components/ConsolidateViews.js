@@ -6,14 +6,21 @@ import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
 
 import { Notification } from './Notifications';
+import {SimplePopover} from '../../components/Tooltips';
 import { BOMApiProgressBarV2 } from '../../components/Progress';
+import { TemplateModal } from '../../components/Modals';
+
+import { MasterManufacturerAdder, AlternateManufacturerAdder } from './ManufacturerSupplierTables';
 
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { bestPriceOffer } from '../../scripts/PLMAlgorithms';
+import { ModalDialog } from 'react-bootstrap';
+import { TabPages } from '../../components/Tabs';
 
 
 export function ConsolidateView(props){
     //const headers = consolidateHeaders.concat(props.consolidatedData.headers);
+    const [modalDetails, setModalDetails] = useState(null);
     const headers = props.consolidatedData.headers;
     function handleBack(){
         props.changeQuotePageState(0);
@@ -21,7 +28,63 @@ export function ConsolidateView(props){
     function handlePrices(){
         props.changeQuotePageState(5);
     }
+    function handleRowClick(r){
+        console.log(props.consolidatedData.data[r]);
+        setModalDetails({manufacturer: props.consolidatedData.data[r].manufacturer, row: r})
+    }
+    function handleClose(){
+        setModalDetails(null);
+    }
+    console.log(modalDetails);
+    function handleAddMasterManufacturer(masterInputs, id){
+        const postData = {function: 'manufacturer_string_id', id: id, string: modalDetails.manufacturer};
+        postPLMRequest('srx_records', postData, 
+        (res) => {
+            console.log(res.data);
+            setModalDetails(null);
+        },
+        (res) => {
+            console.log(res.data);
+        }
+        );
 
+    }
+    function handleUpdateExisting(){
+        const sameManuAdd = props.consolidatedData.data.reduce((obj, row, rn) => {
+            if(row.manufacturer === modalDetails.manufacturer){
+                //obj.push(rn);
+                obj[rn] = {status: {manu_found: {$set: modalDetails.manufacturer}}};
+            }
+            return obj;
+        }, {});
+        console.log(sameManuAdd);
+        props.setConsolidatedData(update(props.consolidatedData, {
+            data: sameManuAdd
+            /*{
+                [modalDetails.row]:  {
+                    status: {
+                        manu_found: {$set: modalDetails.manufacturer}
+                    }
+                }
+            }*/
+        }));
+        setModalDetails(null);
+    }
+    const tabs = [
+        {
+            name: 'Existing Master Manufacturer', 
+            content: <AlternateManufacturerAdder alternateName={modalDetails && modalDetails.manufacturer}
+            onAddManufacturer={handleClose}
+            updateData={handleUpdateExisting}/>
+        },
+        {
+            name: 'Add Master Manufacturer', 
+            content: <MasterManufacturerAdder onAddManufacturer={handleAddMasterManufacturer}/>
+        }
+    ]
+    const body = <div>
+        <TabPages tabs={tabs}/>
+    </div>
     //<SimpleArrayTable data={props.data}/>
     return(
         <div>
@@ -29,8 +92,13 @@ export function ConsolidateView(props){
         <Button onClick={handlePrices}>Prices</Button>
         <Notification data={props.consolidatedData}/>
         {props.consolidateStatus && <div>{props.consolidateStatus}</div>}
-        <CustomHeaderArrayTable data={props.consolidatedData.data} headers={headers}/>
+        <ConsolidateHeaderArrayTable data={props.consolidatedData.data} headers={headers}
+        onRowClick={handleRowClick}/>
         <TotalsDisplay data={props.consolidatedData.totals}/>
+
+        <TemplateModal show={modalDetails !== null} onClose={handleClose}
+        body={body}
+        />
         </div>
     );
 }
@@ -48,8 +116,19 @@ function TotalsDisplay(props){
     );
 }
 
-function CustomHeaderArrayTable(props){
+function ConsolidateHeaderArrayTable(props){
+    const [popup, setPopup] = useState(null);
     console.log(props.data);
+    function handleRowClick(r){
+        return function(){
+            const hasFound = props.data[r].status.manu_found;
+            if(!hasFound){
+                if(props.onRowClick){
+                    props.onRowClick(r);
+                }
+            }
+        }
+    }
     return(
         <Table>
             <thead>
@@ -62,13 +141,22 @@ function CustomHeaderArrayTable(props){
             <tbody>
                 {props.data.map((row, i) => {
                     let cn = '';
-                    if(!row.manu_found){
+                    if(row.status.manu_found === null){
                         cn = 'NHL';
+                    }else if(row.status.multiple_mpn || row.status.multiple_cpn){
+                        cn = 'HLC';
                     }
+                    const pt = <>{row.status.manu_found !== null ? row.status.manu_found  : 'Manufacturer Not Found'}</>;
                     return(
-                    <tr key={i}>
+                    <tr key={i} onClick={handleRowClick(i)}>
                         {props.headers.map((h, j) =>
-                            <td key={j} className={cn}>{row[h.accessor]}</td>
+                            <td key={j} className={cn}>
+                                {h.accessor !== 'manufacturer' ? row[h.accessor] :
+                                <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
+                                    <div>{row[h.accessor]}</div>
+                                </SimplePopover>
+                                }
+                            </td>
                         )}
                     </tr>
                     )}
@@ -192,12 +280,12 @@ function usePartData(partList){
                 partSet.add(mpn);
                 setPartsFinished(new Set([...partSet]));
             }
-            console.log(retryTimes);
+            //console.log(retryTimes);
             if(retryTimes === maxRetries){
                 partSet.add(mpn);
                 setPartsFinished(new Set([...partSet]));
             }
-            console.log(partSet);
+            //console.log(partSet);
             current.push(mpn);
             
             if(partsToDo.length === current.length){

@@ -14,11 +14,11 @@ import { TabPages } from '../../components/Tabs';
 import { ButtonChooseSearcher } from '../../components/Searcher';
 
 //Manufacturer Master List
-export function ManufacturerMasterReference(props){
-    const [manuInputs, setManuInputs] = useState({manufacturer: '', string: ''});
-    const [addMasterInputs, setAddMasterInputs] = useState({name: '', website: ''});
-    const [chosenManufacturer, setChosenManufacturer] = useState(null);
-    const [manufacturerResults, setManufacturerResults] = useState([]);
+export function AlternateManufacturerReference(props){
+    //const [manuInputs, setManuInputs] = useState({manufacturer: '', string: ''});
+    //const [addMasterInputs, setAddMasterInputs] = useState({name: '', website: ''});
+    //const [chosenManufacturer, setChosenManufacturer] = useState(null);
+    //const [manufacturerResults, setManufacturerResults] = useState([]);
     const [masterManufacturerData, setMasterManufacturerData] = useState([]);
     const [manufacturerMap, setManufacturerMap] = useState({});
     useEffect(() => {
@@ -47,6 +47,7 @@ export function ManufacturerMasterReference(props){
         setMasterManufacturerData(data.manufacturer_master);
         setManufacturerMap(data.manufacturer_map);
     }
+    /*
     function handleChangeInputs(inp){
         return function(e){
             setManuInputs(update(manuInputs, {
@@ -66,18 +67,6 @@ export function ManufacturerMasterReference(props){
         const hasManufacturerString = manuInputs.manufacturer in manufacturerMap && 
         manufacturerMap[manuInputs.manufacturer].includes(manuInputs.string);
         if(!hasManufacturerString){
-            /*
-            const postData = {function: 'manufacturer_string', 
-            details: {manufacturer: manuInputs.manufacturer, string: manuInputs.string}};
-            postPLMRequest('srx_records', postData, 
-            (res)=>{
-                console.log(res.data);
-                updateDatas(res.data);
-            },
-            (res)=>{
-                console.log(res.data);
-            });
-            */
         }
         if(chosenManufacturer && manuInputs.string !== ''){
             console.log(chosenManufacturer);
@@ -93,6 +82,8 @@ export function ManufacturerMasterReference(props){
             });
         }
     }
+    */
+    /*
     function handleSearch(s){
         if(s !== ''){
             const getData = {
@@ -115,6 +106,7 @@ export function ManufacturerMasterReference(props){
         setChosenManufacturer(manufacturerResults[i]);
         setManufacturerResults([]);
     }
+    */
     /*
     const tabPages = [
         {name: 'Add Master Manufacturer',
@@ -149,6 +141,7 @@ export function ManufacturerMasterReference(props){
         {/*<Button variant='secondary' onClick={handleBack}>Back</Button>*/}
         <div className='FlexNormal'>
             {/*<TabPages tabs={tabPages}/>*/}
+            {/*
             <span>Manufacturer</span>
             <ButtonChooseSearcher searchResults={manufacturerResults.map((r)=>r.name)} chosen={chosenManufacturer} 
             onDeselect={handleDeselectManufacturer} name={chosenManufacturer ? chosenManufacturer.name : ''}
@@ -158,6 +151,8 @@ export function ManufacturerMasterReference(props){
                 <Form.Control type='text' value={manuInputs.string} onChange={handleChangeInputs('string')}/>
             </Form>
             <Button onClick={handleAddManufacturer}>Add</Button>
+            */}
+            <AlternateManufacturerAdder updateData={updateDatas}/>
         </div>
         <SearchPaginationTable data={masterManufacturerData} headers={headers} 
         headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}/>
@@ -165,11 +160,132 @@ export function ManufacturerMasterReference(props){
     );
 }
 
+export function MasterManufacturerAdder(props){
+    const [addMasterInputs, setAddMasterInputs] = useState({name: '', website: ''});
+    //const headers = [{label: 'Manufacturer', accessor: 'name'}, {label: 'Website', accessor: 'website'}];
+    function handleAddMasterManufacturer(){
+        const postData = {function: 'master_manufacturer', name: addMasterInputs.name, website: addMasterInputs.website};
+        postPLMRequest('srx_records', postData,
+        (res) => {
+            console.log(res.data);
+            //setMasterManufacturerData(res.data.manufacturers);
+            const id = res.data.id;
+            if(props.onAddManufacturer) props.onAddManufacturer(addMasterInputs, id);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+        setAddMasterInputs({
+            name: '', website: ''
+        });
+    }
+    function handleChangeMasterName(e){
+        setAddMasterInputs(update(addMasterInputs, {
+            name: {$set: e.target.value}
+        }));
+    }
+    function handleChangeMasterWebsite(e){
+        setAddMasterInputs(update(addMasterInputs, {
+            website: {$set: e.target.value}
+        }));
+    }
+    return(
+        <>
+        <Form>
+            <Form.Label>Manufacturer Name</Form.Label>
+            <Form.Control type='text' value={addMasterInputs.name} onChange={handleChangeMasterName}/>
+        </Form>
+        <Form>
+            <Form.Label>Website</Form.Label>
+            <Form.Control type='text' value={addMasterInputs.website} onChange={handleChangeMasterWebsite}/>
+        </Form>
+        <Button onClick={handleAddMasterManufacturer}>Add</Button>
+        </>
+    );
+}
+
+export function AlternateManufacturerAdder(props){
+    const [manuInputs, setManuInputs] = useState({manufacturer: '', string: props.alternateName ? props.alternateName : ''});
+    const [chosenManufacturer, setChosenManufacturer] = useState(null);
+    const [manufacturerResults, setManufacturerResults] = useState([]);
+    //const [manufacturerMap, setManufacturerMap] = useState({});
+    function handleChangeInputs(inp){
+        return function(e){
+            setManuInputs(update(manuInputs, {
+                [inp]: {$set: e.target.value}
+            }));
+        }
+    }
+    function handleSearch(s){
+        if(s !== ''){
+            const getData = {
+                function: 'search_manufacturer',
+                search: s,
+                limit: 5
+            }
+            getPLMRequest('srx_records', getData, 
+            (res) => {
+                console.log(res.data);
+                setManufacturerResults(res.data.results);
+            },
+            (res) => {
+                console.log(res.data);
+            });
+        }
+    }
+    function handleDeselectManufacturer(){
+        setChosenManufacturer(null);
+        setManufacturerResults([]);
+    }
+    function handleAddManufacturer(){
+        console.log(manuInputs);
+        setManuInputs(update(manuInputs, {
+            string: {$set: ''}
+        }));
+        //const hasManufacturerString = manuInputs.manufacturer in manufacturerMap && 
+        //manufacturerMap[manuInputs.manufacturer].includes(manuInputs.string);
+        if(chosenManufacturer && manuInputs.string !== ''){
+            //console.log(chosenManufacturer);
+            //call new add reference
+            const postData = {function: 'manufacturer_string_id', 
+            id: chosenManufacturer.id, string: manuInputs.string}
+            console.log(postData);
+            
+            postPLMRequest('srx_records', postData, (res) => {
+                console.log(res.data);
+                props.updateData(res.data);
+                //if(alter)
+            },
+            (res) => {
+                console.log(res.data);
+            });
+            
+        }
+    }
+    function handleSelectManufacturer(i){
+        setChosenManufacturer(manufacturerResults[i]);
+        setManufacturerResults([]);
+    }
+    return(
+        <>
+        <span>Manufacturer</span>
+        <ButtonChooseSearcher searchResults={manufacturerResults.map((r)=>r.name)} chosen={chosenManufacturer} 
+        onDeselect={handleDeselectManufacturer} name={chosenManufacturer ? chosenManufacturer.name : ''}
+        onClick={handleSelectManufacturer} onSearch={handleSearch}/>
+        <Form>
+            <Form.Label>Alternative Manufacturer Name</Form.Label>
+            <Form.Control type='text' value={manuInputs.string} onChange={handleChangeInputs('string')}/>
+        </Form>
+        <Button onClick={handleAddManufacturer}>Add</Button>
+        </>
+    );
+}
 
 
 export function MasterManufacturers(props){
     const [masterManufacturerData, setMasterManufacturerData] = useState([]);
     const [addMasterInputs, setAddMasterInputs] = useState({name: '', website: ''});
+
     useEffect(() => {
         getManufacturers();
     }, []);
@@ -220,7 +336,8 @@ export function MasterManufacturers(props){
                 <Form.Control type='text' value={addMasterInputs.website} onChange={handleChangeMasterWebsite}/>
             </Form>
             <Button onClick={handleAddMasterManufacturer}>Add</Button>
-        <HeaderArrayTable data={masterManufacturerData} headers={headers}/>
+            <SearchPaginationTable data={masterManufacturerData} headers={headers} 
+            headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}/>
         </>
     );
 }
@@ -261,6 +378,7 @@ export function SupplierTable(props){
         postPLMRequest('srx_records', postData, 
         (res) => {
             console.log(res.data);
+            setSupplierData(res.data.suppliers);
         },
         (res) => {
             console.log(res.data);
@@ -282,7 +400,9 @@ export function SupplierTable(props){
         </Form>
         <Button onClick={handleAddSupplier}>Add</Button>
         <div className='FlexNormal'></div>
-        <HeaderArrayTable data={supplierData} headers={headers}/>
+        
+        <SearchPaginationTable data={supplierData} headers={headers} 
+            headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}/>
         </>
     );
 }
