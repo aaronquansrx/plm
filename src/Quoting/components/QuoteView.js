@@ -17,7 +17,7 @@ import { excelSheetToArray } from '../../scripts/ExcelHelpers';
 import { ObjectSuggestionSearcher } from '../../components/Searcher';
 import { Notification } from './Notifications';
 
-import { ConsolidatePricesView, ConsolidateView } from './ConsolidateViews';
+import { ConsolidatePricesView, ConsolidateView, SupplierMapping } from './ConsolidateViews';
 
 
 function QuoteView(props){
@@ -111,6 +111,8 @@ function QuoteView(props){
                 return <PartUsageView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
             case 5:
                 return <ConsolidatePricesView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
+            case 6:
+                return <SupplierMapping consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
         }
     }
     //console.log(props.quote);
@@ -473,7 +475,14 @@ const productSheetHeaders = [
     {label: 'Fitted', accessor: 'fitted'},
     {label: 'Notes', accessor: 'notes'},
     {label: 'Comments', accessor: 'comments'},
-    {label: 'Batch Qty', accessor: 'batch_qty'}
+    {label: 'Batch Qty', accessor: 'batch_qty'},
+    {label: 'Customer Price', accessor: 'customer_price'},
+    {label: 'Critical Components', accessor: 'critical_components'},
+    {label: 'Custom 1', accessor: 'custom1'},
+    {label: 'Custom 2', accessor: 'custom2'},
+    {label: 'Custom 3', accessor: 'custom3'},
+    {label: 'Custom 4', accessor: 'custom4'},
+    {label: 'Custom 5', accessor: 'custom5'}
 ];
 
 function UploadQuoteView(props){

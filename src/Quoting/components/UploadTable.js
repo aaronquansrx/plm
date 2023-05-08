@@ -13,7 +13,7 @@ import { TabbedSheetTable } from '../../components/Tables';
 import {ListSelectDropdown} from '../../components/Dropdown';
 import { PalleteTable } from '../components/PalleteTable';
 import { SimpleDropdown } from '../../components/Dropdown';
-
+import { LabeledTextInput } from '../../components/Forms';
 
 import './../../css/main.css';
 import { ListGroup } from 'react-bootstrap';
@@ -55,7 +55,14 @@ const defaultHeaders = [
     {label: 'Fitted', accessor: 'fitted'},
     {label: 'Notes', accessor: 'notes'},
     {label: 'Comments', accessor: 'comments'},
-    {label: 'Batch Qty', accessor: 'batch_qty'}
+    {label: 'Batch Qty', accessor: 'batch_qty'},
+    {label: 'Customer Price', accessor: 'customer_price'},
+    {label: 'Critical Components', accessor: 'critical_components'},
+    {label: 'Custom 1', accessor: 'custom1'},
+    {label: 'Custom 2', accessor: 'custom2'},
+    {label: 'Custom 3', accessor: 'custom3'},
+    {label: 'Custom 4', accessor: 'custom4'},
+    {label: 'Custom 5', accessor: 'custom5'},
 ];
 
 export function UploadMain(props){
@@ -419,18 +426,35 @@ export function UploadTableSingle(props){
     const [sheetId, setSheetId] = useState(null);
     const [selectedRow, setSelectedRow] = useState(null);
     const [showHeaderModal, setShowHeaderModal] = useState(false);
+    const [showCustomHeaderModal, setShowCustomHeaderModal] = useState(false);
+    const [customHeaders, setCustomHeaders] = useState([])
+    //const [activeCustomHeaders, setActiveCustomHeaders] = useState([]);
     const [headers, setHeaders] = useState(
         [{label: '_remove', accessor: '_remove'}].concat(defaultHeaders)
     );
-    const [dropdownHeaders, setDropdownHeaders] = useState(headers.map(() => '_remove'));
-
+    const [dropdownHeaders, setDropdownHeaders] = useState([]);
+    
     const labelHeaders = headers.map((h) => h.label);
     const headerMap = headers.reduce((mp, h) => {
         mp[h.label] = h.accessor;
         return mp;
     }, {});
-
-
+    useEffect(() => {
+        const getData = {function: 'custom_headers', user: props.user};
+        getPLMRequest('quote', getData, 
+        (res) => {
+            console.log(res.data);
+            setCustomHeaders(res.data.custom_headers);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }, []);
+    useEffect(() => {
+        if(props.sheets && props.sheets.length > sheetId && props.sheets[sheetId].array.length > 0){
+            setDropdownHeaders(props.sheets[sheetId].array[0].map(() => '_remove'));
+        }
+    }, [sheetId]);
     function handleChangeSheet(i){
         setSheetId(i);
         console.log(i);
@@ -458,6 +482,8 @@ export function UploadTableSingle(props){
                         }
                         headerFound.add(str);
                         return str;
+                    }else if(Number.isInteger(str)){
+                        console.log('custom'+str);
                     }
                     return '_remove';
                 });
@@ -550,30 +576,38 @@ export function UploadTableSingle(props){
     function handleCloseModal(){
         setShowHeaderModal(false);
     }
-    function handleColumnChange(i, item){
+    function handleCustomHeaderModal(){
+        setShowCustomHeaderModal(true);
+    }
+    function handleCloseCustomModal(){
+        setShowCustomHeaderModal(false);
+    }
+    function handleColumnChange(i, item, itemNo){
         console.log(i);
         console.log(item);
+        console.log(headers[itemNo-1]);
         setDropdownHeaders(update(dropdownHeaders, {
             [i]: {$set: item}
         }));
     }
-    console.log(props.sheets);
-    console.log(sheetId);
     return(
         <>
         <div className='FlexNormal'>
             <h3>{props.product && props.product.name}</h3>
             <Button onClick={handleHeaderModal}>Headers</Button>
+            {/*<Button onClick={handleCustomHeaderModal}>Custom Headers</Button>*/}
             <Button onClick={handleSubmit}>Submit</Button>
         </div>
-        <div className='FlexNormal'>
+        <>
         {usingDropdown ? <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}
         onChangeSheet={handleChangeSheet}
         tableClass={'FlexNormal Overflow'} tabsClass={'FlexNormal'}
         table={(props) => 
         <DropdownHeaderTable {...props} 
         /*sheet={sheetId < props.sheets.length ? props.sheets[sheetId].array : []} */
-        columnOptions={labelHeaders} 
+        columnOptions={labelHeaders/*.concat(customHeaders.map((ch) => {
+            return ch.name;
+        }))*/} 
         columnAttributes={dropdownHeaders}
         onRowSelect={handleSheetRowSelect}
         onColumnChange={handleColumnChange}
@@ -590,11 +624,72 @@ export function UploadTableSingle(props){
                 }}
             />
         }
-        </div>
+        </>
         <HeaderModal show={showHeaderModal} onClose={handleCloseModal} 
         headers={headers} onChangeHeaders={handleChangeHeaders}/>
+        <CustomHeaderModal show={showCustomHeaderModal} headers={customHeaders}
+        setCustomHeaders={setCustomHeaders} onClose={handleCloseCustomModal} user={props.user}/>
         </>
     )
+}
+
+function CustomHeaderModal(props){
+    //const [headers, setHeaders] = useState([]);
+    const [customHeaderName, setCustomHeaderName] = useState('');
+    /*
+    useEffect(() => {
+        const getData = {function: 'custom_headers', user: props.user};
+        getPLMRequest('quote', getData, 
+        (res) => {
+            console.log(res.data);
+            setHeaders(res.data.custom_headers);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }, []);
+    */
+    function handleAddHeader(){
+        if(customHeaderName !== ''){
+            const postData = {function: 'add_custom_header_name', user: props.user, header_name: customHeaderName};
+            postPLMRequest('quote', postData, 
+            (res) => {
+                console.log(res.data);
+                props.setCustomHeaders(res.data.custom_headers);
+            },
+            (res) => {
+                console.log(res.data);
+            });
+            //setCustomHeaderName('');
+        }
+    }
+    function handleChangeHeaderName(text){
+        console.log(text)
+        setCustomHeaderName(text);
+    }
+    const body = <>
+        <div>
+            <div>
+                <h4>Headers</h4>
+                {props.headers.length > 0 ? 
+                <ListGroup>{props.headers.map((header, i) => {
+                    return <ListGroup.Item key={i}>{header.name}</ListGroup.Item>
+                })}
+                </ListGroup> 
+                : <>No Custom Headers</>}
+            </div>
+        <div>
+            <h4>Add Custom Header</h4>
+            <LabeledTextInput label='Name' value={customHeaderName} onChange={handleChangeHeaderName}/>
+            <Button onClick={handleAddHeader}>Add</Button>
+        </div>
+        </div>
+    </>
+    const footer = <Button variant='secondary' onClick={props.onClose}>Close</Button>
+    return(
+        <TemplateModal show={props.show} body={body} footer={footer}
+        onClose={props.onClose} title={'Headers'} onChange={handleChangeHeaderName}/>
+    );
 }
 
 export function DropdownHeaderTable(props){
@@ -607,8 +702,8 @@ export function DropdownHeaderTable(props){
             if(props.onRowSelect) props.onRowSelect(j);
         }
     }
-    function handleColumnChange(i, item){
-        if(props.onColumnChange) props.onColumnChange(i, item);
+    function handleColumnChange(i, item, itemNo){
+        if(props.onColumnChange) props.onColumnChange(i, item, itemNo);
     }
     //console.log(props.sheet);
     const headerRow = (
@@ -619,7 +714,7 @@ export function DropdownHeaderTable(props){
             {[...Array(numCols)].map((e, i) => 
             <td key={i}>
                 <SimpleDropdown items={props.columnOptions} 
-                selected={props.columnAttributes[i]} onChange={(item) => handleColumnChange(i, item)}/>
+                selected={props.columnAttributes[i]} onChange={(item, cn) => handleColumnChange(i, item, cn)}/>
             </td>
             )}
         </tr>

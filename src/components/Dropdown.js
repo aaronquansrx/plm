@@ -31,6 +31,26 @@ export function SimpleDropdown(props){
     );
 }
 
+
+export function LabelledDropdownList(props){
+    function handleChange(item, i){
+        if(props.onChange) props.onChange(item, i);
+    }
+    return(
+    <Dropdown>
+        <Dropdown.Toggle variant="success" id="dropdown-basic">
+            {props.selected.label}
+        </Dropdown.Toggle>
+
+        <Dropdown.Menu>
+            {props.items.map((item, i) => 
+                <Dropdown.Item key={i} onClick={() => handleChange(item, i)}>{item.label}</Dropdown.Item>
+            )}
+        </Dropdown.Menu>
+    </Dropdown>
+    );
+}
+
 export function BomDropdown(props){
     function handleChange(i){
         return function(){

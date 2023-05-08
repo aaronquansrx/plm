@@ -10,7 +10,7 @@ import {SimplePopover} from '../../components/Tooltips';
 import { BOMApiProgressBarV2 } from '../../components/Progress';
 import { TemplateModal } from '../../components/Modals';
 
-import { MasterManufacturerAdder, AlternateManufacturerAdder } from './ManufacturerSupplierTables';
+import { MasterManufacturerAdder, AlternateManufacturerAdder, SupplierButtonChooser } from './ManufacturerSupplierTables';
 
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { bestPriceOffer } from '../../scripts/PLMAlgorithms';
@@ -53,7 +53,7 @@ export function ConsolidateView(props){
         const sameManuAdd = props.consolidatedData.data.reduce((obj, row, rn) => {
             if(row.manufacturer === modalDetails.manufacturer){
                 //obj.push(rn);
-                obj[rn] = {status: {manu_found: {$set: modalDetails.manufacturer}}};
+                obj[rn] = {status: {manu_found: {$set: row.manufacturer}}};
             }
             return obj;
         }, {});
@@ -89,7 +89,7 @@ export function ConsolidateView(props){
     return(
         <div>
         <Button variant='secondary' onClick={handleBack}>Back</Button>
-        <Button onClick={handlePrices}>Prices</Button>
+        <Button onClick={handlePrices}>Data Mapping</Button>
         <Notification data={props.consolidatedData}/>
         {props.consolidateStatus && <div>{props.consolidateStatus}</div>}
         <ConsolidateHeaderArrayTable data={props.consolidatedData.data} headers={headers}
@@ -195,11 +195,20 @@ function HeaderArrayTable(props){
 export function ConsolidatePricesView(props){
     const mpnSet = props.consolidatedData.data.map((line) => line.mpn);
     const [partData, finished, requestParts, finishedParts] = usePartData(mpnSet);
-    const h = [{accessor: 'mpn', label: 'MPN'}, {accessor: 'price', label: 'Price'}];
+    const h = [
+        {accessor: 'mpn', label: 'MPN'},  
+        {accessor: 'master_manufacturer', label: 'Manufacturer'},
+        {accessor: 'description', label: 'Description'},
+        {accessor: 'total', label: 'Total'},
+        {accessor: 'packaging', label: 'Packaging'},
+        {accessor: 'plc', label: 'Product Life Cycle'},
+        {accessor: 'price', label: 'Price'}
+    ];
 
     const [showProgress, setShowProgress] = useState(false);
     const [priceData, setPriceData] = useState(props.consolidatedData.data.map((line) => {
-        return {mpn: line.mpn, price: null};
+        return {mpn: line.mpn, total: line.total, description: line.description,
+            master_manufacturer: line.master_manufacturer, price: null};
     }));
     //console.log(partData);
     useEffect(() => {
@@ -209,16 +218,20 @@ export function ConsolidatePricesView(props){
             const newData = [...priceData];
             props.consolidatedData.data.forEach((line, i) => {
                 if(partData.has(line.mpn)){
-                    const data = partData.get(line.mpn).apis;
+                    const data = partData.get(line.mpn);
                     let offers = [];
-                    for(const api in data){
-                        offers = offers.concat(data[api].offers);
+                    for(const api in data.apis){
+                        offers = offers.concat(data.apis[api].offers);
                     }
                     //console.log(offers);
                     //const offers = data.reduce();
-                    const p = bestPriceOffer(offers);
+                    const p = bestPriceOffer(offers, line.total);
                     if(p !== null){
                         newData[i].price = p.total_price;
+                    }
+                    if(data.details.length > 0){
+                        newData[i].packaging = data.details[0].Parameters.Packaging;
+                        newData[i].plc = data.details[0].Parameters['Part Status'];
                     }
                 }
             });
@@ -226,7 +239,10 @@ export function ConsolidatePricesView(props){
         }
     }, [finished]);
     function handleBack(){
-        props.changeQuotePageState(0);
+        props.changeQuotePageState(4);
+    }
+    function handleSupplierMapping(){
+        props.changeQuotePageState(6);
     }
     function handleGetPrices(){
         console.log('requesting parts');
@@ -238,14 +254,127 @@ export function ConsolidatePricesView(props){
     }
     return(
         <>
-        <Button onClick={handleBack}>Back</Button>
-        <Button onClick={handleGetPrices}>Prices</Button>
-        Prices
+        <div>
+        <Button variant='secondary' onClick={handleBack}>Back</Button>
+        <Button onClick={handleGetPrices}>Request Prices</Button>
+        <Button onClick={handleSupplierMapping}>Supplier Mapping</Button>
+        </div>
         <BOMApiProgressBarV2 show={showProgress} numParts={mpnSet.length} 
         numFinished={finishedParts.size} onHideBar={handleHide}/>
         <HeaderArrayTable data={priceData} headers={h}/>
         </>
     );
+}
+
+export function SupplierMapping(props){
+    console.log(props.consolidatedData);
+    const [selected, setSelected] = useState(null);
+    const [data, setData] = useState(props.consolidatedData.data.map((line, i) => {
+        return {system: i, cpn: 'cpn', mpn: line.mpn, mfr: line.master_manufacturer, desc: line.description}
+    }));
+    //const []
+    //const [selectedLine, ]
+    const h = [
+        {accessor: 'system', label: 'System Unique ID'},  
+        {accessor: 'mpn', label: 'MPN'},  
+        {accessor: 'mfr', label: 'Manufacturer'},
+        {accessor: 'desc', label: 'Description'},
+        {accessor: 'supplier0', label: 'Supplier 1'},
+        {accessor: 'supplier1', label: 'Supplier 2'},
+        {accessor: 'supplier2', label: 'Supplier 3'},
+        {accessor: 'supplier3', label: 'Supplier 4'},
+        {accessor: 'supplier4', label: 'Supplier 5'}
+    ];
+    function handleBack(){
+        props.changeQuotePageState(5);
+    }
+    function handleAddSupplier(){
+        
+    }
+    function handleSelectLine(){
+        setSelected();
+    }
+    function handleAutoMap(){
+        const postData = {
+            function: 'get_manufacturer_supplier_list', 
+            manufacturer_list: props.consolidatedData.manufacturers
+        };
+        postPLMRequest('srx_records', postData, 
+        (res) => {
+            console.log(res.data);
+
+            const manufacturer_supplier_map = res.data.manufacturer_supplier_map;
+            const newData = [...data].map((line) => {
+                const newLine = {...line};
+                //console.log(newLine);
+                const manu = line.mfr;
+                console.log(manu);
+                if(manu !== null){
+                    const suppliers = manufacturer_supplier_map[manu];
+                    suppliers.forEach((supplier, i) => {
+                        const supString = 'supplier'+i.toString();
+                        newLine[supString] = supplier.supplier_name
+                    });
+                }
+                return newLine;
+            });
+            setData(newData);
+            console.log(newData);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
+    return(
+        <>
+        <div>
+        <Button variant='secondary' onClick={handleBack}>Back</Button>
+        <div><SupplierButtonChooser/>
+        </div>
+        <Button onClick={handleAddSupplier} disabled={true}>Add Supplier</Button>
+        <Button onClick={handleAutoMap}>Auto Map</Button>
+        </div>
+        <SelectLineHeaderArrayTable data={data} headers={h} onSelectLine={handleSelectLine}/>
+        </>
+    )
+}
+
+function SelectLineHeaderArrayTable(props){
+    const [selectedRow, setSelectedRow] = useState();
+    function handleSelectLine(i){
+        return function(){
+            if(i === selectedRow){
+                setSelectedRow(null);
+                if(props.onDeselectLine) props.onDeselectLine(i);
+            }else{
+                setSelectedRow(i);
+                if(props.onSelectLine) props.onSelectLine(i);
+            }
+        }
+    }
+    return(
+        <Table>
+            <thead>
+                <tr>
+                {props.headers.map((h, i) => 
+                <th key={i}>{h.label}</th>
+                )}
+                </tr>
+            </thead>
+            <tbody>
+                {props.data.map((row, i) => {
+                    const cn = selectedRow === i ? 'HighlightedRow' : '';
+                    return(
+                    <tr key={i} className={cn} onClick={handleSelectLine(i)}>
+                        {props.headers.map((h, j) =>
+                            <td key={j}>{row[h.accessor]}</td>
+                        )}
+                    </tr>
+                    )}
+                )}
+            </tbody>
+        </Table>
+    )
 }
 
 function usePartData(partList){

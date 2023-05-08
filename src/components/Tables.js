@@ -197,6 +197,7 @@ export function SearchPaginationTable(props){
     const [searchTerm, setSearchTerm] = useState('');
     const [searchField, setSearchField] = useState(props.searchField);
     const [resetPage, setResetPage] = useState(0);
+    const [fieldIndex, setFieldIndex] = useState(0);
     useEffect(() => {
         //const upperSearch = searchTerm.toUpperCase();
         const fd = props.data.reduce((arr, v) => {
@@ -230,6 +231,7 @@ export function SearchPaginationTable(props){
         handleChangeSearch(searchTerm, props.headers[i].accessor);
         setSearchField(props.headers[i].accessor);
         setResetPage(resetPage+1);
+        setFieldIndex(i);
     }
     //console.log(filteredData);
     return(
@@ -237,7 +239,7 @@ export function SearchPaginationTable(props){
         <div className='Hori'>
             <TextControl onChange={handleChangeSearch}/>
             {props.fieldOptions && <SimpleDropdown items={props.headers.map((h) => h.label)} 
-            selected={searchField} onChange={handleFieldChange}/>}
+            selected={props.headers[fieldIndex].label} onChange={handleFieldChange}/>}
         </div>
         <PaginationHeaderTable headers={props.headers} data={filteredData} headerClass={props.headerClass}
         reset={resetPage}/>

@@ -45,6 +45,22 @@ export function TextControl(props){
     )
 }
 
+export function LabeledTextInput(props){
+
+    function handleChange(e){
+        if(props.onChange) props.onChange(e.target.value);
+    }
+    function handleBlur(e){
+        if(props.onBlur) props.onBlur(e.target.value);
+    }
+    return (
+        <Form>
+            {props.label && <Form.Label>{props.label}</Form.Label>}
+            <Form.Control type="text" onChange={handleChange} onBlur={handleBlur} value={props.value}/>
+        </Form>
+    );
+}
+
 export function NumberInput(props){
     const [number, setNumber] = useState(props.value ? props.value : 1);
     //const displayNumber = props.value ? props.value : number;

@@ -17,7 +17,8 @@ function QuotingTables(props){
         {name: 'Master Manufacturer', content: <MasterManufacturers/>},
         {name: 'Alternative Manufacturer Names', content: <AlternateManufacturerReference/>},
         {name: 'Supplier', content: <SupplierTable/>},
-        {name: 'Manufacturer Supplier Link', content: <ManufacturerSupplierTable/>}
+        {name: 'Manufacturer Supplier Link AU', content: <TableAU/>},
+        {name: 'Manufacturer Supplier Link MYR', content: <TableMYR/>}
     ];
     return(
         <>
@@ -25,6 +26,19 @@ function QuotingTables(props){
         </>
     );
 }
+
+function TableAU(props){
+    return(
+        <ManufacturerSupplierTable region='au'/>
+    );
+}
+
+function TableMYR(props){
+    return(
+        <ManufacturerSupplierTable region='myr'/>
+    );
+}
+
 /*
 function ManufacturerTable(props){
     return(
