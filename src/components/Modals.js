@@ -6,7 +6,7 @@ import { Accordion } from 'react-bootstrap';
 
 import { NamedCheckBox } from './Checkbox';
 import { TabPages } from './Tabs';
-import { NameForm, LoginForm, LabeledCheckbox} from './Forms';
+import { NameForm, LoginForm, LabeledCheckbox, LabeledTextInput} from './Forms';
 
 import './../css/main.css';
 
@@ -54,6 +54,31 @@ export function TemplateModal(props){
             {props.footer}
         </Modal.Footer>}
         </Modal>
+    )
+}
+
+export function ExcelExportModal(props){
+    const [filename, setFilename] = useState('');
+    const title = 'Export Excel';
+    const body = <div>
+        <LabeledTextInput label={'File Name'} onChange={handleChangeName}/>
+    </div>
+    const footer = <>
+        <Button onClick={handleExport}>Export</Button>
+        <Button variant='secondary' onClick={handleClose}>Close</Button>
+    </>
+    function handleChangeName(name){
+        setFilename(name);
+    }
+    function handleExport(){
+        props.onExport(filename);
+    }
+    function handleClose(){
+        props.onClose();
+    }
+    
+    return(
+        <TemplateModal show={props.show} onClose={props.onClose} title={title} body={body} footer={footer}/>
     )
 }
 

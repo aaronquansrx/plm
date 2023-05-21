@@ -18,6 +18,7 @@ import { LabeledTextInput } from '../../components/Forms';
 import './../../css/main.css';
 import { ListGroup } from 'react-bootstrap';
 import { TemplateModal } from '../../components/Modals';
+import { WarningToolTipButtonFade } from '../../components/Tooltips';
 
 const S1 = styled.div`
     width: 30px;
@@ -36,33 +37,33 @@ const batchUploadHeaders = [
 ];
 
 const defaultHeaders = [
-    {label: 'Level', accessor: 'level'},
-    {label: 'Commodity', accessor: 'commodity'},
-    {label: 'CMs', accessor: 'cms'},
+    {label: 'Level', accessor: 'level', size: 100},
+    {label: 'Commodity', accessor: 'commodity', size: 100},
+    {label: 'CMs', accessor: 'cms', size: 10},
     {label: 'Item No.', accessor: 'item_no'}, 
-    {label: 'CPN', accessor: 'cpn'},
-    {label: 'SRX PN', accessor: 'srx_pn'},
-    {label: 'Description', accessor: 'description'},
+    {label: 'CPN', accessor: 'cpn', size: 100},
+    {label: 'SRX PN', accessor: 'srx_pn', size: 100},
+    {label: 'Description', accessor: 'description', size: 1000},
     {label: 'Usage Per', accessor: 'usage_per'},
-    {label: 'UOM', accessor: 'uom'},
-    {label: 'Designator', accessor: 'designator'},
-    {label: 'Approved MFR', accessor: 'mfr'},
-    {label: 'Approved MPN', accessor: 'mpn'},
-    {label: 'Supplier 1', accessor: 'supplier'},
-    {label: 'Supplier Part Number 1', accessor: 'spn'},
-    {label: 'Value', accessor: 'value'},
-    {label: 'Footprint', accessor: 'footprint'},
-    {label: 'Fitted', accessor: 'fitted'},
-    {label: 'Notes', accessor: 'notes'},
-    {label: 'Comments', accessor: 'comments'},
+    {label: 'UOM', accessor: 'uom', size: 100},
+    {label: 'Designator', accessor: 'designator', size: 1000},
+    {label: 'Approved MFR', accessor: 'mfr', size: 100},
+    {label: 'Approved MPN', accessor: 'mpn', size: 100},
+    {label: 'Supplier 1', accessor: 'supplier', size: 100},
+    {label: 'Supplier Part Number 1', accessor: 'spn', size: 100},
+    {label: 'Value', accessor: 'value', size: 100},
+    {label: 'Footprint', accessor: 'footprint', size: 100},
+    {label: 'Fitted', accessor: 'fitted', size: 100},
+    {label: 'Notes', accessor: 'notes', size: 100},
+    {label: 'Comments', accessor: 'comments', size: 1000},
     {label: 'Batch Qty', accessor: 'batch_qty'},
-    {label: 'Customer Price', accessor: 'customer_price'},
-    {label: 'Critical Components', accessor: 'critical_components'},
-    {label: 'Custom 1', accessor: 'custom1'},
-    {label: 'Custom 2', accessor: 'custom2'},
-    {label: 'Custom 3', accessor: 'custom3'},
-    {label: 'Custom 4', accessor: 'custom4'},
-    {label: 'Custom 5', accessor: 'custom5'},
+    {label: 'Customer Price', accescustomersor: 'customer_price'},
+    {label: 'Critical Components', accessor: 'critical_components', size: 100},
+    {label: 'Custom 1', accessor: 'custom1', size: 1000},
+    {label: 'Custom 2', accessor: 'custom2', size: 1000},
+    {label: 'Custom 3', accessor: 'custom3', size: 1000},
+    {label: 'Custom 4', accessor: 'custom4', size: 1000},
+    {label: 'Custom 5', accessor: 'custom5', size: 1000},
 ];
 
 export function UploadMain(props){
@@ -72,6 +73,8 @@ export function UploadMain(props){
     const [linkMode, setLinkMode] = useState(linkModes[0]); // 0 for 
     const [headers, setHeaders] = useState(batchUploadHeaders);
     const [showHeaderModal, setShowHeaderModal] = useState(false);
+
+    const [errorMessage, setErrorMessage] = useState(null);
     useEffect(() => {
         //if(changeSheets.current){
             if(props.sheets !== null){
@@ -433,10 +436,14 @@ export function UploadTableSingle(props){
         [{label: '_remove', accessor: '_remove'}].concat(defaultHeaders)
     );
     const [dropdownHeaders, setDropdownHeaders] = useState([]);
+
+    const [errorMessage, setErrorMessage] = useState(null);
+
+    const sheetState = useRef(null);
     
     const labelHeaders = headers.map((h) => h.label);
     const headerMap = headers.reduce((mp, h) => {
-        mp[h.label] = h.accessor;
+        mp[h.label] = h;
         return mp;
     }, {});
     useEffect(() => {
@@ -457,13 +464,14 @@ export function UploadTableSingle(props){
     }, [sheetId]);
     function handleChangeSheet(i){
         setSheetId(i);
-        console.log(i);
+        setErrorMessage(null);
     }
     function handleChangeHeaders(newHeaders){
         console.log(newHeaders);
         setHeaders(newHeaders);
     }
     function handleSheetRowSelect(rowIndex){
+        setErrorMessage(null);
         //reference this row for more detail (can use HeaderTableWithRowSelectorV2 and TabbedTable)
         //setSelectedRow({sheetId: sheetId, row: rowIndex, productValues: productChildrenVals, headersFound: headersFound});
         if(selectedRow && selectedRow.row === rowIndex && selectedRow.sheetId === sheetId){
@@ -505,27 +513,9 @@ export function UploadTableSingle(props){
         }
     }
     function handleSubmit(){
-        //find correct headers
-        const headerSet = new Set(headers.map(h => h.label));
-        const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
-        if(usingDropdown){
-            const startRow = selectedRow ? selectedRow.row+1 : 0;
-            const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
-                if(h !== '_remove'){
-                    arr.push({accessor: headerMap[h], index: i});
-                }
-                return arr;
-            }, []);
-            const objs2 = [];
-            for(let r=startRow; r < activeSheet.length; r++){
-                const obj = headerIndexes.reduce((o, h) => {
-                    o[h.accessor] = activeSheet[r][h.index];
-                    return o;
-                }, {});
-                objs2.push(obj);
-            }
-            const postData = {product_sheet: objs2, function: 'add_product_sheet', user: props.user, 
-                product_id: props.product.id, quote_id: props.quoteId};  
+        if(errorMessage && sheetState.current){
+            const postData = {product_sheet: sheetState.current, function: 'add_product_sheet', user: props.user, 
+                    product_id: props.product.id, quote_id: props.quoteId};  
             postPLMRequest('quote', postData,
                 (res) => {
                     console.log(res.data);
@@ -536,12 +526,64 @@ export function UploadTableSingle(props){
                     console.log(res.data);
                 }
             );
+            setErrorMessage(null);
+        }
+        //find correct headers
+        const headerSet = new Set(headers.map(h => h.label));
+        const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
+        if(usingDropdown){
+            console.log('data');
+            const startRow = selectedRow ? selectedRow.row+1 : 0;
+            const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
+                if(h !== '_remove'){
+                    arr.push({...headerMap[h], index: i});
+                }
+                return arr;
+            }, []);
+            const objs2 = [];
+            const truncatedFields = new Set();
+            for(let r=startRow; r < activeSheet.length; r++){
+                const obj = headerIndexes.reduce((o, h) => {
+                    let cellValue = activeSheet[r][h.index];
+                    if('size' in h){
+                        if(cellValue.length > h.size){
+                            cellValue = cellValue.substring(0, h.size);
+                            truncatedFields.add(h.label);
+                        }
+                    }
+                    o[h.accessor] = activeSheet[r][h.index];
+                    return o;
+                }, {});
+                objs2.push(obj);
+            }
+            sheetState.current = objs2;
+            if(truncatedFields.size === 0){
+                const postData = {product_sheet: objs2, function: 'add_product_sheet', user: props.user, 
+                    product_id: props.product.id, quote_id: props.quoteId};  
+                postPLMRequest('quote', postData,
+                    (res) => {
+                        console.log(res.data);
+                        props.changeQuotePageState(2);
+                        props.updateProducts(res.data);
+                    },
+                    (res) => {
+                        console.log(res.data);
+                    }
+                );
+            }else{
+                let errorString = [...truncatedFields].reduce((str, field) => {
+                    return str + field + ' ';
+                }, 'Truncating fields: ');
+                //errorString = errorString;
+                //console.log(errorString);
+                setErrorMessage(<div>{errorString}<br/>Submit again to save</div>);
+            }
         }else{
             if(selectedRow && selectedRow.row !== null){
                 const sheetRow = activeSheet[selectedRow.row];
                 const hs = sheetRow.reduce((arr, h, n) => {
                     if(headerSet.has(h)){
-                        arr.push({accessor: headerMap[h], index: n});
+                        arr.push({...headerMap[h], index: n});
                     }
                     return arr;
                 }, []);
@@ -583,12 +625,15 @@ export function UploadTableSingle(props){
         setShowCustomHeaderModal(false);
     }
     function handleColumnChange(i, item, itemNo){
-        console.log(i);
-        console.log(item);
-        console.log(headers[itemNo-1]);
-        setDropdownHeaders(update(dropdownHeaders, {
+        setErrorMessage(null);
+        const headerIndex = dropdownHeaders.findIndex((h) => h === item);
+        const updateObj = {
             [i]: {$set: item}
-        }));
+        };
+        if(headerIndex !== -1){
+            updateObj[headerIndex] = {$set: '_remove'};
+        }
+        setDropdownHeaders(update(dropdownHeaders, updateObj));
     }
     return(
         <>
@@ -596,7 +641,10 @@ export function UploadTableSingle(props){
             <h3>{props.product && props.product.name}</h3>
             <Button onClick={handleHeaderModal}>Headers</Button>
             {/*<Button onClick={handleCustomHeaderModal}>Custom Headers</Button>*/}
-            <Button onClick={handleSubmit}>Submit</Button>
+            <WarningToolTipButtonFade buttonText='Submit' onClick={handleSubmit}
+            messageTime={4000}>
+                {errorMessage && errorMessage}
+            </WarningToolTipButtonFade>
         </div>
         <>
         {usingDropdown ? <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}

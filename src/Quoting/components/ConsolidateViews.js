@@ -1,6 +1,7 @@
 import {useState, useEffect} from 'react';
 
 import update from 'immutability-helper';
+import XLSX from 'xlsx';
 
 import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
@@ -8,7 +9,7 @@ import Table from 'react-bootstrap/Table';
 import { Notification } from './Notifications';
 import {SimplePopover} from '../../components/Tooltips';
 import { BOMApiProgressBarV2 } from '../../components/Progress';
-import { TemplateModal } from '../../components/Modals';
+import { TemplateModal, ExcelExportModal } from '../../components/Modals';
 
 import { MasterManufacturerAdder, AlternateManufacturerAdder, SupplierButtonChooser } from './ManufacturerSupplierTables';
 
@@ -16,12 +17,16 @@ import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { bestPriceOffer } from '../../scripts/PLMAlgorithms';
 import { ModalDialog } from 'react-bootstrap';
 import { TabPages } from '../../components/Tabs';
+import { pickKeysObject, objectToArray } from '../../scripts/General';
+import { SimpleDropdown } from '../../components/Dropdown';
 
 
 export function ConsolidateView(props){
     //const headers = consolidateHeaders.concat(props.consolidatedData.headers);
     const [modalDetails, setModalDetails] = useState(null);
+    const [showExportModal, setShowExportModal] = useState(false);
     const headers = props.consolidatedData.headers;
+    console.log(headers);
     function handleBack(){
         props.changeQuotePageState(0);
     }
@@ -86,9 +91,35 @@ export function ConsolidateView(props){
         <TabPages tabs={tabs}/>
     </div>
     //<SimpleArrayTable data={props.data}/>
+    function handleExportModal(){
+        setShowExportModal(true);
+    }
+    function handleExportExcel(filename){
+        const keys = headers.map((h) => h.accessor);
+        const formattedData = props.consolidatedData.data.map((line) => {
+            const newLine = {...line};
+            if(newLine.uom.length === 1){
+                newLine.uom = newLine.uom[0];
+            }else{
+                newLine.uom = '';
+            }
+            return pickKeysObject(newLine, keys);
+        });
+        
+        const sheet = XLSX.utils.json_to_sheet(formattedData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, '');
+        XLSX.writeFile(wb, filename+'.xlsx');
+        
+    }
+    function handleCloseExport(){
+        setShowExportModal(false);
+    }
     return(
         <div>
+        <ExcelExportModal show={showExportModal} onClose={handleCloseExport} onExport={handleExportExcel}/>
         <Button variant='secondary' onClick={handleBack}>Back</Button>
+        <Button onClick={handleExportModal}>Export</Button>
         <Button onClick={handlePrices}>Data Mapping</Button>
         <Notification data={props.consolidatedData}/>
         {props.consolidateStatus && <div>{props.consolidateStatus}</div>}
@@ -149,15 +180,36 @@ function ConsolidateHeaderArrayTable(props){
                     const pt = <>{row.status.manu_found !== null ? row.status.manu_found  : 'Manufacturer Not Found'}</>;
                     return(
                     <tr key={i} onClick={handleRowClick(i)}>
-                        {props.headers.map((h, j) =>
+                        {props.headers.map((h, j) => {
+                            let contents;
+                            switch(h.accessor){
+                                case 'manufacturer':
+                                    contents = <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
+                                        <div>{row[h.accessor]}</div>
+                                    </SimplePopover>
+                                    break;
+                                case 'uom':
+                                    if(row.uom.length === 0){
+                                        contents = 'No UOM found';
+                                    }else if(row.uom.length === 1){
+                                        contents = row.uom[0];
+                                    }else{
+                                        contents = 'Multiple UOMs: ';
+                                        row.uom.forEach((uom) => {
+                                            contents = contents.concat(uom+' ');
+                                        });
+                                    }
+                                    break;
+                                default:
+                                    contents = row[h.accessor];
+                                    break;
+                            }
+                            return(
                             <td key={j} className={cn}>
-                                {h.accessor !== 'manufacturer' ? row[h.accessor] :
-                                <SimplePopover popoverBody={pt} trigger={['hover', 'focus']} placement='auto'>
-                                    <div>{row[h.accessor]}</div>
-                                </SimplePopover>
-                                }
+                                {contents}
                             </td>
-                        )}
+                            )
+                        })}
                     </tr>
                     )}
                 )}
@@ -200,15 +252,16 @@ export function ConsolidatePricesView(props){
         {accessor: 'master_manufacturer', label: 'Manufacturer'},
         {accessor: 'description', label: 'Description'},
         {accessor: 'total', label: 'Total'},
+        {accessor: 'uom', label: 'UOM'},
         {accessor: 'packaging', label: 'Packaging'},
         {accessor: 'plc', label: 'Product Life Cycle'},
         {accessor: 'price', label: 'Price'}
     ];
-
     const [showProgress, setShowProgress] = useState(false);
     const [priceData, setPriceData] = useState(props.consolidatedData.data.map((line) => {
+        const uom = line.uom.length > 0 ? line.uom[0] : '';
         return {mpn: line.mpn, total: line.total, description: line.description,
-            master_manufacturer: line.master_manufacturer, price: null};
+            master_manufacturer: line.master_manufacturer, uom: uom,  price: null};
     }));
     //console.log(partData);
     useEffect(() => {
@@ -239,7 +292,7 @@ export function ConsolidatePricesView(props){
         }
     }, [finished]);
     function handleBack(){
-        props.changeQuotePageState(4);
+        props.changeQuotePageState(3);
     }
     function handleSupplierMapping(){
         props.changeQuotePageState(6);
@@ -266,38 +319,67 @@ export function ConsolidatePricesView(props){
     );
 }
 
+const regions = ['AU', 'MY'];
+
 export function SupplierMapping(props){
-    console.log(props.consolidatedData);
+    //console.log(props.consolidatedData);
+    //const [supplierInput, setSupplierInput] = useState(null);
     const [selected, setSelected] = useState(null);
+    const [regionSelector, setRegionSelector] = useState('AU');
+    const [customHeaders, setCustomHeaders] = useState([]);
+
+    const [showExport, setShowExport] = useState(false);
+
     const [data, setData] = useState(props.consolidatedData.data.map((line, i) => {
-        return {system: i, cpn: 'cpn', mpn: line.mpn, mfr: line.master_manufacturer, desc: line.description}
+        const uom = line.uom.length > 0 ? line.uom[0] : '';
+        return {...line, system: i, uom: uom, suppliers: []}
     }));
-    //const []
-    //const [selectedLine, ]
-    const h = [
+    useEffect(() => {
+        props.setEditedConsolidatedData(data);
+    }, []);
+    const batchHeaders = Array.from(Array(props.consolidatedData.num_batches)).map((_, i) => {
+        return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
+    });
+    const headers = [
         {accessor: 'system', label: 'System Unique ID'},  
-        {accessor: 'mpn', label: 'MPN'},  
-        {accessor: 'mfr', label: 'Manufacturer'},
-        {accessor: 'desc', label: 'Description'},
+        {accessor: 'cpn', label: 'CPN'},
+        {accessor: 'description', label: 'Description'},
+        {accessor: 'uom', label: 'UOM'},
+        {accessor: 'mpn', label: 'Approved MPN'},
+        {accessor: 'manufacturer', label: 'Approved MFR'},  
+        {accessor: 'description', label: 'Description'},
+        ...batchHeaders,
+        {accessor: 'sum_eau', label: 'Total EAU'},
+        /*
         {accessor: 'supplier0', label: 'Supplier 1'},
         {accessor: 'supplier1', label: 'Supplier 2'},
         {accessor: 'supplier2', label: 'Supplier 3'},
         {accessor: 'supplier3', label: 'Supplier 4'},
-        {accessor: 'supplier4', label: 'Supplier 5'}
+        {accessor: 'supplier4', label: 'Supplier 5'}*/
     ];
+    const customOptions = ['custom1', 'custom2', 'custom3', 'custom4', 'custom5', 'cms', 'comments',
+        'commodity', 'designator', 'fitted', 'footprint', 'notes', 'srx_pn', 'supplier', 'spn',
+        'critical_components', 'value', 'customer_price'];
     function handleBack(){
         props.changeQuotePageState(5);
     }
     function handleAddSupplier(){
-        
+        //if()
+        const postData = {function: 'add_manufacturer_supplier'};
+
     }
-    function handleSelectLine(){
-        setSelected();
+    function handleSelectLine(i){
+        console.log(i);
+        setSelected(i);
+    }
+    function handleDeselectLine(){
+        setSelected(null);
     }
     function handleAutoMap(){
         const postData = {
             function: 'get_manufacturer_supplier_list', 
-            manufacturer_list: props.consolidatedData.manufacturers
+            manufacturer_list: props.consolidatedData.manufacturers,
+            region: regionSelector
         };
         postPLMRequest('srx_records', postData, 
         (res) => {
@@ -307,19 +389,89 @@ export function SupplierMapping(props){
             const newData = [...data].map((line) => {
                 const newLine = {...line};
                 //console.log(newLine);
-                const manu = line.mfr;
-                console.log(manu);
+                const manu = line.master_manufacturer;
+                //console.log(manu);
                 if(manu !== null){
                     const suppliers = manufacturer_supplier_map[manu];
                     suppliers.forEach((supplier, i) => {
                         const supString = 'supplier'+i.toString();
-                        newLine[supString] = supplier.supplier_name
+                        newLine[supString] = supplier.supplier_name;
                     });
+                    newLine.suppliers = suppliers;
+                }else{
+                    newLine.suppliers = []; 
                 }
                 return newLine;
             });
             setData(newData);
             console.log(newData);
+            props.setEditedConsolidatedData(newData);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
+    function handleChangeRegion(item){
+        setRegionSelector(item);
+    }
+    /*
+    function handleSelectSupplierInput(supplier){
+        setSupplierInput(supplier);
+    }
+    function handleDeselectSupplierInput(){
+        setSupplierInput(null);
+    }*/
+    function handleRequestForQuote(){
+        props.changeQuotePageState(7);
+    }
+    function handleChangeCustom(val, i){
+        setCustomHeaders(update(customHeaders, {
+            [i]: {$set: val}
+        }));
+    }
+    function handleAddCustom(){
+        const next = customOptions.reduce((n, curr) => {
+            if(n === null && !customHeaders.includes(curr)){
+                n = curr;
+            }
+            return n;
+        }, null);
+        if(next){
+            setCustomHeaders(update(customHeaders, {
+                $push: [next]
+            }));
+        }
+    }
+    function handleShowExport(){
+        setShowExport(true);
+    }
+    function handleExportExcel(fn){
+        console.log('do export: '+fn);
+        const keys = headers.map((h) => h.accessor).concat(customHeaders);
+        const labels = headers.map((h) => h.label);
+        const fullLabels = labels.concat(customHeaders);
+        const formattedData2 = data.map((line) => {
+            return objectToArray(line, keys);
+        });
+        const excelData = [fullLabels].concat(formattedData2);
+        
+        const sheet = XLSX.utils.aoa_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, '');
+        XLSX.writeFile(wb, fn+'.xlsx');
+        
+    }
+    function handleCloseExport(){
+        setShowExport(false);
+    }
+    function handleAddSupplier(i, supplier){
+        //console.log(i);
+        //console.log(supplier);
+        console.log(data[i]);
+        const postData = {function: 'add_manufacturer_supplier', supplier_id: supplier.id, };
+        postPLMRequest('srx_records', postData,
+        (res) => {
+            console.log(res.data);
         },
         (res) => {
             console.log(res.data);
@@ -327,20 +479,44 @@ export function SupplierMapping(props){
     }
     return(
         <>
+        <ExcelExportModal show={showExport} onClose={handleCloseExport} onExport={handleExportExcel}/>
         <div>
         <Button variant='secondary' onClick={handleBack}>Back</Button>
-        <div><SupplierButtonChooser/>
+        <Button onClick={handleRequestForQuote}>Request For Quote</Button>
+        {/*
+        <div><SupplierButtonChooser chosenSupplier={supplierInput}
+        onSelectSupplier={handleSelectSupplierInput}
+        onDeselectSupplier={handleDeselectSupplierInput}/>
         </div>
-        <Button onClick={handleAddSupplier} disabled={true}>Add Supplier</Button>
+        <Button onClick={handleAddSupplier} 
+        disabled={supplierInput === null || selected === null}>
+            Add Supplier
+        </Button>
+        */}
+        <div>
+        <Button onClick={handleAddCustom}>Add Custom Column</Button>
+        <Button onClick={handleShowExport}>Export</Button>
+        </div>
+        <div>
+        
         <Button onClick={handleAutoMap}>Auto Map</Button>
+        <SimpleDropdown selected={regionSelector} items={regions} onChange={handleChangeRegion}/>
         </div>
-        <SelectLineHeaderArrayTable data={data} headers={h} onSelectLine={handleSelectLine}/>
+        </div>
+        <SupplierMappingTable data={data} headers={headers} 
+        customHeaders={customHeaders} customOptions={customOptions}
+        onSelectLine={handleSelectLine}
+        onDeselectLine={handleDeselectLine}
+        onChangeCustom={handleChangeCustom}
+        onAddSupplier={handleAddSupplier}
+        />
         </>
     )
 }
 
-function SelectLineHeaderArrayTable(props){
-    const [selectedRow, setSelectedRow] = useState();
+function SupplierMappingTable(props){
+    const [supplierInputs, setSupplierInputs] = useState(props.data.map(() => null));
+    const [selectedRow, setSelectedRow] = useState(null);
     function handleSelectLine(i){
         return function(){
             if(i === selectedRow){
@@ -352,6 +528,30 @@ function SelectLineHeaderArrayTable(props){
             }
         }
     }
+    function handleChange(i){
+        return function(val){
+            props.onChangeCustom(val, i);
+        }
+    }
+    function handleSelectSupplierInput(i){
+        return function(supplier){
+            setSupplierInputs(update(supplierInputs, {
+                [i]: {$set: supplier}
+            }));
+        }
+    }
+    function handleDeselectSupplierInput(i){
+        return function(){
+            setSupplierInputs(update(supplierInputs, {
+                [i]: {$set: null}
+            }));
+        }
+    }
+    function handleAddSupplier(i){
+        return function(){
+            props.onAddSupplier(i, supplierInputs[i]);
+        }
+    }
     return(
         <Table>
             <thead>
@@ -359,22 +559,174 @@ function SelectLineHeaderArrayTable(props){
                 {props.headers.map((h, i) => 
                 <th key={i}>{h.label}</th>
                 )}
+                {props.customHeaders.map((header, i) => {
+                    return(
+                        <th key={i}><SimpleDropdown selected={header} 
+                        items={props.customOptions} onChange={handleChange(i)}/>
+                        </th>
+                    );
+                })}
+                {Array.from(Array(5)).map((n,i) => {
+                    return <th key={i}>Supplier {i+1}</th>
+                })}
                 </tr>
             </thead>
             <tbody>
                 {props.data.map((row, i) => {
+                    let hasSupplierChooser = false;
                     const cn = selectedRow === i ? 'HighlightedRow' : '';
                     return(
                     <tr key={i} className={cn} onClick={handleSelectLine(i)}>
-                        {props.headers.map((h, j) =>
+                        {props.headers.map((h, j) => 
                             <td key={j}>{row[h.accessor]}</td>
                         )}
+                        {props.customHeaders.map((header, j) => {
+                        return(
+                            <td key={j}>
+                                {row[header]}
+                            </td>
+                        )
+                        })}
+                        {Array.from(Array(5)).map((n, j) => {
+                            let cell = row['supplier'+j];
+                            if(!hasSupplierChooser){
+                                if(row['supplier'+j] === undefined){
+                                    cell = <div><SupplierButtonChooser chosenSupplier={supplierInputs[i]}
+                                    onSelectSupplier={handleSelectSupplierInput(i)}
+                                    onDeselectSupplier={handleDeselectSupplierInput(i)}/>
+                                    {supplierInputs[i] && <Button onClick={handleAddSupplier(j)}>Add</Button>}
+                                    </div>;
+                                    hasSupplierChooser = true;
+                                }
+                            }
+                            return(
+                            <td key={j}>
+                                {cell}
+                            </td>
+                            )
+                        })}
                     </tr>
                     )}
                 )}
             </tbody>
         </Table>
     )
+}
+
+export function RequestForQuoteList(props){
+    //console.log(props.editedData);
+    const [data, setData] = useState(getRFQData());
+    const [showExportModal, setShowExportModal] = useState(false);
+    function getRFQData(){
+        //props.editedData.
+        const newData = props.editedData.reduce((arr, line) => {
+            const lines = line.suppliers.map((sup,i) => {
+                const sys = line.system+'.'+i;
+                return {...line, system: sys, supplier: sup.supplier_name, email: sup.email};
+            });
+            return arr.concat(lines);
+        }, []);
+        return newData;
+    }
+    const batchHeaders = Array.from(Array(props.numBatches)).map((_, i) => {
+        return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
+    });
+    const headers = [
+        {accessor: 'system', label: 'System Unique ID'}, 
+        {accessor: 'cpn', label: 'CPN'},
+        {accessor: 'description', label: 'Description'},
+        {accessor: 'uom', label: 'UOM'},
+        {accessor: 'mpn', label: 'Approved MPN'},
+        {accessor: 'manufacturer', label: 'Approved MFR'},
+        ...batchHeaders,
+        {accessor: 'sum_eau', label: 'Total EAU'},
+        {accessor: 'supplier', label: 'Supplier'},
+        {accessor: 'email', label: 'Email'}
+    ];
+    function handleBack(){
+        props.changeQuotePageState(6);
+    }
+    function handleNext(){
+        props.changeQuotePageState(8);
+    }
+    function handleShowExport(){
+        setShowExportModal(true);
+    }
+    function handleExportExcel(fn){
+        //console.log('do export: '+fn);
+        const keys = headers.map((h) => h.accessor);
+        const labels = headers.map((h) => h.label);
+        /*
+        const formattedData = data.map((line) => {
+            const newLine = {...line};
+            if(newLine.uom.length === 1){
+                //newLine.uom = newLine.uom[0];
+            }else{
+                //newLine.uom = '';
+            }
+            return pickKeysObject(newLine, keys);
+        });*/
+        const formattedData2 = data.map((line) => {
+            return objectToArray(line, keys);
+        });
+        const excelData = [labels].concat(formattedData2);
+        console.log(excelData);
+        
+        const sheet = XLSX.utils.aoa_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, '');
+        XLSX.writeFile(wb, fn+'.xlsx');
+        
+    }
+    function handleCloseExport(){
+        setShowExportModal(false);
+    }
+    return(
+        <div>
+            <ExcelExportModal show={showExportModal} onClose={handleCloseExport} onExport={handleExportExcel}/>
+            <Button variant='secondary' onClick={handleBack}>Back</Button>
+            <Button onClick={handleShowExport}>Export</Button>
+            <Button onClick={handleNext}>Next</Button>
+            <RFQTable data={data} headers={headers}/>
+        </div>
+    );
+}
+
+export function RFQTable(props){
+    return (
+        <Table>
+        <thead>
+            <tr>
+            {props.headers.map((h, i) => 
+            <th key={i}>{h.label}</th>
+            )}
+            </tr>
+        </thead>
+        <tbody>
+            {props.data.map((row, i) => {
+                //const cn = selectedRow === i ? 'HighlightedRow' : '';
+                return(
+                <tr key={i} className={''} /*onClick={handleSelectLine(i)}*/>
+                    {props.headers.map((h, j) =>
+                        <td key={j}>{row[h.accessor]}</td>
+                    )}
+                </tr>
+                )}
+            )}
+        </tbody>
+    </Table> 
+    );
+}
+
+export function MasterWorkingFile(props){
+    function handleBack(){
+        props.changeQuotePageState(7);
+    }
+    return(
+        <div>
+            <Button variant='secondary' onClick={handleBack}>Back</Button>
+        </div>
+    );
 }
 
 function usePartData(partList){
@@ -419,6 +771,7 @@ function usePartData(partList){
             
             if(partsToDo.length === current.length){
                 if(retries.length > 0 && retryTimes < maxRetries){
+                    /*
                     console.log(currentParts);
                     console.log(retries);
                     const parts = retries.map((retry) => retry.mpn);
@@ -428,7 +781,8 @@ function usePartData(partList){
                     retryTimes++;
                     partsToDo.forEach((part) => {
                         callPart(part, handleCompletePart, handleError);
-                    });
+                    });*/
+                    doRetry();
                 }else{
                     setFinished(true);
                 }
@@ -439,6 +793,7 @@ function usePartData(partList){
             current.push(mpn);
             if(partsToDo.length === current.length){
                 if(retries > 0 && retryTimes < maxRetries){
+                    /*
                     console.log(currentParts);
                     console.log(retries);
                     const parts = retries.map((retry) => retry.mpn);
@@ -448,7 +803,8 @@ function usePartData(partList){
                     retryTimes++;
                     partsToDo.forEach((part) => {
                         callPart(part, handleCompletePart, handleError);
-                    });
+                    });*/
+                    doRetry();
                 }else{
                     partSet.add(mpn)
                     setPartsFinished(partSet);
@@ -456,6 +812,16 @@ function usePartData(partList){
                 }
             }
             //retries.push({apis: rets, mpn: mpn});
+        }
+        function doRetry(){
+            const parts = retries.map((retry) => retry.mpn);
+            partsToDo = parts;
+            retries = [];
+            current = [];
+            retryTimes++;
+            partsToDo.forEach((part) => {
+                callPart(part, handleCompletePart, handleError);
+            });
         }
         partsToDo.forEach((part) => {
             callPart(part, handleCompletePart, handleError);

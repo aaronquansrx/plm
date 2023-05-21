@@ -44,3 +44,17 @@ export function trimObject(obj, fields){
 export function decodeStringBoolean(s){
     return s !== "0";
 }
+
+export function pickKeysObject(object, keys){
+    /*
+    const newObject = keys.reduce((obj, k) => {
+        obj[k] = object[k];
+        return obj;
+    }, {});
+    return newObject;*/
+    return keys.reduce((a, e) => (a[e] = object[e], a), {});
+}
+
+export function objectToArray(object, keys){
+    return keys.map((key) => object[key]);
+}

@@ -22,7 +22,7 @@ export function SimpleDropdown(props){
                 {selected}
             </Dropdown.Toggle>
 
-            <Dropdown.Menu>
+            <Dropdown.Menu style={{maxHeight: '300px', overflow: 'auto'}}>
                 {props.items.map((item, i) => 
                     <Dropdown.Item key={i} onClick={() => handleChange(item, i)}>{item}</Dropdown.Item>
                 )}

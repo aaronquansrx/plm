@@ -17,7 +17,11 @@ import { excelSheetToArray } from '../../scripts/ExcelHelpers';
 import { ObjectSuggestionSearcher } from '../../components/Searcher';
 import { Notification } from './Notifications';
 
-import { ConsolidatePricesView, ConsolidateView, SupplierMapping } from './ConsolidateViews';
+import { 
+    ConsolidatePricesView, ConsolidateView, 
+    SupplierMapping, RequestForQuoteList,
+    MasterWorkingFile
+} from './ConsolidateViews';
 
 
 function QuoteView(props){
@@ -28,9 +32,13 @@ function QuoteView(props){
     const [pageState, setPageState] = useState({current:0, last: null});
     const [minBatches, setMinBatches] = useState(1);
 
-    const [consolidatedData, setConsolidatedData] = useState({data: [], headers: [], totals: null});
+    const [consolidatedData, setConsolidatedData] = useState({
+        data: [], headers: [], manufacturers: {}, totals: null, num_batches: 0
+    });
     const [editedConsolidateData, setEditedConsolidatedData] = useState({});
     const [consolidateStatus, setConsolidateStatus] = useState(null);
+
+    //const [supplierMapData, setSupplierMapData] = useState(null);
 
     useEffect(() => {
         console.log(props.quote);
@@ -87,8 +95,8 @@ function QuoteView(props){
     function handleStartConsolidate(){
         setConsolidateStatus('Consolidate running');
     }
-
     function renderView(){
+        const numBatches = consolidatedData ? consolidatedData.num_batches : 0;
         switch(pageState.current){
             case 0:
                 return <MainQuoteView quote={props.quote} updateProducts={updateProducts} products={products} 
@@ -112,7 +120,12 @@ function QuoteView(props){
             case 5:
                 return <ConsolidatePricesView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
             case 6:
-                return <SupplierMapping consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
+                return <SupplierMapping consolidatedData={consolidatedData} numBatches={numBatches} changeQuotePageState={changeQuotePageState}
+                setEditedConsolidatedData={setEditedConsolidatedData}/>
+            case 7:
+                return <RequestForQuoteList numBatches={numBatches} editedData={editedConsolidateData} changeQuotePageState={changeQuotePageState}/>
+            case 8:
+                return <MasterWorkingFile changeQuotePageState={changeQuotePageState}/>
         }
     }
     //console.log(props.quote);

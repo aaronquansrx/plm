@@ -519,7 +519,7 @@ export function SupplierButtonChooser(props){
     }
     return(
         <>
-        <span>Supplier</span>
+        <span>{props.name}</span>
         <ButtonChooseSearcher searchResults={supplierResults.map((r)=>r.name)} chosen={props.chosenSupplier} 
         onDeselect={handleDeselectSupplier} name={props.chosenSupplier ? props.chosenSupplier.name : ''}
         onClick={handleSelectSupplier} onSearch={handleSearch}/>

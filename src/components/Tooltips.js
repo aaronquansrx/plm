@@ -34,7 +34,8 @@ export function WarningToolTipButtonFade(props){
     const target = useRef(null);
     const placement = props.placement ? props.placement : 'right';
     useEffect(() => {
-        const timer = show ? setTimeout(() => setShow(false), 2000) : null;
+        const timer = show ? setTimeout(() => setShow(false), 
+        props.messageTime ? props.messageTime : 2000) : null;
         return () => {
             clearTimeout(timer);
         }
