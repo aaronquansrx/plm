@@ -10,12 +10,15 @@ import Table from 'react-bootstrap/Table';
 import XLSX from 'xlsx';
 
 import { UploadTableSingle, UploadMain } from '../components/UploadTable';
-import {ExcelDropzone} from '../../components/Dropzone';
+import { ExcelDropzone } from '../../components/Dropzone';
 import { SimpleArrayTable, HeaderArrayTable, EditTable } from '../../components/Tables';
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { excelSheetToArray } from '../../scripts/ExcelHelpers';
 import { ObjectSuggestionSearcher } from '../../components/Searcher';
 import { Notification } from './Notifications';
+import { HoverOverlay } from '../../components/Tooltips';
+import { bestPriceOffer } from '../../scripts/PLMAlgorithms';
+
 
 import { 
     ConsolidatePricesView, ConsolidateView, 
@@ -32,27 +35,23 @@ function QuoteView(props){
     const [pageState, setPageState] = useState({current:0, last: null});
     const [minBatches, setMinBatches] = useState(1);
 
+    const [customHeaders, setCustomHeaders] = useState([]);
     const [consolidatedData, setConsolidatedData] = useState({
         data: [], headers: [], manufacturers: {}, totals: null, num_batches: 0
     });
-    const [editedConsolidateData, setEditedConsolidatedData] = useState({});
+    const [priceConsolidatedData, setPriceConsolidatedData] = useState([]);
+    const [editedConsolidateData, setEditedConsolidatedData] = useState([]);
+    const [RFQData, setRFQData] = useState([]);
     const [consolidateStatus, setConsolidateStatus] = useState(null);
 
-    //const [supplierMapData, setSupplierMapData] = useState(null);
-
     useEffect(() => {
-        console.log(props.quote);
-        //const getData = {function: 'get_products', quote_id: props.quote.id, user: props.user}
         const getData = {
             function: 'get_children', quote_id: props.quote.id, user: props.user
         }
-        
         getPLMRequest('quote', getData,
         (res) => {
             console.log(res.data);
-            updateProducts(res.data)
-            //setMinBatches(res.data.num_batches);
-
+            updateProducts(res.data);
         },
         (res) => {
             console.log(res.data);
@@ -75,25 +74,30 @@ function QuoteView(props){
         props.changePageState(0);
     }
     function selectProduct(p){
-        console.log(p);
         setSelectedProduct(p);
     }
 
     function handleConsolidate(data){
+        /*
         setConsolidatedData(data);
+        setPriceConsolidatedData(data.data);
+        //setEditedConsolidatedData(data.data);
         setConsolidateStatus('Consolidate completed');
         setTimeout(() => {
             setConsolidateStatus(null);
-        }, 2000);
+        }, 2000);*/
+        changeQuotePageState(3);
     }
     function handleConsolidateError(){
+        /*
         setConsolidateStatus('Consolidate error');
         setTimeout(() => {
             setConsolidateStatus(null);
         }, 2000);
+        */
     }
     function handleStartConsolidate(){
-        setConsolidateStatus('Consolidate running');
+        //setConsolidateStatus('Consolidate running');
     }
     function renderView(){
         const numBatches = consolidatedData ? consolidatedData.num_batches : 0;
@@ -103,7 +107,8 @@ function QuoteView(props){
                 productsList={productsList} user={props.user}
                 changeMainPageState={props.changePageState} changeQuotePageState={changeQuotePageState} 
                 selectProduct={selectProduct} minBatches={minBatches} onConsolidate={handleConsolidate}
-                onStartConolidate={handleStartConsolidate} onConsolidateError={handleConsolidateError}/>
+                onStartConolidate={handleStartConsolidate} onConsolidateError={handleConsolidateError}
+                setHighlightedProduct={setHighlightedProduct}/>
             case 1:
                 return <UploadQuoteView products={products} quote={props.quote} user={props.user}
                 update={updateProducts} changeQuotePageState={changeQuotePageState} product={selectedProduct}
@@ -112,41 +117,355 @@ function QuoteView(props){
             case 2:
                 return <ViewProduct product={selectedProduct} changeQuotePageState={changeQuotePageState} 
                 quote={props.quote} user={props.user} />
+
             case 3:
-                return <ConsolidateView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}
-                consolidateStatus={consolidateStatus} setConsolidatedData={setConsolidatedData}/>
+                return <ConsolidatePage user={props.user} quote={props.quote} numBatches={numBatches}
+                highlightedProduct={highlightedProduct}
+                store={props.store} currency={props.currency} changeQuotePageState={changeQuotePageState}/>
             case 4:
                 return <PartUsageView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
+            /*
+            case 3:
+                return <ConsolidateView  consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}
+                consolidateStatus={consolidateStatus} setConsolidatedData={setConsolidatedData} 
+                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState} 
+                selected={pageState.current}/>}/>
             case 5:
-                return <ConsolidatePricesView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
+                return <ConsolidatePricesView consolidatedData={consolidatedData} 
+                user={props.user} quote={props.quote} 
+                store={props.store} currency={props.currency}
+                changeQuotePageState={changeQuotePageState}
+                setPriceConsolidatedData={setPriceConsolidatedData}
+                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState} 
+                selected={pageState.current}/>}/>
             case 6:
-                return <SupplierMapping consolidatedData={consolidatedData} numBatches={numBatches} changeQuotePageState={changeQuotePageState}
-                setEditedConsolidatedData={setEditedConsolidatedData}/>
+                return <SupplierMapping priceConsolidatedData={priceConsolidatedData} consolidatedData={consolidatedData} numBatches={numBatches} changeQuotePageState={changeQuotePageState}
+                setEditedConsolidatedData={setEditedConsolidatedData}
+                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState} 
+                selected={pageState.current}/>} setCustomHeaders={setCustomHeaders}/>
             case 7:
-                return <RequestForQuoteList numBatches={numBatches} editedData={editedConsolidateData} changeQuotePageState={changeQuotePageState}/>
+                return <RequestForQuoteList numBatches={numBatches} editedData={editedConsolidateData} 
+                changeQuotePageState={changeQuotePageState} setRFQData={setRFQData}
+                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState}
+                selected={pageState.current}/>} customHeaders={customHeaders}/>
             case 8:
-                return <MasterWorkingFile changeQuotePageState={changeQuotePageState}/>
+                return <MasterWorkingFile RFQData={RFQData} editedData={editedConsolidateData} changeQuotePageState={changeQuotePageState}
+                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState}
+                selected={pageState.current}/>} customHeaders={customHeaders}/>
+            */
         }
     }
     //console.log(props.quote);
     return(
         <>
+
             {renderView()}
         </>
     );
 }
 
+function ConsolidatePage(props){
+    const [pageState, setPageState] = useState({current:0, last: null});
+    const [customHeaders, setCustomHeaders] = useState([]);
+    const [consolidatedData, setConsolidatedData] = useState({
+        data: [], headers: [], manufacturers: {}, totals: null, num_batches: 0
+    });
+    //const [priceConsolidatedData, setPriceConsolidatedData] = useState([]);
+    const [priceSupplierMappingData, setSupplierMappingData] = useState([]);
+    const [RFQData, setRFQData] = useState([]);
+    const [consolidateStatus, setConsolidateStatus] = useState({success: false,  message: null});
+    const [selectedPriceData, setSelectedPriceData] = useState(null);
+    const [priceGroups, setPriceGroups] = useState([]);
+    const [region, setRegion] = useState('AU');
+    useState(() => {
+
+        const getData = props.highlightedProduct === null ? {function: 'consolidate_quote', user: props.user, quote_id: props.quote.id} 
+        : {function: 'consolidate_product', user: props.user, product_id: props.highlightedProduct};
+        setConsolidateStatus('Consolidate running');
+        getPLMRequest('quote', getData,
+        (res)=>{
+            setConsolidatedData(res.data);
+            //setPriceConsolidatedData(res.data.data);
+            const spd = res.data.data.map((line, i) => {
+                return {...line, system: i, suppliers: []};
+            });
+            setSupplierMappingData(spd);
+            requestInitialPriceData(res.data.data, res.data.manufacturers);
+            //requestSupplierMapping(res.data.data, res.data.manufacturers);
+            setConsolidateStatus('Consolidate completed');
+            setTimeout(() => {
+                setConsolidateStatus(null);
+            }, 2000);
+        },
+        (res)=>{
+            setConsolidateStatus('Consolidate error');
+            setTimeout(() => {
+                setConsolidateStatus(null);
+            }, 2000);
+        });
+        const getPriceGroupData = {
+            function: 'price_groups', quote_id: props.quote.id, user: props.user
+        };
+        getPLMRequest('quote', getPriceGroupData,
+        (res) => {
+            console.log(res.data);
+            setPriceGroups(res.data.groups);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }, []);
+    function requestInitialPriceData(cd, manufacturers){
+        const getPriceData = {
+            function: 'first_price_save', quote_id: props.quote.id, user: props.user
+        };
+        getPLMRequest('quote', getPriceData,
+        (res) => {
+            console.log(res.data);
+            let newPriceData = [...cd];
+            if(res.data.prices !== null){
+                const mpnPriceMap = res.data.prices.reduce((obj, p) => {
+                    obj[p.mpn] = p;
+                    return obj;
+                }, {});
+                newPriceData = [...cd].map((line, i) => {
+                    let newLine = {...line};
+                    const uom = line.uom.length > 0 ? line.uom[0] : '';
+                    newLine.uom = uom;
+                    newLine.distributor = null;
+                    newLine.price = null;
+                    newLine.packaging = null;
+                    newLine.plc = null;
+                    if(line.mpn in mpnPriceMap){
+                        newLine = {...newLine, ...mpnPriceMap[line.mpn]};
+                    }
+                    return newLine;
+                });
+            }else{
+                newPriceData = [...cd].map((line, i) => {
+                    let newLine = {...line};
+                    const uom = line.uom.length > 0 ? line.uom[0] : '';
+                    newLine.uom = uom;
+                    newLine.distributor = null;
+                    newLine.price = null;
+                    newLine.packaging = null;
+                    newLine.plc = null;
+                    return newLine;
+                });
+            }
+            console.log(newPriceData);
+            //setPriceConsolidatedData(newPriceData);
+            requestSupplierMapping(newPriceData, manufacturers);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
+    function requestSupplierMapping(priceCD, manufacturers){
+        console.log(manufacturers);
+        const postQuoteSupplierMapping = {
+            function: 'supplier_mapping', quote_id: props.quote.id, user: props.user,
+            manufacturer_list: manufacturers
+        }
+        postPLMRequest('quote', postQuoteSupplierMapping,
+        (res) => {
+            console.log(res.data);
+            /*
+            setRegion(res.data.quote_mapping_details.region);
+            const manufacturer_supplier_map = res.data.manufacturer_supplier_map;
+            const newData = [...priceCD].map((line, i) => {
+                const newLine = {...line};
+                const manu = line.master_manufacturer;
+                newLine.system = i;
+                if(manu !== null){
+                    const suppliers = manufacturer_supplier_map[manu];
+                    suppliers.forEach((supplier, i) => {
+                        const supString = 'supplier'+i.toString();
+                        newLine[supString] = supplier.supplier_name;
+                    });
+                    newLine.suppliers = suppliers;
+                }else{
+                    newLine.suppliers = []; 
+                }
+                return newLine;
+            });
+            setSupplierMappingData(newData);
+            */
+            const newData = updateSupplierMappingData(priceCD, 
+                res.data.quote_mapping_details.region,
+                res.data.manufacturer_supplier_map
+            );
+
+            const newRFQData = newData.reduce((arr, line) => {
+                const lines = line.suppliers.map((sup,i) => {
+                    const sys = line.system+'.'+i;
+                    const status = null;
+                    return {...line, system: sys, supplier: sup.supplier_name, email: sup.email, 
+                        status: status};
+                });
+                return arr.concat(lines);
+            }, []);
+            setRFQData(newRFQData);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
+    function updateSupplierMappingData(priceCD, region,  manufacturerSupplierMap){
+        setRegion(region);
+        //const manufacturer_supplier_map = data.manufacturer_supplier_map;
+        const newData = [...priceCD].map((line, i) => {
+            const newLine = {...line};
+            const manu = line.master_manufacturer;
+            newLine.system = i;
+            if(manu !== null){
+                const suppliers = manufacturerSupplierMap[manu];
+                for(let j=0; j <= 5; j++){
+                    delete newLine['supplier'+j.toString()];
+                }
+                suppliers.forEach((supplier, i) => {
+                    const supString = 'supplier'+i.toString();
+                    newLine[supString] = supplier.supplier_name;
+                });
+                newLine.suppliers = suppliers;
+            }else{
+                newLine.suppliers = []; 
+            }
+            return newLine;
+        });
+        setSupplierMappingData(newData);
+        return newData;
+    }
+    
+    function changePageState(i){
+        setPageState(update(pageState, {
+            current: {$set: i},
+            last: {$set: pageState.last}
+        }));
+    }
+    function renderView(){
+        switch(pageState.current){
+            case 0:
+                return <ConsolidateView consolidatedData={consolidatedData} 
+                changePageState={changePageState} changeQuotePageState={props.changeQuotePageState} 
+                setConsolidatedData={setConsolidatedData}/>
+            case 1:
+                return <ConsolidatePricesView consolidatedData={consolidatedData} 
+                //priceConsolidatedData={priceConsolidatedData}
+                priceConsolidatedData={priceSupplierMappingData}
+                priceGroups={priceGroups}
+                user={props.user} quote={props.quote} 
+                store={props.store} currency={props.currency}
+                changePageState={changePageState}
+                //setPriceConsolidatedData={setPriceConsolidatedData}
+                />
+            case 2:
+                return <SupplierMapping numBatches={props.numBatches} consolidatedData={consolidatedData}
+                changePageState={changePageState} supplierMappingData={priceSupplierMappingData}
+                setSupplierMappingData={setSupplierMappingData} setCustomHeaders={setCustomHeaders}
+                region={region} setRegion={setRegion} quote={props.quote} user={props.user}
+                updateSupplierMappingData={updateSupplierMappingData}
+                manufacturerList={consolidatedData.manufacturers}
+                />
+            case 3:
+                return <RequestForQuoteList numBatches={props.numBatches} RFQData={RFQData} 
+                changePageState={changePageState} setRFQData={setRFQData} customHeaders={customHeaders}/>
+            case 4:
+                return <MasterWorkingFile RFQData={RFQData}
+                changePageState={changePageState} customHeaders={customHeaders}/>
+        }
+    }
+    return(
+        <>
+        <ConsolidateNavigation changeQuotePageState={props.changeQuotePageState} changePageState={changePageState} selected={pageState.current}/>
+        <div>
+            {consolidateStatus}
+        </div>
+        {renderView()}
+        </>
+    );
+}
+
+function ConsolidateNavigation(props){
+    function handleNavChange(i){
+        return function(){
+            //console.log(i);
+            if(props.changePageState){
+                props.changePageState(i);
+            }
+            //props.changeQuotePageState(i);
+        }
+    }
+    function handleBack(){
+        props.changeQuotePageState(0);
+    }
+    function styling(sel, i){
+        if(sel === i) return { backgroundColor: '#acb3ba'};
+        return {};
+    }
+    return(
+        <div className='FlexNormal IconNav'>
+            <div className='MainSwitchIcon'>
+            <HoverOverlay tooltip={'Back to Quote'} placement='bottom'>
+                    <div className={'Pointer'} onClick={handleBack}>
+                        Back to Quote
+                    </div>
+                </HoverOverlay>
+            </div>
+            <div className='MainSwitchIcon'>
+                <HoverOverlay tooltip={'Consolidate'} placement='bottom'>
+                    <div style={styling(props.selected, 0)} className={'Pointer'} 
+                    onClick={handleNavChange(0)}>
+                        Consolidate
+                    </div>
+                </HoverOverlay>
+            </div>
+            <div className='MainSwitchIcon'>
+                <HoverOverlay tooltip={'Price Data Mapping'} placement='bottom'>
+                    <div style={styling(props.selected, 1)} className={'Pointer'} 
+                    onClick={handleNavChange(1)}>
+                        Price Data Mapping
+                    </div>
+                </HoverOverlay>
+            </div>
+            <div className='MainSwitchIcon'>
+                <HoverOverlay tooltip={'Supplier Mapping'} placement='bottom'>
+                    <div style={styling(props.selected, 2)} className={'Pointer'} 
+                    onClick={handleNavChange(2)}>
+                        Supplier Mapping
+                    </div>
+                </HoverOverlay>
+            </div>
+            <div className='MainSwitchIcon'>
+                <HoverOverlay tooltip={'Request For Quote List'} placement='bottom'>
+                    <div style={styling(props.selected, 3)} className={'Pointer'} 
+                    onClick={handleNavChange(3)}>
+                        Request For Quote List
+                    </div>
+                </HoverOverlay>
+            </div>
+            <div className='MainSwitchIcon'>
+                <HoverOverlay tooltip={'Master Working File'} placement='bottom'>
+                    <div style={styling(props.selected, 4)} className={'Pointer'} 
+                    onClick={handleNavChange(4)}>
+                        Master Working File
+                    </div>
+                </HoverOverlay>
+            </div>
+        </div>
+    );
+}
+
 function MainQuoteView(props){
     const [highlightedProduct, setHighlightedProduct] = useState(null);
-    const [parentProduct, setParentProduct] = useState(false);
+    //const [parentProduct, setParentProduct] = useState(false);
     const [numBatches, setNumBatches] = useState(0);
     const [userRecommends, setUserRecommends] = useState([]);
     useEffect(() => {
         if(numBatches < props.minBatches){
             setNumBatches(props.minBatches);
         }
-    }, [props.minBatches])
-    //const 
+    }, [props.minBatches]);
     function handleEditQuote(){
         props.changeMainPageState(3);
     }
@@ -169,35 +488,40 @@ function MainQuoteView(props){
     function handleHighlightProduct(p){
         if(p === null){
             setHighlightedProduct(null);
+            props.setHighlightedProduct(null);
         }else{
             if(p.id === highlightedProduct){
                 setHighlightedProduct(null);
+                props.setHighlightedProduct(null);
             }else{
                 setHighlightedProduct(p.id);
+                props.setHighlightedProduct(p.id);
             }
         }
     }
-
     function handleChangeBatches(e){
-        //console.log(e.target.value);
         const val = parseInt(e.target.value);
         if(val >= props.minBatches && val < 10){
             setNumBatches(val);
         }
     }
     function handleConsolidate(){
+        props.onConsolidate();
+        /*
         const getData = highlightedProduct === null ? {function: 'consolidate_quote', user: props.user, quote_id: props.quote.id} 
         : {function: 'consolidate_product', user: props.user, product_id: highlightedProduct};
         getPLMRequest('quote', getData,
-        (res)=>{
+        (res) => {
             console.log(res.data);
             props.onConsolidate(res.data);
             props.changeQuotePageState(3);
         },
-        (res)=>{
+        (res) => {
             console.log(res.data);
             props.onConsolidateError();
         });
+        props.changeQuotePageState(3);
+        */
     }
     function handlePartUsage(){
         const getData = {function: 'part_usage', user: props.user, quote_id: props.quote.id};
@@ -237,6 +561,7 @@ function MainQuoteView(props){
                 console.log(res.data);
                 props.updateProducts(res.data);
                 setHighlightedProduct(null);
+                props.setHighlightedProduct(null);
             },
             (res) => {
                 console.log(res.data);
@@ -249,7 +574,6 @@ function MainQuoteView(props){
             Customer BOM
             <Button variant="secondary" onClick={handleBack}>Quote List</Button>
             <Button onClick={handleEditQuote}>Edit Quote</Button>
-            {/*<Button onClick={handleAddProduct}>Add Product</Button>*/}
             </div>
             <div>
 
@@ -258,9 +582,6 @@ function MainQuoteView(props){
                 <h3>{props.quote.formatted.rfq}</h3>
                 <h5>Customer: {props.quote.formatted.customer}</h5>
                 <h6>Owner: {props.quote.formatted.owner}</h6>
-                <div>
-                {/*<ObjectSuggestionSearcher recommends={userRecommends} onSearch={handleSearchUser}/>*/}
-                </div>
                 <div className='Hori'>
                     <div className='FlexNormal' style={{display: 'flex', justifyContent: 'center'}}>
                     <Form>
@@ -277,9 +598,9 @@ function MainQuoteView(props){
             </div>
             <h3>Products</h3>
             <ProductTable products={props.products} onViewProduct={handleViewProduct} quote={props.quote} 
-                onUpload={handleUpload} user={props.user} productsList={props.productsList}
-                onHighlightProduct={handleHighlightProduct} highlightedProduct={highlightedProduct} numBatches={numBatches}
-                updateProducts={props.updateProducts}/>
+            onUpload={handleUpload} user={props.user} productsList={props.productsList}
+            onHighlightProduct={handleHighlightProduct} highlightedProduct={highlightedProduct} numBatches={numBatches}
+            updateProducts={props.updateProducts}/>
             <div className='Hori'>
             <div className='Hori'>
             <ProductAdder updateProducts={props.updateProducts} user={props.user} quoteId={props.quote.id} 
@@ -339,20 +660,17 @@ function ProductRow(props){
         setName(e.target.value);
     }
     function handleToggleEdit(){
-        //props.onHighlightProduct(null);
         setEdit(!edit);
     }
     function handleSave(){
         console.log(batches);
         handleToggleEdit();
-
         const bd = {
             name: name,
             eau: eau,
             qty: qty,
             batches: batches
         }
-        //console.log(p.id);
         console.log(props.quoteId);
         const postData = {function: 'modify_batch', quote_id: props.quoteId, user: props.user, 
         product_id: p.id, batch_details: bd};
@@ -370,7 +688,7 @@ function ProductRow(props){
         //console.log(e.target.id);
         if(!edit && e.target.id !== 'edit') props.onHighlightProduct(p);
     }
-    console.log(name);
+    //console.log(name);
     return(
         <>
         <tr className={props.cn} onClick={handleHighlightProduct}>
@@ -397,7 +715,6 @@ function ProductRow(props){
             </td>
         </tr>
         {props.children && props.children.map((child, i) => {
-            //console.log(child);
             return <ProductRow key={i} onHighlightProduct={props.onHighlightProduct} onViewProduct={props.onViewProduct}
             onUpload={props.onUpload} batchesArr={props.batchesArr} quoteId={props.quoteId} user={props.user} {...child}
             updateProducts={props.updateProducts}/>
@@ -408,8 +725,8 @@ function ProductRow(props){
 
 function ProductTable(props){
     const batchesArr = [...Array(props.numBatches).keys()];
-    console.log(props.productsList);
-    console.log(props.highlightedProduct);
+    //console.log(props.productsList);
+    //console.log(props.highlightedProduct);
     return(
         <Table>
         <thead>
@@ -427,42 +744,6 @@ function ProductTable(props){
             onUpload={props.onUpload} product={product} cn={cn} quoteId={props.quote.id} idValue={product.id_string} batchesArr={batchesArr}
             updateProducts={props.updateProducts}/>
         })}
-        
-        {/*
-        //old code for generating product list with products and children
-        props.products.map((c, pid) => {
-            const pi = pid+1;
-            const p = c.product;
-            //let childs = c;
-            const cn = p.id === props.highlightedProduct ? 'HighlightedRow' : '';
-
-            const childs = c.children.map((child, i) => {
-                return {child: child, id: [pi, i+1]}
-            });
-            let childrenRows = [];
-            while(childs.length > 0){
-                const c = childs.shift();
-                const child = c.child;
-                const cn = child.product.id === props.highlightedProduct ? 'HighlightedRow' : '';
-                //const P = <ProductRow onHighlightProduct={props.onHighlightProduct} onViewProduct={props.onViewProduct}
-                //onUpload={props.onUpload} />
-                //console.log(child);
-                child.children.forEach((ch, i) => {
-                    childs.push({child: ch, id: c.id.concat([i+1])});
-                })
-                //console.log(c.id);
-                const idStr = c.id.reduce((str, ind) => {
-                    if(str === 'Child ') return str+ind;
-                    return str+'.'+ind;
-                }, 'Child ');
-                childrenRows.push({product: child.product, cn:cn, idValue: idStr});
-                //childs.
-                //console.log(c);
-                //childs = childs.children;
-            }
-            return (<ProductRow key={pi} user={props.user} onHighlightProduct={props.onHighlightProduct} onViewProduct={props.onViewProduct}
-                onUpload={props.onUpload} product={p} cn={cn} idValue={'Parent '+(pi).toString()} batchesArr={batchesArr} children={childrenRows}/>);
-        })*/}
         </tbody>
         </Table>
     );

@@ -17,8 +17,6 @@ import { ButtonChooseSearcher } from '../../components/Searcher';
 //to test
 export function MasterManufacturers(props){
     const [masterManufacturerData, setMasterManufacturerData] = useState([]);
-    //const [addMasterInputs, setAddMasterInputs] = useState({name: '', website: ''});
-
     useEffect(() => {
         getManufacturers();
     }, []);
@@ -34,49 +32,11 @@ export function MasterManufacturers(props){
             console.log(res.data);
         });
     }
-    /*
-    function handleAddMasterManufacturer(){
-        const postData = {function: 'master_manufacturer', name: addMasterInputs.name, website: addMasterInputs.website};
-        postPLMRequest('srx_records', postData,
-        (res) => {
-            console.log(res.data);
-            setMasterManufacturerData(res.data.manufacturers);
-        },
-        (res) => {
-            console.log(res.data);
-        });
-        setAddMasterInputs({
-            name: '', website: ''
-        });
-    }
-    */
     function updateDatas(data){
         setMasterManufacturerData(data.manufacturers);
     }
-    /*
-    function handleChangeMasterName(e){
-        setAddMasterInputs(update(addMasterInputs, {
-            name: {$set: e.target.value}
-        }));
-    }
-    function handleChangeMasterWebsite(e){
-        setAddMasterInputs(update(addMasterInputs, {
-            website: {$set: e.target.value}
-        }));
-    }*/
     return (
         <>
-            {/*
-            <Form>
-                <Form.Label>Manufacturer Name</Form.Label>
-                <Form.Control type='text' value={addMasterInputs.name} onChange={handleChangeMasterName}/>
-            </Form>
-            <Form>
-                <Form.Label>Website</Form.Label>
-                <Form.Control type='text' value={addMasterInputs.website} onChange={handleChangeMasterWebsite}/>
-            </Form>
-            <Button onClick={handleAddMasterManufacturer}>Add</Button>
-            */}
             <div className='FlexNormal'>
                 <MasterManufacturerAdder updateData={updateDatas}/>
             </div>

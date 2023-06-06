@@ -38,11 +38,12 @@ export function offerEvaluation(offer, min_quantity){
 
 export function best_price_finder_offer(offer, min_quantity, include_available=true){
     //console.log(offer);
-    const ret = best_price_finder_full(offer.pricing, offer.moq, offer.spq, min_quantity, offer.available, offer.fees ? offer.fees.total : 0, include_available);
+    const api = offer.api ? offer.api : null;
+    const ret = best_price_finder_full(offer.pricing, offer.moq, offer.spq, min_quantity, offer.available, offer.fees ? offer.fees.total : 0, include_available, null, api);
     return ret;
 }
 
-function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_total, include_available=true, excess_rule=null){
+function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_total, include_available=true, excess_rule=null, api=null){
     //if(pricing.length === 0) return price_return(0, 0, 0, null);
     if(isNaN(spq) || spq <= 0){
         spq = 1;
@@ -66,7 +67,7 @@ function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_
     };
     const bracket_index = get_pricing_bracket_index(pricing, quantity);
     let price_per = pricing[bracket_index].unit_price;
-    let ret = price_return(price_per, quantity, min_quantity, bracket_index, fee_total);
+    let ret = price_return(price_per, quantity, min_quantity, bracket_index, fee_total, api);
     const quantity_post_rule = apply_excess_rule(quantity, excess_rule);
     //console.log(quantity_post_rule);
     if(quantity !== pricing[bracket_index].break_quantity && bracket_index+1 < pricing.length){
@@ -76,7 +77,7 @@ function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_
         if(p2 < ret.total_price){
             price_per = pricing[bracket_index+1].unit_price;
             quantity = pricing[bracket_index+1].break_quantity;
-            ret = price_return(price_per, quantity, min_quantity, bracket_index+1, fee_total);
+            ret = price_return(price_per, quantity, min_quantity, bracket_index+1, fee_total, api);
         } 
     }
     return ret;
@@ -90,7 +91,7 @@ function get_pricing_bracket_index(pricing, quantity){
     return n;
 }
 
-function price_return(price_per, quantity, min_quantity, bracket_index, fee_total){
+function price_return(price_per, quantity, min_quantity, bracket_index, fee_total, api=null){
     const price = price_per * quantity;
     const excess_quantity = quantity - min_quantity > 0 ? quantity - min_quantity : 0;
     const excess_price = price_per * excess_quantity;
@@ -113,7 +114,8 @@ function price_return(price_per, quantity, min_quantity, bracket_index, fee_tota
         },
         index:bracket_index,
         excess_quantity:excess_quantity,
-        excess_price:excess_price
+        excess_price:excess_price,
+        distributor: api
     };
 }
 
@@ -217,6 +219,7 @@ function best_leadtime_algorithm(line, quantity, apis=all_apis, in_stock=false, 
         out.excess_quantity = min_offer.excess_quantity[stock_str];
         out.excess_price = min_offer.excess_price[stock_str];
     }
+    console.log(out);
     return out;
 }
 

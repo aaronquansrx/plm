@@ -45,30 +45,9 @@ const quoteHeaders = ["Level","Commodity","CMs","Item No.","CPN","SRX PN",
     "Supplier Part Number 1","Value","Footprint","Fitted","Notes","Comments","Batch Qty"
 ];
 
-/*
-[
-    {
-        id: "Quote A",
-        client: "Client",
-        users: ["User1", "User2"]
-    },
-    {
-        id: "Quote B",
-        client: "CCC",
-        users: ["User2"]
-    }
-]
-*/
-
-function myJsx(jsx){
-    return (p) => null;
-}
-
 function QuotingMain(props){
-    const [uploadedData, setUploadedData] = useState(null);
     const [quotes, setQuotes] = useState([]);
     const [activeQuote, setActiveQuote] = useState(null);
-    //const mainState = {page: 0, props: {quotes: quotes, openQuote: openQuote, droppedFile: droppedFile, createQuote: createQuoteFunction()}};
     const [pageState, setPageState] = useState({current:0, last: null});
     useEffect(() => {
         const getData = {function: 'get_quotes', user: props.user}
@@ -78,34 +57,13 @@ function QuotingMain(props){
             if(res.data.success){
                 setQuotes(res.data.quotes);
             }
-            /*
-            if(pageState.page === 0){
-                setPageState(update(pageState, {
-                    props: {
-                        quotes: {$set: res.data.quotes}
-                    }
-                }));
-            }*/
         },
         (res) => {
             console.log(res.data);
         }
         );
     }, [props.user]);
-    function handleBack(){
-        //setPageState({page: 0, props: {quotes: quotes, onOpenQuote: handleOpenQuote, droppedFile: droppedFile, createQuote: createQuoteFunction()}});
-    }
-    function openQuote(qid, quote){
-        setActiveQuote(quote);
-        return function(){
-            /*
-           const hb = handleBack();
-            setPageState({
-                page: 3, props: {toEditQuote: createQuoteFunction(false), quoteId: qid, quote: quote, user: props.user, back: hb}
-            });
-            */
-        }
-    }
+
     function handleOpenQuote(quote){
         return function(){
             setActiveQuote(quote)
@@ -116,35 +74,16 @@ function QuotingMain(props){
         setActiveQuote(quote)
         changePageState(1);
     }
-    /*
-    function toCustomerBom(qid, quote){
-        setPageState({
-            page: 3, props: {toEditQuote: createQuoteFunction(false), quoteId: qid, quote: quote, user: props.user, back: handleBack}
-        });
-    }*/
     function changePageState(i){
         setPageState({last: pageState.current, current: i});
     }
-    function toCreateQuote(){
-        //const title = create ? 'Create Quote' : 'Edit Quote';
-        //return function(){
-        setPageState(2);
-            //page: 2, props: {back: handleBack, toCustomerBom: toCustomerBom, title: title, create: create, user: props.user}});
-        //}
-    }
-    /*
-    function droppedFile(sheets){
-        //setUploadedData(upl);
-        console.log(sheets);
-        setPageState({page: 4, props: {sheets: sheets, quoteHeaders: quoteHeaders, back: handleBack}});
-    }*/
-    
     function renderView(){
         switch(pageState.current){
             case 0: // main quote list for user
                 return <Main user={props.user} quotes={quotes} setQuotes={setQuotes} onOpenQuote={handleOpenQuote} changePageState={changePageState}/>
             case 1: //quoteView
-                return <QuoteView quote={activeQuote} changePageState={changePageState} user={props.user}/>
+                return <QuoteView quote={activeQuote} changePageState={changePageState} user={props.user} 
+                store={props.store} currency={props.currency}/>
             case 2:
                 return <CreateQuote changePageState={changePageState} onCreateQuote={handleCreateProduct} 
                 lastPageState={pageState.last} user={props.user} setQuotes={setQuotes}/>
@@ -160,7 +99,6 @@ function QuotingMain(props){
     return(
         <>
             {renderView()}
-            {/*pageStates[pageState.page](pageState.props)*/}
         </>
     );
 }

@@ -5,7 +5,7 @@ import { Dropdown } from 'react-bootstrap';
 import { OutsideClickFunction } from '../hooks/InterfaceHelpers';
 import { ListGroup } from 'react-bootstrap';
 
-import './../css/main.css'
+import './../css/main.css';
 
 export function SimpleDropdown(props){
     const [selected, setSelected] = useState(props.items.length > 0 ? props.items[0] : null);
@@ -21,7 +21,6 @@ export function SimpleDropdown(props){
             <Dropdown.Toggle variant="success" id="dropdown-basic">
                 {selected}
             </Dropdown.Toggle>
-
             <Dropdown.Menu style={{maxHeight: '300px', overflow: 'auto'}}>
                 {props.items.map((item, i) => 
                     <Dropdown.Item key={i} onClick={() => handleChange(item, i)}>{item}</Dropdown.Item>
@@ -41,7 +40,6 @@ export function LabelledDropdownList(props){
         <Dropdown.Toggle variant="success" id="dropdown-basic">
             {props.selected.label}
         </Dropdown.Toggle>
-
         <Dropdown.Menu>
             {props.items.map((item, i) => 
                 <Dropdown.Item key={i} onClick={() => handleChange(item, i)}>{item.label}</Dropdown.Item>

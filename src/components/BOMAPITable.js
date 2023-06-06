@@ -568,8 +568,7 @@ function MPNsRenderer(props){
         if(!props.lock && !props.functionLock){
             if(e.ctrlKey){
                 window.open(clientUrl+'/partdetails/'+mpn, '_blank');
-            }
-            else if(e.shiftKey){
+            }else if(e.shiftKey){
                 setEditSelector(true);
             }else if(e.altKey){
                 if(props.value.options.length > 1){

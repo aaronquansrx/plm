@@ -39,16 +39,19 @@ const inProduction = process.env.NODE_ENV === 'production';
 
 //use this
 const pages = [
-  //{path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>},
-  {path: 'bomtool', title: 'BOM Tool', element: (params) => <BOMMain options={params.options} changeLock={params.lock} user={params.user}/>},
-  {path: 'cbom', title: 'CBOM Exporter', element: () => <CBom/>},
-  {path: 'partsearch', title: 'Part Search', element: () => <PartSearch/>},
-  {path: 'bomscrub', title: 'BOM Scrub', element: () => <BOMScrub/>}
+  {path: 'quoting', title: 'E-Quote', element: (params) => <QuotingMain user={params.user} 
+  store={params.options.store} currency={params.options.currency}/>},
+  {path: 'bomtool', title: 'Open Market BOM Search', element: (params) => <BOMMain options={params.options} changeLock={params.lock} user={params.user}/>},
+  //{path: 'cbom', title: 'CBOM Exporter', element: () => <CBom/>},
+  {path: 'partsearch', title: 'Open Market Part Search', element: () => <PartSearch/>},
+  {path: 'bomscrub', title: 'Components Attributes Search', element: () => <BOMScrub/>}
 ];
 
+/*
 if(!inProduction){
-  pages.unshift({path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user}/>});
-}
+  pages.unshift({path: 'quoting', title: 'Quoting', element: (params) => <QuotingMain user={params.user} 
+  store={params.options.store} currency={params.options.currency}/>});
+}*/
 
 function App() {
   const serverUrl = useServerUrl();
