@@ -171,10 +171,10 @@ function ConsolidatePage(props){
         data: [], headers: [], manufacturers: {}, totals: null, num_batches: 0
     });
     //const [priceConsolidatedData, setPriceConsolidatedData] = useState([]);
-    const [priceSupplierMappingData, setSupplierMappingData] = useState([]);
+    const [priceSupplierMappingData, setPriceSupplierMappingData] = useState([]);
     const [RFQData, setRFQData] = useState([]);
     const [consolidateStatus, setConsolidateStatus] = useState({success: false,  message: null});
-    const [selectedPriceData, setSelectedPriceData] = useState(null);
+    //const [selectedPriceData, setSelectedPriceData] = useState(null);
     const [priceGroups, setPriceGroups] = useState([]);
     const [region, setRegion] = useState('AU');
     useState(() => {
@@ -190,7 +190,7 @@ function ConsolidatePage(props){
             const spd = res.data.data.map((line, i) => {
                 return {...line, system: i, suppliers: []};
             });
-            setSupplierMappingData(spd);
+            setPriceSupplierMappingData(spd);
             requestInitialPriceData(res.data.data, res.data.manufacturers);
             //requestSupplierMapping(res.data.data, res.data.manufacturers);
             setConsolidateStatus('Consolidate completed');
@@ -335,7 +335,7 @@ function ConsolidatePage(props){
             }
             return newLine;
         });
-        setSupplierMappingData(newData);
+        setPriceSupplierMappingData(newData);
         return newData;
     }
     
@@ -353,18 +353,17 @@ function ConsolidatePage(props){
                 setConsolidatedData={setConsolidatedData}/>
             case 1:
                 return <ConsolidatePricesView consolidatedData={consolidatedData} 
-                //priceConsolidatedData={priceConsolidatedData}
-                priceConsolidatedData={priceSupplierMappingData}
+                priceSupplierMappingData={priceSupplierMappingData}
                 priceGroups={priceGroups}
                 user={props.user} quote={props.quote} 
                 store={props.store} currency={props.currency}
                 changePageState={changePageState}
-                //setPriceConsolidatedData={setPriceConsolidatedData}
+                setPriceSupplierMappingData={setPriceSupplierMappingData}
                 />
             case 2:
                 return <SupplierMapping numBatches={props.numBatches} consolidatedData={consolidatedData}
                 changePageState={changePageState} supplierMappingData={priceSupplierMappingData}
-                setSupplierMappingData={setSupplierMappingData} setCustomHeaders={setCustomHeaders}
+                setSupplierMappingData={setPriceSupplierMappingData} setCustomHeaders={setCustomHeaders}
                 region={region} setRegion={setRegion} quote={props.quote} user={props.user}
                 updateSupplierMappingData={updateSupplierMappingData}
                 manufacturerList={consolidatedData.manufacturers}

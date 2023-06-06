@@ -282,8 +282,12 @@ export function ConsolidatePricesView(props){
     useEffect(() => {
         if(finished){
             //console.log(partData);
-            const newData = [...props.priceConsolidatedData];
-            props.consolidatedData.data.forEach((line, i) => {
+            const newData = [...props.priceSupplierMappingData];
+            props.priceSupplierMappingData.forEach((line, i) => {
+                newData[i].distributor = null;
+                newData[i].price = null;
+                newData[i].packaging = null;
+                newData[i].plc = null;
                 if(partData.has(line.mpn)){
                     const data = partData.get(line.mpn);
                     let offers = [];
@@ -305,7 +309,7 @@ export function ConsolidatePricesView(props){
                 }
             });
             //setPriceData(newData);
-            props.setPriceConsolidatedData(newData);
+            props.setPriceSupplierMappingData(newData);
         }
         //getPriceGroups();
         //console.log(finished);
@@ -330,7 +334,7 @@ export function ConsolidatePricesView(props){
     }
     function handleSavePrices(savename){
         console.log(savename);
-        const prices = props.priceConsolidatedData.reduce((arr, line) => {
+        const prices = props.priceSupplierMappingData.reduce((arr, line) => {
             if(line.price !== null){
                 arr.push(pickKeysObject(line, ['mpn', 'distributor', 'price', 'packaging', 'plc']));
             }
@@ -370,6 +374,7 @@ export function ConsolidatePricesView(props){
         setShowSaveModal(false);
     }
     function handleChangeGroup(name, i){
+        console.log('changeGroup');
         const getData = {
             function: 'price_save', save_id: props.priceGroups[i].id, user: props.user
         };
@@ -380,14 +385,19 @@ export function ConsolidatePricesView(props){
                 obj[price.mpn] = price;
                 return obj;
             }, {});
-            const newPriceData = props.priceConsolidatedData.map((line) => {
-                if(line.mpn in mpnMap){
-                    line = {...line, ...mpnMap[line.mpn]};
+            const newPriceData = props.priceSupplierMappingData.map((line) => {
+                let newLine = {...line};
+                newLine.distributor = null;
+                newLine.price = null;
+                newLine.packaging = null;
+                newLine.plc = null;
+                if(newLine.mpn in mpnMap){
+                    newLine = {...newLine, ...mpnMap[newLine.mpn]};
                 }
-                return line;
+                return newLine;
             }, []);
             //setPriceData(newPriceData);
-            props.setPriceConsolidatedData(newPriceData);
+            props.setPriceSupplierMappingData(newPriceData);
         },
         (res) => {
             console.log(res.data);
@@ -396,6 +406,7 @@ export function ConsolidatePricesView(props){
     function getPriceGroupName(pg){
         return pg.name+' '+pg.date_saved;
     }
+    console.log(props.priceGroups);
     return(
         <>
         {props.navigation}
@@ -413,7 +424,7 @@ export function ConsolidatePricesView(props){
         <BOMApiProgressBarV2 show={showProgress} numParts={mpnSet.length} 
         numFinished={finishedParts.size} onHideBar={handleHide}/>
         <div className='MainTable'>
-        <HeaderArrayTable data={props.priceConsolidatedData} headers={headers}/>
+        <HeaderArrayTable data={props.priceSupplierMappingData} headers={headers}/>
         </div>
         </>
     );
@@ -617,11 +628,11 @@ export function SupplierMapping(props){
         <div>
         <Button variant='secondary' onClick={handleBack}>Back</Button>
         <Button onClick={handleRequestForQuote}>Request For Quote</Button>
-        <div>
+        <div className='FlexNormal'>
         <Button onClick={handleAddCustom}>Add Custom Column</Button>
         <Button onClick={handleShowExport}>Export</Button>
         </div>
-        <div>
+        <div className='FlexNormal'>
         <Button onClick={handleAutoMap}>Auto Map</Button>
         <SimpleDropdown selected={props.region} items={regions} onChange={handleChangeRegion}/>
         </div>
@@ -728,7 +739,7 @@ function SupplierMappingTable(props){
                             let cell = row['supplier'+j];
                             if(!hasSupplierChooser){
                                 if(row['supplier'+j] === undefined){
-                                    cell = <div><SupplierButtonChooser chosenSupplier={props.supplierInputs[i]}
+                                    cell = <div style={{position: 'relative', height: 'auto'}}><SupplierButtonChooser chosenSupplier={props.supplierInputs[i]}
                                     onSelectSupplier={handleSelectSupplierInput(i)}
                                     onDeselectSupplier={handleDeselectSupplierInput(i)}/>
                                     {props.supplierInputs[i] && <Button onClick={handleAddSupplier(i)}>Add</Button>}
