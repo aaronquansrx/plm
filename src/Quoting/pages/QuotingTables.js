@@ -29,13 +29,13 @@ function QuotingTables(props){
 
 function TableAU(props){
     return(
-        <ManufacturerSupplierTable region='au'/>
+        <ManufacturerSupplierTable region='AU'/>
     );
 }
 
 function TableMYR(props){
     return(
-        <ManufacturerSupplierTable region='myr'/>
+        <ManufacturerSupplierTable region='MY'/>
     );
 }
 

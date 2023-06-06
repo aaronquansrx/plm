@@ -184,6 +184,7 @@ function ConsolidatePage(props){
         setConsolidateStatus('Consolidate running');
         getPLMRequest('quote', getData,
         (res)=>{
+            console.log(res.data);
             setConsolidatedData(res.data);
             //setPriceConsolidatedData(res.data.data);
             const spd = res.data.data.map((line, i) => {
@@ -198,6 +199,7 @@ function ConsolidatePage(props){
             }, 2000);
         },
         (res)=>{
+            console.log(res.data);
             setConsolidateStatus('Consolidate error');
             setTimeout(() => {
                 setConsolidateStatus(null);
