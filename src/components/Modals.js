@@ -477,3 +477,34 @@ export function Login(props){
         </Modal>
     )
 }
+
+export function DeleteModal(props){
+    const [show, setShow] = useState(false);
+    const disabled = props.disabled ? props.disabled : false;
+    function handleOpen(){
+        if(props.onOpen) props.onOpen();
+        setShow(true);
+    }
+    function handleClose(){
+        if(props.onClose) props.onClose();
+        setShow(false);
+    }
+    function handleConfirm(){
+        if(props.onConfirm) props.onConfirm();
+        handleClose();
+    }
+    return(
+        <>
+        <Button onClick={handleOpen} variant='danger' disabled={disabled}>Delete</Button>
+        <Modal show={show} onHide={handleClose}>
+            <Modal.Header closeButton={true}>
+                <Modal.Title>Confirm Delete {props.deleteName}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <Button onClick={handleConfirm}>Confirm</Button>
+                <Button onClick={handleClose} variant={'secondary'}>Cancel</Button>
+            </Modal.Body>
+        </Modal>
+        </>
+    );
+}

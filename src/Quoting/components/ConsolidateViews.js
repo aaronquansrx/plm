@@ -9,16 +9,20 @@ import Table from 'react-bootstrap/Table';
 import { Notification } from './Notifications';
 import {SimplePopover} from '../../components/Tooltips';
 import { BOMApiProgressBarV2 } from '../../components/Progress';
-import { TemplateModal, ExcelExportModal } from '../../components/Modals';
+import { TemplateModal, ExcelExportModal, DeleteModal } from '../../components/Modals';
 
 import { MasterManufacturerAdder, AlternateManufacturerAdder, SupplierButtonChooser } from './ManufacturerSupplierTables';
 
+import { excelSheetToArray } from '../../scripts/ExcelHelpers';
+
+import { ExcelDropzone } from '../../components/Dropzone';
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { bestPriceOffer } from '../../scripts/PLMAlgorithms';
 import { TabPages } from '../../components/Tabs';
 import { LabeledTextInput } from '../../components/Forms';
 import { pickKeysObject, objectToArray } from '../../scripts/General';
 import { SimpleDropdown } from '../../components/Dropdown';
+import { MasterWorkingUploadTable } from './UploadTable';
 
 
 export function ConsolidateView(props){
@@ -49,6 +53,7 @@ export function ConsolidateView(props){
         postPLMRequest('srx_records', postData, 
         (res) => {
             console.log(res.data);
+            props.getAllConsolidateData();
             setModalDetails(null);
         },
         (res) => {
@@ -58,6 +63,7 @@ export function ConsolidateView(props){
 
     }
     function handleUpdateExisting(){
+        /*
         const sameManuAdd = props.consolidatedData.data.reduce((obj, row, rn) => {
             if(row.manufacturer === modalDetails.manufacturer){
                 //obj.push(rn);
@@ -68,14 +74,9 @@ export function ConsolidateView(props){
         console.log(sameManuAdd);
         props.setConsolidatedData(update(props.consolidatedData, {
             data: sameManuAdd
-            /*{
-                [modalDetails.row]:  {
-                    status: {
-                        manu_found: {$set: modalDetails.manufacturer}
-                    }
-                }
-            }*/
         }));
+        */
+        props.getAllConsolidateData();
         setModalDetails(null);
     }
     const tabs = [
@@ -258,6 +259,7 @@ export function ConsolidatePricesView(props){
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [partData, finished, requestParts, finishedParts] = usePartData(mpnSet, 0, props.currency, props.store);
     const [showProgress, setShowProgress] = useState(false);
+    const [selectedGroup, setSelectedGroup] = useState(null)
     /*
     const [priceData, setPriceData] = useState(props.consolidatedData.data.map((line) => {
         const uom = line.uom.length > 0 ? line.uom[0] : '';
@@ -279,6 +281,9 @@ export function ConsolidatePricesView(props){
         {accessor: 'price', label: 'Price'},
         {accessor: 'distributor', label: 'Distributor'}
     ];
+    useEffect(() => {
+        setSelectedGroup(props.priceGroups[props.priceGroups.length-1]);
+    }, [props.priceGroups]);
     useEffect(() => {
         if(finished){
             //console.log(partData);
@@ -347,11 +352,27 @@ export function ConsolidatePricesView(props){
         postPLMRequest('quote', postData, 
         (res) => {
             console.log(res.data);
+            props.setPriceGroups(res.data.groups);
         },
         (res) => {
             console.log(res.data);
         });
         setShowSaveModal(false);
+    }
+    function handleDeletePrices(){
+        console.log(selectedGroup);
+        const postData = {
+            function: 'delete_prices', quote_id: props.quote.id, save_id: selectedGroup.id,
+            user: props.user
+        }
+        postPLMRequest('quote', postData, 
+        (res) => {
+            console.log(res.data);
+            props.setPriceGroups(res.data.groups);
+        },
+        (res) => {
+            console.log(res.data);
+        });
     }
     /*
     function getPriceGroups(){
@@ -374,7 +395,8 @@ export function ConsolidatePricesView(props){
         setShowSaveModal(false);
     }
     function handleChangeGroup(name, i){
-        console.log('changeGroup');
+        //console.log('changeGroup');
+        setSelectedGroup(props.priceGroups[i]);
         const getData = {
             function: 'price_save', save_id: props.priceGroups[i].id, user: props.user
         };
@@ -404,6 +426,7 @@ export function ConsolidatePricesView(props){
         });
     }
     function getPriceGroupName(pg){
+        if(!pg) return 'No Prices Saved';
         return pg.name+' '+pg.date_saved;
     }
     console.log(props.priceGroups);
@@ -417,9 +440,11 @@ export function ConsolidatePricesView(props){
         <Button onClick={handleSupplierMapping}>Supplier Mapping</Button>
         </div>
         <div>
-            <SimpleDropdown selected={props.priceGroups.length > 0 ? getPriceGroupName(props.priceGroups[props.priceGroups.length-1]) : null} 
+            <SimpleDropdown selected={getPriceGroupName(selectedGroup)}
+                //props.priceGroups.length > 0 ? getPriceGroupName(props.priceGroups[props.priceGroups.length-1]) : null} 
             items={props.priceGroups.map((pg) => getPriceGroupName(pg))} onChange={handleChangeGroup}/>
             <Button onClick={handleOpenSaveModal}>Save</Button>
+            <DeleteModal deleteName={'Prices'} onConfirm={handleDeletePrices}/>
         </div>
         <BOMApiProgressBarV2 show={showProgress} numParts={mpnSet.length} 
         numFinished={finishedParts.size} onHideBar={handleHide}/>
@@ -433,26 +458,18 @@ export function ConsolidatePricesView(props){
 const regions = ['AU', 'MY'];
 
 export function SupplierMapping(props){
-    //console.log(props.consolidatedData);
-    //const [supplierInput, setSupplierInput] = useState(null);
+    const numSupplierColumns = props.numSupplierColumns;
     const [selected, setSelected] = useState(null);
-    //const [regionSelector, setRegionSelector] = useState('AU');
     const [customHeaders, setCustomHeaders] = useState([]);
-
     const [showExport, setShowExport] = useState(false);
-    //console.log(props.priceConsolidatedData);
-    //const [data, setData] = useState(props.priceConsolidatedData.map((line, i) => {
-        //const uom = line.uom.length > 0 ? line.uom[0] : '';
-        //return {...line, system: i, suppliers: []};
-    //}));
-
     const [supplierInputs, setSupplierInputs] = useState(props.supplierMappingData.map(() => null));
-    useEffect(() => {
-        //props.setEditedConsolidatedData(data);
-    }, []);
     const batchHeaders = Array.from(Array(props.numBatches)).map((_, i) => {
         return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
     });
+    const [errorText, setErrorText] = useState(null);
+    useEffect(() => {
+        if(errorText !== null) setTimeout(() => setErrorText(null), 2000);
+    }, [errorText]);
     const headers = [
         {accessor: 'system', label: 'System Unique ID'},  
         {accessor: 'cpn', label: 'CPN'},
@@ -464,6 +481,10 @@ export function SupplierMapping(props){
         ...batchHeaders,
         {accessor: 'sum_eau', label: 'Total EAU'}
     ];
+    const supplierHeaders = Array.from(Array(numSupplierColumns)).map((_, n) => {
+        const i = n+1;
+        return {accessor: 'supplier'+i.toString(), label: 'Supplier '+i.toString()};
+    });
     const customOptions = ['custom1', 'custom2', 'custom3', 'custom4', 'custom5', 'cms', 'comments',
         'commodity', 'designator', 'fitted', 'footprint', 'notes', 'srx_pn', 'supplier', 'spn',
         'critical_components', 'value', 'customer_price'
@@ -526,11 +547,12 @@ export function SupplierMapping(props){
         (res) => {
             console.log(res.data);
             props.updateSupplierMappingData(props.supplierMappingData,
-                res.data.region, res.data.manufacturer_supplier_map, res.data);
+                res.data.region, res.data.manufacturer_supplier_map,
+                res.data.quote_mapping_details.custom_supplier_manufacturer);
         },
         (res) => {
             console.log(res.data);
-        })
+        });
     }
     function handleChangeCustom(val, i){
         const newHeaders = update(customHeaders, {
@@ -567,15 +589,30 @@ export function SupplierMapping(props){
     function handleExportExcel(fn){
         const keys = headers.map((h) => h.accessor).concat(customHeaders);
         const labels = headers.map((h) => h.label);
-        const fullLabels = labels.concat(customHeaders);
-        const formattedData2 = props.supplierMappingData.map((line) => {
+        const supplierLabels = supplierHeaders.map((h) => h.label);
+        const fullLabels = labels.concat(customHeaders).concat(supplierLabels);
+
+        const formattedData = props.supplierMappingData.map((line) => {
             return objectToArray(line, keys);
         });
-        const excelData = [fullLabels].concat(formattedData2);
+        const supplierData = props.supplierMappingData.map((line) => {
+            return Array.from(Array(numSupplierColumns)).reduce((arr, _, n) => {
+                const i = (n + 1).toString();
+                const val = line['supplier'+i.toString()] ? line['supplier'+i.toString()].name : '';
+                arr.push(val);
+                return arr;
+            }, []);
+        });
+        const fullFormatted = formattedData.map((form, i) => {
+            return form.concat(supplierData[i]);
+        });
+        console.log(fullFormatted);
+        const excelData = [fullLabels].concat(fullFormatted);
         const sheet = XLSX.utils.aoa_to_sheet(excelData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, sheet, '');
         XLSX.writeFile(wb, fn+'.xlsx');
+        
     }
     function handleCloseExport(){
         setShowExport(false);
@@ -593,6 +630,9 @@ export function SupplierMapping(props){
                     const newLine = {...line};
                     if(newLine.master_manufacturer === props.supplierMappingData[i].master_manufacturer){
                         newLine.suppliers = res.data.suppliers;
+                        for(let j=0; j <= numSupplierColumns; j++){
+                            delete newLine['supplier'+j.toString()];
+                        }
                         res.data.suppliers.forEach((supplier, j) => {
                             const supString = 'supplier'+j.toString();
                             newLine[supString] = supplier.supplier_name;
@@ -610,6 +650,82 @@ export function SupplierMapping(props){
             });
         }
     }
+    function handleAddQuoteSupplier(i, supplier){
+        console.log(supplier);
+        const master_manufacturer = props.supplierMappingData[i].full_master_manufacturer;
+        console.log(master_manufacturer);
+        if(master_manufacturer){
+            const postData = {
+                function: 'add_quote_custom_supplier', supplier_id: supplier.id, 
+                manufacturer_id: master_manufacturer.id, quote_id: props.quote.id,
+                user: props.user, manufacturer_list: props.manufacturerList, 
+                region: props.region
+            };
+            postPLMRequest('quote', postData,
+            (res) => {
+                console.log(res.data);
+                updateSupplierMappingData(res.data.manufacturer_supplier_map,
+                    res.data.quote_mapping_details.custom_supplier_manufacturer);
+                setSupplierInputs(update(supplierInputs, {
+                    [i]: {$set: null}
+                }));
+            },
+            (res) => {
+                console.log(res.data);
+            });
+        }else{
+            setErrorText('No Master Manufacturer Linked');
+        }
+    }
+    function handleDeleteQuoteSupplier(i, j){
+        //console.log(i + ' ' + j);
+        //console.log(props.supplierMappingData[i].custom_suppliers[j]);
+        const saveID = props.supplierMappingData[i].custom_suppliers[j].custom_id;
+        const postData = {
+            function: 'delete_quote_custom_supplier', quote_id: props.quote.id, user: props.user,
+            manufacturer_list: props.manufacturerList, save_id: saveID, region: props.region
+        };
+        postPLMRequest('quote', postData,
+        (res) => {
+            console.log(res.data);
+            updateSupplierMappingData(res.data.manufacturer_supplier_map,
+                res.data.quote_mapping_details.custom_supplier_manufacturer);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
+    function updateSupplierMappingData(manufacturerSupplierMap, customSupplierManufacturerMap){
+        const newData = props.supplierMappingData.map((line, i) => {
+            const newLine = {...line};
+            const manu = line.master_manufacturer;
+            newLine.system = i;
+            if(manu !== null){
+                const suppliers = manufacturerSupplierMap[manu];
+                const customs = manu in customSupplierManufacturerMap ? customSupplierManufacturerMap[manu] : [];
+                for(let j=0; j <= numSupplierColumns; j++){
+                    delete newLine['supplier'+j.toString()];
+                }
+                suppliers.forEach((supplier, i) => {
+                    const supString = 'supplier'+i.toString();
+                    newLine[supString] = {name: supplier.supplier_name, type: 'global'};
+                });
+                newLine.suppliers = suppliers;
+                customs.forEach((custom, i) => {
+                    const supString = 'supplier'+(suppliers.length+i).toString();
+                    newLine[supString] = {name: custom.supplier_name, type: 'custom'};
+                });
+                newLine.custom_suppliers = customs;
+            }else{
+                newLine.suppliers = []; 
+            }
+            return newLine;
+        });
+        console.log(newData);
+        props.setSupplierMappingData(newData);
+        props.updateRFQData(newData);
+        return newData;
+    }
     function handleSelectSupplierInput(i, supplier){
         setSupplierInputs(update(supplierInputs, {
             [i]: {$set: supplier}
@@ -625,23 +741,22 @@ export function SupplierMapping(props){
         {props.navigation}
         <ExcelExportModal show={showExport} onClose={handleCloseExport} onExport={handleExportExcel}/>
         <div className='FlexNormal'>
-        <div>
         <Button variant='secondary' onClick={handleBack}>Back</Button>
         <Button onClick={handleRequestForQuote}>Request For Quote</Button>
+        </div>
         <div className='FlexNormal'>
         <Button onClick={handleAddCustom}>Add Custom Column</Button>
         <Button onClick={handleShowExport}>Export</Button>
         </div>
         <div className='FlexNormal'>
-        <Button onClick={handleAutoMap}>Auto Map</Button>
+        <Button onClick={handleAutoMap} disabled={true}>Auto Map</Button>
         <SimpleDropdown selected={props.region} items={regions} onChange={handleChangeRegion}/>
         </div>
-        </div>
-        </div>
+        <div className='FlexNormal'>{errorText}</div>
         <div className='MainTable'>
         <SupplierMappingTable data={props.supplierMappingData} headers={headers} 
         customHeaders={customHeaders} customOptions={customOptions}
-        supplierInputs={supplierInputs}
+        supplierInputs={supplierInputs} numSupplierColumns={numSupplierColumns}
         onDeselectSupplierInput={handleDeselectSupplierInput}
         onSelectSupplierInput={handleSelectSupplierInput}
         onSelectLine={handleSelectLine}
@@ -649,6 +764,8 @@ export function SupplierMapping(props){
         onChangeCustom={handleChangeCustom}
         onDeleteCustom={handleDeleteCustom}
         onAddSupplier={handleAddSupplier}
+        onAddQuoteSupplier={handleAddQuoteSupplier}
+        onDeleteQuoteSupplier={handleDeleteQuoteSupplier}
         />
         </div>
         </>
@@ -697,6 +814,16 @@ function SupplierMappingTable(props){
             }
         }
     }
+    function handleAddQuoteSupplier(i){
+        return function(e){
+            props.onAddQuoteSupplier(i, props.supplierInputs[i]);
+        };
+    }
+    function handleRemoveCustom(i, j){
+        return function(){
+            props.onDeleteQuoteSupplier(i, j);
+        }
+    }
     return(
         <Table>
             <thead className={'TableHeading'}>
@@ -714,7 +841,7 @@ function SupplierMappingTable(props){
                         </th>
                     );
                 })}
-                {Array.from(Array(5)).map((n,i) => {
+                {Array.from(Array(props.numSupplierColumns)).map((n,i) => {
                     return <th key={i}>Supplier {i+1}</th>
                 })}
                 </tr>
@@ -735,17 +862,34 @@ function SupplierMappingTable(props){
                             </td>
                         )
                         })}
-                        {Array.from(Array(5)).map((n, j) => {
-                            let cell = row['supplier'+j];
+                        {Array.from(Array(props.numSupplierColumns)).map((n, j) => {
+                            let cell = '';
                             if(!hasSupplierChooser){
                                 if(row['supplier'+j] === undefined){
                                     cell = <div style={{position: 'relative', height: 'auto'}}><SupplierButtonChooser chosenSupplier={props.supplierInputs[i]}
                                     onSelectSupplier={handleSelectSupplierInput(i)}
                                     onDeselectSupplier={handleDeselectSupplierInput(i)}/>
-                                    {props.supplierInputs[i] && <Button onClick={handleAddSupplier(i)}>Add</Button>}
+                                    {props.supplierInputs[i] && 
+                                    <>
+                                    <Button onClick={handleAddSupplier(i)}>Add Global</Button>
+                                    <Button onClick={handleAddQuoteSupplier(i)}>Add to Quote</Button>
+                                    </>
+                                    }
                                     </div>;
                                     hasSupplierChooser = true;
+                                }else{
+                                    if(row['supplier'+j].type === 'global'){
+                                        cell = row['supplier'+j].name;
+                                    }else{
+                                        const customIndex = j - row['suppliers'].length;
+                                        cell =
+                                        <div>
+                                            {row['supplier'+j].name}
+                                            <Button onClick={handleRemoveCustom(i, customIndex)} variant='danger'>X</Button>
+                                        </div>
+                                    }
                                 }
+                            }else{
                             }
                             return(
                             <td key={j}>
@@ -889,6 +1033,12 @@ export function MasterWorkingFile(props){
         return {accessor: header, label: header, type: 'custom'};
     });
     console.log(props.RFQData);
+    const masterHeaders = props.uploadMasterHeaders.reduce((arr, header) => {
+        if(header.display){
+            arr.push(header);
+        }
+        return arr;
+    }, []);
     const headers = [
         {accessor: 'system', label: 'System Unique ID'}, 
         {accessor: 'cpn', label: 'CPN'},
@@ -904,11 +1054,18 @@ export function MasterWorkingFile(props){
         {accessor: 'customer_price', label: 'Customer Price'},
         {accessor: 'price', label: 'PLM Price'},
         {accessor: 'distributor', label: 'Distributor'},
-        {accessor: 'status', label: 'Status'}
+        {accessor: 'status', label: 'Status'},
+        ...masterHeaders
     ];
+
     function handleBack(){
         if(props.changePageState){
             props.changePageState(3);
+        }
+    }
+    function handleUpload(){
+        if(props.changePageState){
+            props.changePageState(5);
         }
     }
     return(
@@ -916,6 +1073,7 @@ export function MasterWorkingFile(props){
         {props.navigation}
         <div className='FlexNormal'>
             <Button variant='secondary' onClick={handleBack}>Back</Button>
+            <Button onClick={handleUpload}>Upload</Button>
         </div>
         <div className='MainTable'>
             <MasterWorkingTable data={props.RFQData} headers={headers}/>
@@ -1082,4 +1240,34 @@ function SavePricesModal(props){
     return(
         <TemplateModal show={props.show} onClose={props.onClose} title={title} body={body} footer={footer}/>
     )
+}
+
+export function MasterUpload(props){
+    const [sheets, setSheets] = useState(null);
+    function handleBack(){
+        if(props.changePageState){
+            props.changePageState(4);
+        }
+    }
+    function handleDrop(wb, file){
+        console.log(wb);
+        const sheetNames = wb.SheetNames;
+        const sheets = sheetNames.map((sn) => {
+            const sheetArray = excelSheetToArray(wb.Sheets[sn]);
+            return {name: sn, array: sheetArray};
+        });
+        setSheets(sheets);
+    }
+    return(
+        <>
+        <div className='FlexNormal'>
+            <Button variant='secondary' onClick={handleBack}>Back</Button>
+            <ExcelDropzone class='DropFiles' onDrop={handleDrop}>
+                <p>Upload</p>
+            </ExcelDropzone>
+        </div>
+        <MasterWorkingUploadTable headers={props.headers} sheets={sheets} 
+        onMasterUpload={props.onMasterUpload}/>
+        </>
+    );
 }

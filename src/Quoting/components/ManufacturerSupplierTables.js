@@ -381,6 +381,7 @@ export function SupplierTable(props){
 }
 
 export function ManufacturerSupplierTable(props){
+    console.log(props.region);
     const [tableData, setTableData] = useState([]);
     const [chosenManufacturer, setChosenManufacturer] = useState(null);
     const [chosenSupplier, setChosenSupplier] = useState(null);

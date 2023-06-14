@@ -512,6 +512,7 @@ export function UploadTableSingle(props){
             }
         }
     }
+    
     function handleSubmit(){
         if(errorMessage && sheetState.current){
             const postData = {product_sheet: sheetState.current, function: 'add_product_sheet', user: props.user, 
@@ -679,6 +680,115 @@ export function UploadTableSingle(props){
         setCustomHeaders={setCustomHeaders} onClose={handleCloseCustomModal} user={props.user}/>
         </>
     )
+}
+
+export function MasterWorkingUploadTable(props){
+    const [sheetId, setSheetId] = useState(null);
+    const [selectedRow, setSelectedRow] = useState(null);
+    const [showHeaderModal, setShowHeaderModal] = useState(false);
+    const [showCustomHeaderModal, setShowCustomHeaderModal] = useState(false);
+    const [customHeaders, setCustomHeaders] = useState([])
+    //const [activeCustomHeaders, setActiveCustomHeaders] = useState([]);
+    const [headers, setHeaders] = useState(
+        [{label: '_remove', accessor: '_remove'}].concat(props.headers)
+    );
+    const [dropdownHeaders, setDropdownHeaders] = useState([]);
+
+    const [errorMessage, setErrorMessage] = useState(null);
+    const labelHeaders = headers.map((h) => h.label);
+
+    function handleChangeSheet(i){
+        setSheetId(i);
+        setErrorMessage(null);
+    }
+    function handleSheetRowSelect(rowIndex){
+        setErrorMessage(null);
+        //reference this row for more detail (can use HeaderTableWithRowSelectorV2 and TabbedTable)
+        //setSelectedRow({sheetId: sheetId, row: rowIndex, productValues: productChildrenVals, headersFound: headersFound});
+        if(selectedRow && selectedRow.row === rowIndex && selectedRow.sheetId === sheetId){
+            setSelectedRow(null);
+        }else{
+            
+            const activeSheet = props.sheets[sheetId].array;
+            const sheetRow = activeSheet[rowIndex];
+            const headerSet = new Set(props.headers.map(h => h.label));
+            const headerFound = new Set();
+            const headersFound = sheetRow.map((str) => {
+                const matches = headerSet.has(str);
+                if(matches){
+                    if(headerFound.has(str)){
+                        return '_remove';
+                    }
+                    headerFound.add(str);
+                    return str;
+                }else if(Number.isInteger(str)){
+                    console.log('custom'+str);
+                }
+                return '_remove';
+            });
+            setDropdownHeaders(headersFound);
+            setSelectedRow({sheetId: sheetId, row: rowIndex});
+        }
+    }
+    function handleColumnChange(){
+
+    }
+    const headerMap = headers.reduce((mp, h) => {
+        mp[h.label] = h;
+        return mp;
+    }, {});
+    function handleSubmit(){
+        const headerSet = new Set(headers.map(h => h.label));
+        const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
+            console.log('data');
+        const startRow = selectedRow ? selectedRow.row+1 : 0;
+        let hasMpn = false;
+        const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
+            if(h !== '_remove'){
+                arr.push({...headerMap[h], index: i});
+            }
+            if(h === 'Approved MPN'){
+                hasMpn = true;
+            }
+            return arr;
+        }, []);
+        const objs = [];
+        const truncatedFields = new Set();
+        for(let r=startRow; r < activeSheet.length; r++){
+            const obj = headerIndexes.reduce((o, h) => {
+                let cellValue = activeSheet[r][h.index];
+                if('size' in h){
+                    if(cellValue.length > h.size){
+                        cellValue = cellValue.substring(0, h.size);
+                        truncatedFields.add(h.label);
+                    }
+                }
+                o[h.accessor] = activeSheet[r][h.index];
+                return o;
+            }, {});
+            objs.push(obj);
+        }
+        if(hasMpn){
+            props.onMasterUpload(objs);
+        }
+    }
+    return(
+        <>
+        <div className='FlexNormal'>
+        <Button onClick={handleSubmit}>Submit</Button>
+        </div>
+        <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}
+        onChangeSheet={handleChangeSheet}
+        tableClass={'FlexNormal Overflow'} tabsClass={'FlexNormal'}
+        table={(props) => 
+        <DropdownHeaderTable {...props} 
+        columnOptions={labelHeaders} 
+        columnAttributes={dropdownHeaders}
+        onRowSelect={handleSheetRowSelect}
+        onColumnChange={handleColumnChange}
+        selectedRow={selectedRow ? selectedRow.row : null}/>}/>
+        </>
+    );
 }
 
 function CustomHeaderModal(props){

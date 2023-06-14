@@ -17,6 +17,7 @@ import LinkProductUpload from '../components/LinkProductUpload';
 import {ExcelDropzone} from '../../components/Dropzone';
 import {IdCheckbox} from '../../components/Checkbox';
 import { HeaderArrayTable } from '../../components/Tables';
+import { DeleteModal } from '../../components/Modals';
 
 import ListGroup from 'react-bootstrap/ListGroup';
 import Badge from 'react-bootstrap/Badge';
@@ -291,12 +292,13 @@ function QuoteTable(props){
                 })}
             </tbody>
         </Table>
-        <Button variant='danger' onClick={showDeleteConfirm}>Delete</Button>
-        <ConfirmDeleteModal show={deleteConfirmModal} onConfirm={handleDelete} onClose={hideDeleteConfirm}/>
+        {/*<Button variant='danger' onClick={showDeleteConfirm}>Delete</Button>
+        <ConfirmDeleteModal show={deleteConfirmModal} onConfirm={handleDelete} onClose={hideDeleteConfirm}/>*/}
+        <DeleteModal deleteName='Quotes' onConfirm={handleDelete}/>
         </div>
     );
 }
-
+/*
 function ConfirmDeleteModal(props){
     function handleClose(){
         if(props.onClose) props.onClose();
@@ -316,6 +318,7 @@ function ConfirmDeleteModal(props){
         </Modal>
     );
 }
+*/
 /*
 function QuoteView(props){
     return(

@@ -23,7 +23,7 @@ import { bestPriceOffer } from '../../scripts/PLMAlgorithms';
 import { 
     ConsolidatePricesView, ConsolidateView, 
     SupplierMapping, RequestForQuoteList,
-    MasterWorkingFile
+    MasterWorkingFile, MasterUpload
 } from './ConsolidateViews';
 
 
@@ -165,6 +165,7 @@ function QuoteView(props){
 }
 
 function ConsolidatePage(props){
+    const numSupplierColumns = 5;
     const [pageState, setPageState] = useState({current:0, last: null});
     const [customHeaders, setCustomHeaders] = useState([]);
     const [consolidatedData, setConsolidatedData] = useState({
@@ -178,7 +179,9 @@ function ConsolidatePage(props){
     const [priceGroups, setPriceGroups] = useState([]);
     const [region, setRegion] = useState('AU');
     useState(() => {
-
+        getAllConsolidateData()
+    }, []);
+    function getAllConsolidateData(){
         const getData = props.highlightedProduct === null ? {function: 'consolidate_quote', user: props.user, quote_id: props.quote.id} 
         : {function: 'consolidate_product', user: props.user, product_id: props.highlightedProduct};
         setConsolidateStatus('Consolidate running');
@@ -216,7 +219,7 @@ function ConsolidatePage(props){
         (res) => {
             console.log(res.data);
         });
-    }, []);
+    }
     function requestInitialPriceData(cd, manufacturers){
         const getPriceData = {
             function: 'first_price_save', quote_id: props.quote.id, user: props.user
@@ -272,49 +275,20 @@ function ConsolidatePage(props){
         postPLMRequest('quote', postQuoteSupplierMapping,
         (res) => {
             console.log(res.data);
-            /*
-            setRegion(res.data.quote_mapping_details.region);
-            const manufacturer_supplier_map = res.data.manufacturer_supplier_map;
-            const newData = [...priceCD].map((line, i) => {
-                const newLine = {...line};
-                const manu = line.master_manufacturer;
-                newLine.system = i;
-                if(manu !== null){
-                    const suppliers = manufacturer_supplier_map[manu];
-                    suppliers.forEach((supplier, i) => {
-                        const supString = 'supplier'+i.toString();
-                        newLine[supString] = supplier.supplier_name;
-                    });
-                    newLine.suppliers = suppliers;
-                }else{
-                    newLine.suppliers = []; 
-                }
-                return newLine;
-            });
-            setSupplierMappingData(newData);
-            */
             const newData = updateSupplierMappingData(priceCD, 
                 res.data.quote_mapping_details.region,
-                res.data.manufacturer_supplier_map
+                res.data.manufacturer_supplier_map,
+                res.data.quote_mapping_details.custom_supplier_manufacturer
             );
-
-            const newRFQData = newData.reduce((arr, line) => {
-                const lines = line.suppliers.map((sup,i) => {
-                    const sys = line.system+'.'+i;
-                    const status = null;
-                    return {...line, system: sys, supplier: sup.supplier_name, email: sup.email, 
-                        status: status};
-                });
-                return arr.concat(lines);
-            }, []);
-            setRFQData(newRFQData);
+            updateRFQData(newData);
         },
         (res) => {
             console.log(res.data);
         });
     }
-    function updateSupplierMappingData(priceCD, region,  manufacturerSupplierMap){
+    function updateSupplierMappingData(priceCD, region, manufacturerSupplierMap, customSupplierManufacturerMap){
         setRegion(region);
+        //console.log(customSupplier);
         //const manufacturer_supplier_map = data.manufacturer_supplier_map;
         const newData = [...priceCD].map((line, i) => {
             const newLine = {...line};
@@ -322,39 +296,91 @@ function ConsolidatePage(props){
             newLine.system = i;
             if(manu !== null){
                 const suppliers = manufacturerSupplierMap[manu];
+                const customs = manu in customSupplierManufacturerMap ? customSupplierManufacturerMap[manu] : [];
+                console.log(customs);
                 for(let j=0; j <= 5; j++){
                     delete newLine['supplier'+j.toString()];
                 }
                 suppliers.forEach((supplier, i) => {
                     const supString = 'supplier'+i.toString();
-                    newLine[supString] = supplier.supplier_name;
+                    newLine[supString] = {name: supplier.supplier_name, type: 'global'};
                 });
                 newLine.suppliers = suppliers;
+                customs.forEach((custom, i) => {
+                    const supString = 'supplier'+(suppliers.length+i).toString();
+                    newLine[supString] = {name: custom.supplier_name, type: 'custom'};
+                });
+                newLine.custom_suppliers = customs;
             }else{
                 newLine.suppliers = []; 
             }
             return newLine;
         });
+        console.log(newData);
         setPriceSupplierMappingData(newData);
+
         return newData;
     }
-    
+    function updateRFQData(newData){
+        const newRFQData = newData.reduce((arr, line) => {
+            const lines = line.suppliers.map((sup,i) => {
+                const sys = line.system+'.'+i;
+                const status = null;
+                return {...line, system: sys, supplier: sup.supplier_name, email: sup.email, 
+                    status: status};
+            });
+            const customLines = line.custom_suppliers.map((sup,i) => {
+                const sys = line.system+'.'+(i+line.suppliers.length);
+                const status = null;
+                return {...line, system: sys, supplier: sup.supplier_name, email: sup.email, 
+                    status: status};
+            });
+            return arr.concat(lines).concat(customLines);
+        }, []);
+        setRFQData(newRFQData);
+    }
     function changePageState(i){
         setPageState(update(pageState, {
             current: {$set: i},
             last: {$set: pageState.last}
         }));
     }
+    const masterWorkingHeaders = [
+        {accessor: 'mpn', label: 'Approved MPN', display: false},
+        {accessor: 'quoted', label: 'Quoted Supplier', display: true},
+        {accessor: 'leadtime', label: 'LT (calendar week)', display: true},
+        {accessor: 'spq', label: 'SPQ', display: true},
+        {accessor: 'currency', label: 'Currency ', display: true},
+        {accessor: 'moq', label: 'MOQ', display: true},
+        {accessor: 'price', label: ' Price/pce  ', display: true},
+    ];
+    function handleMasterUpload(objs){
+        console.log(objs);
+        const mpnMap = objs.reduce((obj, data) => {
+            obj[data.mpn] = data;
+            return obj;
+        }, {});
+        const newRFQData = RFQData.map((line) => {
+            let newLine = {...line};
+            if(newLine.mpn in mpnMap){
+                newLine = {...newLine, ...mpnMap[newLine.mpn]};
+            }
+            return newLine;
+        })
+        setRFQData(newRFQData);
+        changePageState(4);
+    }
     function renderView(){
         switch(pageState.current){
             case 0:
                 return <ConsolidateView consolidatedData={consolidatedData} 
                 changePageState={changePageState} changeQuotePageState={props.changeQuotePageState} 
-                setConsolidatedData={setConsolidatedData}/>
+                setConsolidatedData={setConsolidatedData} getAllConsolidateData={getAllConsolidateData}/>
             case 1:
                 return <ConsolidatePricesView consolidatedData={consolidatedData} 
                 priceSupplierMappingData={priceSupplierMappingData}
                 priceGroups={priceGroups}
+                setPriceGroups={setPriceGroups}
                 user={props.user} quote={props.quote} 
                 store={props.store} currency={props.currency}
                 changePageState={changePageState}
@@ -367,13 +393,18 @@ function ConsolidatePage(props){
                 region={region} setRegion={setRegion} quote={props.quote} user={props.user}
                 updateSupplierMappingData={updateSupplierMappingData}
                 manufacturerList={consolidatedData.manufacturers}
+                numSupplierColumns={numSupplierColumns}
+                updateRFQData={updateRFQData}
                 />
             case 3:
                 return <RequestForQuoteList numBatches={props.numBatches} RFQData={RFQData} 
                 changePageState={changePageState} setRFQData={setRFQData} customHeaders={customHeaders}/>
             case 4:
                 return <MasterWorkingFile RFQData={RFQData}
-                changePageState={changePageState} customHeaders={customHeaders}/>
+                changePageState={changePageState} customHeaders={customHeaders} 
+                uploadMasterHeaders={masterWorkingHeaders}/>
+            case 5:
+                return <MasterUpload headers={masterWorkingHeaders} changePageState={changePageState} onMasterUpload={handleMasterUpload}/>
         }
     }
     return(
