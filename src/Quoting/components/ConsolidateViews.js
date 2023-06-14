@@ -718,6 +718,7 @@ export function SupplierMapping(props){
                 newLine.custom_suppliers = customs;
             }else{
                 newLine.suppliers = []; 
+                newLine.custom_suppliers = [];
             }
             return newLine;
         });

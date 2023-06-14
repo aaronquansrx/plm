@@ -312,7 +312,8 @@ function ConsolidatePage(props){
                 });
                 newLine.custom_suppliers = customs;
             }else{
-                newLine.suppliers = []; 
+                newLine.suppliers = [];
+                newLine.custom_suppliers = [];
             }
             return newLine;
         });
