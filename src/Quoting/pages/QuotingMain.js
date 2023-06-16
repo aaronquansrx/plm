@@ -217,7 +217,6 @@ const quoteTableHeaders = [
 function QuoteTable(props){
     const [selectedQuotes, setSelectedQuotes] = useState([]);
     console.log(selectedQuotes);
-    const [deleteConfirmModal, setDeleteConfirmModal] = useState(false);
     useEffect(() => {
         setSelectedQuotes(props.quotes.map(() => false));
     }, [props.quotes]);
@@ -239,12 +238,6 @@ function QuoteTable(props){
             [i]: {$set: !selectedQuotes[i]}
         }));
     }
-    function showDeleteConfirm(){
-        setDeleteConfirmModal(true);
-    }
-    function hideDeleteConfirm(){
-        setDeleteConfirmModal(false);
-    }
     function handleDelete(){
         const qids = selectedQuotes.reduce((arr, v, i) => {
             if(v){
@@ -252,8 +245,6 @@ function QuoteTable(props){
             }
             return arr;
         }, []);
-        //console.log(qids);
-        //console.log(props.quotes);
         
         const postData = {function: 'delete_quotes', user: props.user, quote_ids: qids};
         postPLMRequest('quote', postData,
@@ -292,33 +283,10 @@ function QuoteTable(props){
                 })}
             </tbody>
         </Table>
-        {/*<Button variant='danger' onClick={showDeleteConfirm}>Delete</Button>
-        <ConfirmDeleteModal show={deleteConfirmModal} onConfirm={handleDelete} onClose={hideDeleteConfirm}/>*/}
         <DeleteModal deleteName='Quotes' onConfirm={handleDelete}/>
         </div>
     );
 }
-/*
-function ConfirmDeleteModal(props){
-    function handleClose(){
-        if(props.onClose) props.onClose();
-    }
-    function handleConfirm(){
-        if(props.onConfirm) props.onConfirm();
-        if(props.onClose) props.onClose();
-    }
-    return(
-        <Modal show={props.show} onHide={handleClose}>
-            <Modal.Header closeButton={true}>
-                <Modal.Title>Delete Quotes</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <Button onClick={handleConfirm}>Confirm</Button><Button onClick={handleClose} variant={'secondary'}>Cancel</Button>
-            </Modal.Body>
-        </Modal>
-    );
-}
-*/
 /*
 function QuoteView(props){
     return(

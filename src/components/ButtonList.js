@@ -1,4 +1,6 @@
 import React, {useEffect, useState} from 'react';
+
+import update from 'immutability-helper';
 import { ListGroup } from 'react-bootstrap';
 
 export function ChooseButtonList(props){
@@ -43,4 +45,31 @@ export function ChooseButtonList(props){
             </div>
         </ListGroup>
     )
+}
+
+export function ToggleButtonList(props){
+    const [itemState, setItemState] = useState(props.state ? props.state : props.items.map(() => true));
+    function handleToggle(item, i){
+        return function(){
+            if(props.onToggleItem) props.onToggleItem(item, i);
+            const newItemState = update(itemState, {
+                [i]: {$set: !itemState[i]}
+            })
+            setItemState(newItemState);
+            const items = newItemState.reduce((arr, t, i) => {
+                if(t) arr.push(props.items[i]);
+                return arr;
+            }, []);
+            if(props.onChangeList) props.onChangeList(items);
+        }
+    }
+    return(
+        <ListGroup style={{width: 'fit-content', cursor: 'pointer'}}>
+            {props.items.map((item, i) => 
+            <ListGroup.Item key={i} className={'ToggleItem'} onClick={handleToggle(item, i)} active={itemState[i]}>
+                {item}
+            </ListGroup.Item>
+            )}
+        </ListGroup>
+    );
 }

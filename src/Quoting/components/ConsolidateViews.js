@@ -23,12 +23,25 @@ import { LabeledTextInput } from '../../components/Forms';
 import { pickKeysObject, objectToArray } from '../../scripts/General';
 import { SimpleDropdown } from '../../components/Dropdown';
 import { MasterWorkingUploadTable } from './UploadTable';
+import { ToggleButtonList } from '../../components/ButtonList';
 
 
 export function ConsolidateView(props){
     const [modalDetails, setModalDetails] = useState(null);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [indexesWithoutManufacturer, setIndexesWithoutManufacturer] = useState([]);
+
     const headers = props.consolidatedData.headers;
+    useEffect(() => {
+        const withoutManufacturer = props.consolidatedData.data.reduce((arr, line, i) => {
+            if(!line.status.manu_found){
+                arr.push(i);
+            }
+            return arr;
+        }, []);
+        console.log(withoutManufacturer);
+        setIndexesWithoutManufacturer(withoutManufacturer);
+    }, [props.consolidatedData]);
     function handleBack(){
         //if(props.changeQuotePageState) props.changeQuotePageState(0);
         if(props.changePageState){
@@ -127,6 +140,7 @@ export function ConsolidateView(props){
         <Button variant='secondary' onClick={handleBack}>Back</Button>
         <Button onClick={handleExportModal}>Export</Button>
         <Button onClick={handlePrices}>Data Mapping</Button>
+
         <Notification data={props.consolidatedData}/>
         </div>
         <div className='MainTable'>
@@ -278,7 +292,7 @@ export function ConsolidatePricesView(props){
         {accessor: 'uom', label: 'UOM'},
         {accessor: 'packaging', label: 'Packaging'},
         {accessor: 'plc', label: 'Product Life Cycle'},
-        {accessor: 'price', label: 'Price'},
+        {accessor: 'plm_price', label: 'Price'},
         {accessor: 'distributor', label: 'Distributor'}
     ];
     useEffect(() => {
@@ -287,12 +301,9 @@ export function ConsolidatePricesView(props){
     useEffect(() => {
         if(finished){
             //console.log(partData);
-            const newData = [...props.priceSupplierMappingData];
-            props.priceSupplierMappingData.forEach((line, i) => {
-                newData[i].distributor = null;
-                newData[i].price = null;
-                newData[i].packaging = null;
-                newData[i].plc = null;
+            //const newData = [...props.priceSupplierMappingData];
+            const newData = props.priceSupplierMappingData.map((line, i) => {
+                const newLine = reformatPriceData(line);
                 if(partData.has(line.mpn)){
                     const data = partData.get(line.mpn);
                     let offers = [];
@@ -304,14 +315,15 @@ export function ConsolidatePricesView(props){
                     }
                     const p = bestPriceOffer(offers, line.total);
                     if(p !== null){
-                        newData[i].distributor = p.distributor;
-                        newData[i].price = p.total_price;
+                        newLine.distributor = p.distributor;
+                        newLine.plm_price = p.total_price;
                     }
                     if(data.details.length > 0){
-                        newData[i].packaging = data.details[0].Parameters.Packaging;
-                        newData[i].plc = data.details[0].Parameters['Part Status'];
+                        newLine.packaging = data.details[0].Parameters.Packaging;
+                        newLine.plc = data.details[0].Parameters['Part Status'];
                     }
                 }
+                return newLine;
             });
             //setPriceData(newData);
             props.setPriceSupplierMappingData(newData);
@@ -319,6 +331,11 @@ export function ConsolidatePricesView(props){
         //getPriceGroups();
         //console.log(finished);
     }, [finished]);
+    function reformatPriceData(line){
+        const newData = {distributor: null, plm_price: null, packaging: null,
+        plc: null};
+        return {...line, ...newData};
+    }
     function handleBack(){
         if(props.changePageState){
             props.changePageState(0);
@@ -340,7 +357,7 @@ export function ConsolidatePricesView(props){
     function handleSavePrices(savename){
         console.log(savename);
         const prices = props.priceSupplierMappingData.reduce((arr, line) => {
-            if(line.price !== null){
+            if(line.plm_price !== null){
                 arr.push(pickKeysObject(line, ['mpn', 'distributor', 'price', 'packaging', 'plc']));
             }
             return arr;
@@ -408,11 +425,7 @@ export function ConsolidatePricesView(props){
                 return obj;
             }, {});
             const newPriceData = props.priceSupplierMappingData.map((line) => {
-                let newLine = {...line};
-                newLine.distributor = null;
-                newLine.price = null;
-                newLine.packaging = null;
-                newLine.plc = null;
+                let newLine = reformatPriceData(line);
                 if(newLine.mpn in mpnMap){
                     newLine = {...newLine, ...mpnMap[newLine.mpn]};
                 }
@@ -429,7 +442,6 @@ export function ConsolidatePricesView(props){
         if(!pg) return 'No Prices Saved';
         return pg.name+' '+pg.date_saved;
     }
-    console.log(props.priceGroups);
     return(
         <>
         {props.navigation}
@@ -626,6 +638,10 @@ export function SupplierMapping(props){
             };
             postPLMRequest('srx_records', postData,
             (res) => {
+                //console.log(supplier);
+                //updateSupplierMappingData(res.data.manufacturer_supplier_map,
+                //    res.data.quote_mapping_details.custom_supplier_manufacturer);
+                console.log(res.data);
                 const newData = props.supplierMappingData.map((line) => {
                     const newLine = {...line};
                     if(newLine.master_manufacturer === props.supplierMappingData[i].master_manufacturer){
@@ -635,11 +651,18 @@ export function SupplierMapping(props){
                         }
                         res.data.suppliers.forEach((supplier, j) => {
                             const supString = 'supplier'+j.toString();
-                            newLine[supString] = supplier.supplier_name;
+                            newLine[supString] = {name: supplier.supplier_name, type: 'global'};
+                        });
+                        newLine.custom_suppliers.forEach((custom, i) => {
+                            const supString = 'supplier'+(newLine.suppliers.length+i).toString();
+                            newLine[supString] = {name: custom.supplier_name, type: 'custom'};
                         });
                     }
                     return newLine;
                 });
+                console.log(newData);
+                //updateSupplierMappingData()
+                
                 props.setSupplierMappingData(newData);
                 setSupplierInputs(update(supplierInputs, {
                     [i]: {$set: null}
@@ -1027,13 +1050,29 @@ export function RFQTable(props){
 
 export function MasterWorkingFile(props){
     //const [data, setData] = useState(props.RFQData);
+    const [showExport, setShowExport] = useState(false);
+    const [showMPNFilterModal, setShowMPNFilterModal] = useState(false);
     const batchHeaders = Array.from(Array(props.numBatches)).map((_, i) => {
         return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
     });
     const customHeaders = props.customHeaders.map((header) => {
         return {accessor: header, label: header, type: 'custom'};
     });
-    console.log(props.RFQData);
+    const mpnValues = new Set(props.RFQData.map((l) => l.mpn));
+    const [validMPNs, setValidMPNs] = useState(mpnValues);
+    const [filteredData, setFilteredData] = useState(props.RFQData);
+    //console.log(props.RFQData);
+    useState(() => {
+        console.log(validMPNs);
+        const newData = props.RFQData.reduce((arr, line) => {
+            if(validMPNs.has(line.mpn)){
+                arr.push(line);
+            }
+            return arr;
+        }, []);
+        console.log(newData);
+        setFilteredData(newData);
+    }, [validMPNs]);
     const masterHeaders = props.uploadMasterHeaders.reduce((arr, header) => {
         if(header.display){
             arr.push(header);
@@ -1047,13 +1086,14 @@ export function MasterWorkingFile(props){
         {accessor: 'uom', label: 'UOM'},
         {accessor: 'mpn', label: 'Approved MPN'},
         {accessor: 'manufacturer', label: 'Approved MFR'},
+        {accessor: 'supplier', label: 'Supplier'},
         ...customHeaders,
         ...batchHeaders,
         {accessor: 'sum_eau', label: 'Total EAU'},
         {accessor: 'packaging', label: 'Packaging'},
         {accessor: 'plc', label: 'Product Life Cycle'},
         {accessor: 'customer_price', label: 'Customer Price'},
-        {accessor: 'price', label: 'PLM Price'},
+        {accessor: 'plm_price', label: 'PLM Price'},
         {accessor: 'distributor', label: 'Distributor'},
         {accessor: 'status', label: 'Status'},
         ...masterHeaders
@@ -1069,28 +1109,79 @@ export function MasterWorkingFile(props){
             props.changePageState(5);
         }
     }
+    function handleShowMPNFilter(){
+        setShowMPNFilterModal(true);
+    }
+    function handleCloseMPNFilter(){
+        setShowMPNFilterModal(false);
+    }
+    function handleMPNChangeList(items){
+        const mpnSet = new Set(items);
+        setValidMPNs(new Set(items));
+        const newData = props.RFQData.reduce((arr, line) => {
+            if(mpnSet.has(line.mpn)){
+                arr.push(line);
+            }
+            return arr;
+        }, []);
+        setFilteredData(newData);
+    }
+    function handleShowExport(){
+        setShowExport(true);
+    }
+    function handleCloseExport(){
+        setShowExport(false);
+    }
+    function handleExportExcel(fn){
+        const keys = headers.map((h) => h.accessor);
+        const labels = headers.map((h) => h.label);
+        const formattedData2 = props.RFQData.map((line) => {
+            return objectToArray(line, keys);
+        });
+        const excelData = [labels].concat(formattedData2);
+        console.log(excelData);
+        
+        const sheet = XLSX.utils.aoa_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, '');
+        XLSX.writeFile(wb, fn+'.xlsx');
+        handleCloseExport();
+    }
     return(
         <>
         {props.navigation}
         <div className='FlexNormal'>
             <Button variant='secondary' onClick={handleBack}>Back</Button>
             <Button onClick={handleUpload}>Upload</Button>
+            <Button onClick={handleShowExport}>Export</Button>
         </div>
         <div className='MainTable'>
-            <MasterWorkingTable data={props.RFQData} headers={headers}/>
+            <MasterWorkingTable data={filteredData} headers={headers} 
+            onClickMPN={handleShowMPNFilter}/>
         </div>
+        <MPNFilterModal show={showMPNFilterModal} mpns={mpnValues} onClose={handleCloseMPNFilter}
+        validMPNs={validMPNs} onChangeList={handleMPNChangeList}/>
+        <ExcelExportModal show={showExport} onClose={handleCloseExport} onExport={handleExportExcel}/>
         </>
     );
 }
 
 function MasterWorkingTable(props){
     const statusOptions = ['Pending RFQ', 'RFQ Failed', 'Pending Quote', 'Missing Info', 'Quoted'];
+
+    function handleClickMpn(){
+        props.onClickMPN();
+    }
     return(
         <Table>
         <thead className={'TableHeading'}>
             <tr>
-            {props.headers.map((h, i) => 
-            <th key={i}>{h.label}</th>
+            {props.headers.map((h, i) => {
+                if(h.accessor === 'mpn'){
+                    return <th key={i} onClick={handleClickMpn}>{h.label}</th>
+                }
+                return <th key={i}>{h.label}</th>;
+            }
             )}
             </tr>
         </thead>
@@ -1107,7 +1198,7 @@ function MasterWorkingTable(props){
                             }
                         }else{
                             if(h.accessor === 'status'){
-                                contents = <SimpleDropdown items={statusOptions}/>
+                                contents = <SimpleDropdown selected={row.status} items={statusOptions}/>
                             }else{
                                 contents = row[h.accessor];
                             }
@@ -1119,6 +1210,18 @@ function MasterWorkingTable(props){
             )}
         </tbody>
     </Table> 
+    );
+}
+
+function MPNFilterModal(props){
+    function handleChangeList(items){
+        props.onChangeList(items);
+    }
+    const body = <>
+        <ToggleButtonList items={[...props.mpns]} onChangeList={handleChangeList}/>
+    </>
+    return(
+        <TemplateModal show={props.show} body={body} onClose={props.onClose}/>
     );
 }
 

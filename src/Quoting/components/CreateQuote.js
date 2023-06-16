@@ -255,7 +255,8 @@ function ChangeQuoteTemplate(props){
     }
     //console.log(formValues.structure);
     return(
-        <div>
+        <>
+        <div className='FlexNormal' style={{overflow: 'auto'}}>
             <UploadModal show={showUploadForm} onClose={handleUploadClose} onSubmit={handleSubmitUploadDetails}/>
             <h3>Create Quote</h3> <Button onClick={handleUpload}>Upload</Button>
             {/*<Form>
@@ -301,9 +302,12 @@ function ChangeQuoteTemplate(props){
             <div>
                 <h4>SRX Internal</h4>
             </div>
-            <Button variant={'secondary'} onClick={handleCancel}>Cancel</Button>
-            <Button onClick={handleSubmit}>Submit</Button>
         </div>
+        <div className='BottomButtons'>
+        <Button variant={'secondary'} onClick={handleCancel}>Cancel</Button>
+        <Button onClick={handleSubmit}>Submit</Button>
+        </div>
+        </>
     )
 }
 

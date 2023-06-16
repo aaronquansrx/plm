@@ -227,20 +227,29 @@ function ConsolidatePage(props){
         getPLMRequest('quote', getPriceData,
         (res) => {
             console.log(res.data);
+            function reformatPriceData(line){
+                const uom = line.uom.length > 0 ? line.uom[0] : '';
+                const newData = {uom: uom, distributor: null, plm_price: null, packaging: null,
+                plc: null};
+                return {...line, ...newData};
+            }
             let newPriceData = [...cd];
             if(res.data.prices !== null){
                 const mpnPriceMap = res.data.prices.reduce((obj, p) => {
                     obj[p.mpn] = p;
                     return obj;
                 }, {});
+                console.log(mpnPriceMap);
                 newPriceData = [...cd].map((line, i) => {
                     let newLine = {...line};
+                    /*
                     const uom = line.uom.length > 0 ? line.uom[0] : '';
                     newLine.uom = uom;
                     newLine.distributor = null;
-                    newLine.price = null;
+                    newLine.plm_price = null;
                     newLine.packaging = null;
-                    newLine.plc = null;
+                    newLine.plc = null;*/
+                    newLine = reformatPriceData(newLine);
                     if(line.mpn in mpnPriceMap){
                         newLine = {...newLine, ...mpnPriceMap[line.mpn]};
                     }
@@ -249,13 +258,13 @@ function ConsolidatePage(props){
             }else{
                 newPriceData = [...cd].map((line, i) => {
                     let newLine = {...line};
-                    const uom = line.uom.length > 0 ? line.uom[0] : '';
+                    /*const uom = line.uom.length > 0 ? line.uom[0] : '';
                     newLine.uom = uom;
                     newLine.distributor = null;
-                    newLine.price = null;
+                    newLine.plm_price = null;
                     newLine.packaging = null;
-                    newLine.plc = null;
-                    return newLine;
+                    newLine.plc = null;*/
+                    return reformatPriceData(newLine);
                 });
             }
             console.log(newPriceData);
@@ -326,13 +335,13 @@ function ConsolidatePage(props){
         const newRFQData = newData.reduce((arr, line) => {
             const lines = line.suppliers.map((sup,i) => {
                 const sys = line.system+'.'+i;
-                const status = null;
+                const status = 'Pending RFQ';
                 return {...line, system: sys, supplier: sup.supplier_name, email: sup.email, 
                     status: status};
             });
             const customLines = line.custom_suppliers.map((sup,i) => {
                 const sys = line.system+'.'+(i+line.suppliers.length);
-                const status = null;
+                const status = 'Pending RFQ';
                 return {...line, system: sys, supplier: sup.supplier_name, email: sup.email, 
                     status: status};
             });
@@ -348,7 +357,7 @@ function ConsolidatePage(props){
     }
     const masterWorkingHeaders = [
         {accessor: 'mpn', label: 'Approved MPN', display: false},
-        {accessor: 'quoted', label: 'Quoted Supplier', display: true},
+        {accessor: 'quoted_supplier', label: 'Quoted Supplier', display: true},
         {accessor: 'leadtime', label: 'LT (calendar week)', display: true},
         {accessor: 'spq', label: 'SPQ', display: true},
         {accessor: 'currency', label: 'Currency ', display: true},
@@ -361,15 +370,20 @@ function ConsolidatePage(props){
             obj[data.mpn] = data;
             return obj;
         }, {});
+        
         const newRFQData = RFQData.map((line) => {
             let newLine = {...line};
             if(newLine.mpn in mpnMap){
-                newLine = {...newLine, ...mpnMap[newLine.mpn]};
+                if(newLine.supplier === mpnMap[newLine.mpn].quoted_supplier){
+                    newLine = {...newLine, ...mpnMap[newLine.mpn]};
+                    newLine.status = 'Quoted';
+                }
             }
             return newLine;
         })
         setRFQData(newRFQData);
         changePageState(4);
+        
     }
     function renderView(){
         switch(pageState.current){

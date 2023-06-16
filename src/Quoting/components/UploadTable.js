@@ -458,6 +458,11 @@ export function UploadTableSingle(props){
         });
     }, []);
     useEffect(() => {
+        if(props.sheets && props.sheets.length > 0){
+            setSheetId(0);
+        }
+    }, props.sheets);
+    useEffect(() => {
         if(props.sheets && props.sheets.length > sheetId && props.sheets[sheetId].array.length > 0){
             setDropdownHeaders(props.sheets[sheetId].array[0].map(() => '_remove'));
         }
@@ -696,7 +701,16 @@ export function MasterWorkingUploadTable(props){
 
     const [errorMessage, setErrorMessage] = useState(null);
     const labelHeaders = headers.map((h) => h.label);
-
+    useEffect(() => {
+        if(props.sheets && props.sheets.length > 0){
+            setSheetId(0);
+        }
+    }, [props.sheets]);
+    useEffect(() => {
+        if(props.sheets && props.sheets.length > sheetId && props.sheets[sheetId].array.length > 0){
+            setDropdownHeaders(props.sheets[sheetId].array[0].map(() => '_remove'));
+        }
+    }, [sheetId]);
     function handleChangeSheet(i){
         setSheetId(i);
         setErrorMessage(null);
@@ -742,13 +756,16 @@ export function MasterWorkingUploadTable(props){
         const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
             console.log('data');
         const startRow = selectedRow ? selectedRow.row+1 : 0;
-        let hasMpn = false;
+        let hasMpn = false; let hasSupplier = false;
         const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
             if(h !== '_remove'){
                 arr.push({...headerMap[h], index: i});
             }
             if(h === 'Approved MPN'){
                 hasMpn = true;
+            }
+            if(h === 'Quoted Supplier'){
+                hasSupplier = true;
             }
             return arr;
         }, []);
@@ -768,7 +785,7 @@ export function MasterWorkingUploadTable(props){
             }, {});
             objs.push(obj);
         }
-        if(hasMpn){
+        if(hasMpn && hasSupplier){
             props.onMasterUpload(objs);
         }
     }
