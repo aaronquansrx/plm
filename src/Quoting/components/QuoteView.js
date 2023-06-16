@@ -220,7 +220,10 @@ function ConsolidatePage(props){
             console.log(res.data);
         });
     }
-    function requestInitialPriceData(cd, manufacturers){
+    function requestInitialPriceData(cd, manufacturers=null){
+        if(!manufacturers){
+            manufacturers = consolidatedData.manufacturers;
+        }
         const getPriceData = {
             function: 'first_price_save', quote_id: props.quote.id, user: props.user
         };
@@ -267,7 +270,7 @@ function ConsolidatePage(props){
                     return reformatPriceData(newLine);
                 });
             }
-            console.log(newPriceData);
+            //console.log(newPriceData);
             //setPriceConsolidatedData(newPriceData);
             requestSupplierMapping(newPriceData, manufacturers);
         },
@@ -275,8 +278,10 @@ function ConsolidatePage(props){
             console.log(res.data);
         });
     }
-    function requestSupplierMapping(priceCD, manufacturers){
-        console.log(manufacturers);
+    function requestSupplierMapping(priceCD, manufacturers=null){
+        if(!manufacturers){ 
+            manufacturers = consolidatedData.manufacturers;
+        }
         const postQuoteSupplierMapping = {
             function: 'supplier_mapping', quote_id: props.quote.id, user: props.user,
             manufacturer_list: manufacturers
@@ -400,6 +405,7 @@ function ConsolidatePage(props){
                 store={props.store} currency={props.currency}
                 changePageState={changePageState}
                 setPriceSupplierMappingData={setPriceSupplierMappingData}
+                requestSupplierMapping={requestSupplierMapping}
                 />
             case 2:
                 return <SupplierMapping numBatches={props.numBatches} consolidatedData={consolidatedData}

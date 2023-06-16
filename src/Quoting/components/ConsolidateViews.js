@@ -358,7 +358,7 @@ export function ConsolidatePricesView(props){
         console.log(savename);
         const prices = props.priceSupplierMappingData.reduce((arr, line) => {
             if(line.plm_price !== null){
-                arr.push(pickKeysObject(line, ['mpn', 'distributor', 'price', 'packaging', 'plc']));
+                arr.push(pickKeysObject(line, ['mpn', 'distributor', 'plm_price', 'packaging', 'plc']));
             }
             return arr;
         }, []);
@@ -433,6 +433,7 @@ export function ConsolidatePricesView(props){
             }, []);
             //setPriceData(newPriceData);
             props.setPriceSupplierMappingData(newPriceData);
+            props.requestSupplierMapping(newPriceData);
         },
         (res) => {
             console.log(res.data);
