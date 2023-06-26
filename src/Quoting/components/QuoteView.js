@@ -39,10 +39,14 @@ function QuoteView(props){
     const [consolidatedData, setConsolidatedData] = useState({
         data: [], headers: [], manufacturers: {}, totals: null, num_batches: 0
     });
-    const [priceConsolidatedData, setPriceConsolidatedData] = useState([]);
-    const [editedConsolidateData, setEditedConsolidatedData] = useState([]);
-    const [RFQData, setRFQData] = useState([]);
-    const [consolidateStatus, setConsolidateStatus] = useState(null);
+    useEffect(() => {
+        console.log(pageState);
+        if(pageState.current === 0){
+            setSelectedProduct(null);
+            setHighlightedProduct(null);
+        }
+        console.log(selectedProduct);
+    }, [pageState]);
 
     useEffect(() => {
         const getData = {
@@ -123,39 +127,11 @@ function QuoteView(props){
                 highlightedProduct={highlightedProduct}
                 store={props.store} currency={props.currency} changeQuotePageState={changeQuotePageState}/>
             case 4:
-                return <PartUsageView consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}/>
-            /*
-            case 3:
-                return <ConsolidateView  consolidatedData={consolidatedData} changeQuotePageState={changeQuotePageState}
-                consolidateStatus={consolidateStatus} setConsolidatedData={setConsolidatedData} 
-                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState} 
-                selected={pageState.current}/>}/>
-            case 5:
-                return <ConsolidatePricesView consolidatedData={consolidatedData} 
+                return <PartUsageView /*consolidatedData={consolidatedData}*/ 
                 user={props.user} quote={props.quote} 
-                store={props.store} currency={props.currency}
-                changeQuotePageState={changeQuotePageState}
-                setPriceConsolidatedData={setPriceConsolidatedData}
-                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState} 
-                selected={pageState.current}/>}/>
-            case 6:
-                return <SupplierMapping priceConsolidatedData={priceConsolidatedData} consolidatedData={consolidatedData} numBatches={numBatches} changeQuotePageState={changeQuotePageState}
-                setEditedConsolidatedData={setEditedConsolidatedData}
-                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState} 
-                selected={pageState.current}/>} setCustomHeaders={setCustomHeaders}/>
-            case 7:
-                return <RequestForQuoteList numBatches={numBatches} editedData={editedConsolidateData} 
-                changeQuotePageState={changeQuotePageState} setRFQData={setRFQData}
-                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState}
-                selected={pageState.current}/>} customHeaders={customHeaders}/>
-            case 8:
-                return <MasterWorkingFile RFQData={RFQData} editedData={editedConsolidateData} changeQuotePageState={changeQuotePageState}
-                navigation={<ConsolidateNavigation changeQuotePageState={changeQuotePageState}
-                selected={pageState.current}/>} customHeaders={customHeaders}/>
-            */
+                changeQuotePageState={changeQuotePageState}/>
         }
     }
-    //console.log(props.quote);
     return(
         <>
 
@@ -179,7 +155,7 @@ function ConsolidatePage(props){
     const [priceGroups, setPriceGroups] = useState([]);
     const [region, setRegion] = useState('AU');
     useState(() => {
-        getAllConsolidateData()
+        getAllConsolidateData();
     }, []);
     function getAllConsolidateData(){
         const getData = props.highlightedProduct === null ? {function: 'consolidate_quote', user: props.user, quote_id: props.quote.id} 
@@ -242,16 +218,9 @@ function ConsolidatePage(props){
                     obj[p.mpn] = p;
                     return obj;
                 }, {});
-                console.log(mpnPriceMap);
+                //console.log(mpnPriceMap);
                 newPriceData = [...cd].map((line, i) => {
                     let newLine = {...line};
-                    /*
-                    const uom = line.uom.length > 0 ? line.uom[0] : '';
-                    newLine.uom = uom;
-                    newLine.distributor = null;
-                    newLine.plm_price = null;
-                    newLine.packaging = null;
-                    newLine.plc = null;*/
                     newLine = reformatPriceData(newLine);
                     if(line.mpn in mpnPriceMap){
                         newLine = {...newLine, ...mpnPriceMap[line.mpn]};
@@ -261,17 +230,9 @@ function ConsolidatePage(props){
             }else{
                 newPriceData = [...cd].map((line, i) => {
                     let newLine = {...line};
-                    /*const uom = line.uom.length > 0 ? line.uom[0] : '';
-                    newLine.uom = uom;
-                    newLine.distributor = null;
-                    newLine.plm_price = null;
-                    newLine.packaging = null;
-                    newLine.plc = null;*/
                     return reformatPriceData(newLine);
                 });
             }
-            //console.log(newPriceData);
-            //setPriceConsolidatedData(newPriceData);
             requestSupplierMapping(newPriceData, manufacturers);
         },
         (res) => {
@@ -337,22 +298,105 @@ function ConsolidatePage(props){
         return newData;
     }
     function updateRFQData(newData){
-        const newRFQData = newData.reduce((arr, line) => {
+        let lines = -1;
+        function returnLine(line, sup, sys){
+            const status = 'Pending RFQ';
+            lines++;
+            return {...line, system: sys, supplier: sup.supplier_name, supplier_id: sup.supplier_id, 
+                email: sup.email, status: status, selection: false, 
+                mqa: null, est_total_po: null, excess: null, lineNum: lines};
+        }
+        const newRFQData = newData.reduce((arr, line, ln) => {
             const lines = line.suppliers.map((sup,i) => {
                 const sys = line.system+'.'+i;
-                const status = 'Pending RFQ';
-                return {...line, system: sys, supplier: sup.supplier_name, email: sup.email, 
-                    status: status};
+                return returnLine(line, sup, sys);
             });
             const customLines = line.custom_suppliers.map((sup,i) => {
                 const sys = line.system+'.'+(i+line.suppliers.length);
-                const status = 'Pending RFQ';
-                return {...line, system: sys, supplier: sup.supplier_name, email: sup.email, 
-                    status: status};
+                return returnLine(line, sup, sys);
             });
             return arr.concat(lines).concat(customLines);
         }, []);
-        setRFQData(newRFQData);
+        const postData = {
+            function: 'load_working_file', rfq_data: newRFQData,
+            quote_id: props.quote.id, user: props.user,
+        }
+        postPLMRequest('quote', postData, 
+        (res) => {
+            if(res.data.success){
+                console.log(res.data);
+                const compRFQData = loadIntoRFQData(res.data.upload_data, newRFQData, res.data.load_data_map);
+                console.log(compRFQData);
+                setRFQData(compRFQData);
+            }
+        },
+        (res) => {
+            console.log(res.data);
+        });
+        //setRFQData(newRFQData);
+    }
+    function loadIntoRFQData(workingUploadData, newRFQData, loadDataMap=null){
+        const mpnMap = workingUploadData.reduce((obj, data) => {
+            if(data.quoted_mpn in obj){
+                obj[data.quoted_mpn][data.quoted_supplier] = data;
+            }else{
+                obj[data.quoted_mpn] = {[data.quoted_supplier]: data}
+            }
+            return obj;
+        }, {});
+        const updates = [];
+        const compRFQData = newRFQData.map((line) => {
+            let newLine = {...line};
+            if(loadDataMap !== null && newLine.mpn in loadDataMap){
+                if(newLine.supplier_id in loadDataMap[newLine.mpn]){
+                    //console.log(newLine.supplier_id);
+                    newLine = {...newLine, ...loadDataMap[newLine.mpn][newLine.supplier_id]};
+                }
+            }
+            if(newLine.mpn in mpnMap){
+                if(newLine.supplier in mpnMap[newLine.mpn]){
+                    newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
+                    if(loadDataMap === null){
+                        
+                        newLine.status = 'Quoted';
+                        updates.push({
+                            update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
+                            line: newLine
+                        });
+                    }
+                }
+            }
+            return newLine;
+        });
+        compRFQData.forEach((line, i) => {
+            const moq = parseInt(line.moq);
+            const batch = parseInt(line['sum0']);
+            const spq = parseInt(line.spq);
+            const price = parseFloat(line.price);
+            const totalPo = (moq >= batch ? moq : Math.ceil(batch, spq)) * price;
+            const excess = ((moq >= batch ? moq : Math.ceil(batch, spq))-batch) * price;
+
+            if(!isNaN(totalPo)){
+                compRFQData[i].est_total_po = totalPo;
+            }
+            if(!isNaN(excess)){
+                compRFQData[i].excess = excess;
+            }
+        });
+        if(updates.length > 0){
+            const postData = {
+                function: 'update_working_file', quote_id: props.quote.id, user: props.user,
+                update_data: updates
+            }
+            postPLMRequest('quote', postData,
+            (res) => {
+                console.log(res.data);
+            },
+            (res) => {
+                console.log(res.data);
+            });
+        }
+        return compRFQData;
     }
     function changePageState(i){
         setPageState(update(pageState, {
@@ -363,30 +407,77 @@ function ConsolidatePage(props){
     const masterWorkingHeaders = [
         {accessor: 'mpn', label: 'Approved MPN', display: false},
         {accessor: 'quoted_supplier', label: 'Quoted Supplier', display: true},
+        {accessor: 'quoted_mpn', label: 'Quoted MPN', display: true},
+        {accessor: 'quoted_mfr', label: 'Quoted MFR', display: true},
         {accessor: 'leadtime', label: 'LT (calendar week)', display: true},
         {accessor: 'spq', label: 'SPQ', display: true},
-        {accessor: 'currency', label: 'Currency ', display: true},
+        {accessor: 'currency', label: 'Currency', display: true},
         {accessor: 'moq', label: 'MOQ', display: true},
-        {accessor: 'price', label: ' Price/pce  ', display: true},
+        {accessor: 'price', label: 'Price/pce', display: true},
+        {accessor: 'book_price', label: 'Book Price (Y/N)', display: true},
+        {accessor: 'payment_terms', label: 'Payment Terms', display: true},
+        {accessor: 'incoterms', label: 'Incoterms', display: true},
+        {accessor: 'incoterms_location', label: 'Incoterms Location', display: true},
+        {accessor: 'country_of_origin', label: 'Country of Origin (COO)', display: true},
+        {accessor: 'cancellation_window', label: 'Cancellation Window', display: true},
+        {accessor: 'packaging_type', label: 'Packaging Type', display: true},
+        {accessor: 'rohs', label: '(RoHS) (Y/N)', display: true},
+        {accessor: 'reach', label: 'Reach (Y/N)', display: true},
+        {accessor: 'conflict_minerals', label: 'Conflict Minerals (Y/N)', display: true},
+        {accessor: 'nre_cost', label: 'NRE cost', display: true},
+        {accessor: 'tooling_lead_time', label: 'Tooling Lead time (Week)', display: true},
+        {accessor: 'remarks', label: 'Remarks', display: true}
     ];
-    function handleMasterUpload(objs){
-        console.log(objs);
+    function handleMasterUpload(uploadData){
+        const compRFQData = loadIntoRFQData(uploadData, RFQData);
+        setRFQData(compRFQData);
+        /* 
         const mpnMap = objs.reduce((obj, data) => {
-            obj[data.mpn] = data;
+            if(data.mpn in obj){
+                obj[data.mpn][data.quoted_supplier] = data;
+            }else{
+                obj[data.mpn] = {[data.quoted_supplier]: data}
+            }
             return obj;
         }, {});
-        
         const newRFQData = RFQData.map((line) => {
             let newLine = {...line};
             if(newLine.mpn in mpnMap){
-                if(newLine.supplier === mpnMap[newLine.mpn].quoted_supplier){
-                    newLine = {...newLine, ...mpnMap[newLine.mpn]};
+                if(newLine.supplier in mpnMap[newLine.mpn]){
+                    newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
                     newLine.status = 'Quoted';
                 }
             }
             return newLine;
-        })
+        });
+        newRFQData.forEach((line) => {
+            const moq = parseInt(line.moq);
+            const batch = parseInt(line['sum0']);
+            const spq = parseInt(line.spq);
+            const price = parseFloat(line.price);
+            const totalPo = (moq >= batch ? moq : Math.ceil(batch, spq)) * price;
+            const excess = ((moq >= batch ? moq : Math.ceil(batch, spq))-batch) * price;
+
+            if(!isNaN(totalPo)){
+                line.est_total_po = totalPo;
+            }
+            if(!isNaN(excess)){
+                line.excess = excess;
+            }
+        });
         setRFQData(newRFQData);
+        */
+        const postData = {
+            function: 'upload_quote_master_file_data', quote_id: props.quote.id, user: props.user,
+            upload_data: uploadData, 
+        }
+        postPLMRequest('quote', postData, 
+        (res) => {
+            console.log(res.data);
+        },
+        (res) => {
+            console.log(res.data);
+        });
         changePageState(4);
         
     }
@@ -421,9 +512,11 @@ function ConsolidatePage(props){
                 return <RequestForQuoteList numBatches={props.numBatches} RFQData={RFQData} 
                 changePageState={changePageState} setRFQData={setRFQData} customHeaders={customHeaders}/>
             case 4:
-                return <MasterWorkingFile RFQData={RFQData}
+                return <MasterWorkingFile RFQData={RFQData} setRFQData={setRFQData}
                 changePageState={changePageState} customHeaders={customHeaders} 
-                uploadMasterHeaders={masterWorkingHeaders}/>
+                uploadMasterHeaders={masterWorkingHeaders}
+                loadIntoRFQData={loadIntoRFQData} quote={props.quote} user={props.user}
+                />
             case 5:
                 return <MasterUpload headers={masterWorkingHeaders} changePageState={changePageState} onMasterUpload={handleMasterUpload}/>
         }
@@ -576,18 +669,11 @@ function MainQuoteView(props){
         props.changeQuotePageState(3);
         */
     }
+    
     function handlePartUsage(){
-        const getData = {function: 'part_usage', user: props.user, quote_id: props.quote.id};
-        getPLMRequest('quote', getData,
-        (res)=>{
-            console.log(res.data);
-            props.onConsolidate({data: res.data.data, headers: res.data.headers});
-            props.changeQuotePageState(4);
-        },
-        (res)=>{
-            console.log(res.data);
-        });
+        props.changeQuotePageState(4);
     }
+    
     function handleMainUpload(){
         props.changeQuotePageState(1);
         props.selectProduct(null);
@@ -823,7 +909,7 @@ const productSheetHeaders = [
     {label: 'Notes', accessor: 'notes'},
     {label: 'Comments', accessor: 'comments'},
     {label: 'Batch Qty', accessor: 'batch_qty'},
-    {label: 'Customer Price', accessor: 'customer_price'},
+    {label: 'Customer Price', accessor: 'customer_price_string'},
     {label: 'Critical Components', accessor: 'critical_components'},
     {label: 'Custom 1', accessor: 'custom1'},
     {label: 'Custom 2', accessor: 'custom2'},
@@ -973,13 +1059,27 @@ function ViewProduct(props){
 }
 
 function PartUsageView(props){
+    const [data, setData] = useState({data: [], headers: []});
+    useEffect(() => {
+        const getData = {function: 'part_usage', user: props.user, quote_id: props.quote.id};
+        getPLMRequest('quote', getData,
+        (res)=>{
+            console.log(res.data);
+            setData(res.data);
+            //props.onConsolidate({data: res.data.data, headers: res.data.headers});
+            //props.changeQuotePageState(4);
+        },
+        (res)=>{
+            console.log(res.data);
+        });
+    }, []);
     function handleBack(){
         props.changeQuotePageState(0);
     }
     return(
         <div>
         <Button variant='secondary' onClick={handleBack}>Back</Button>
-        <HeaderArrayTable data={props.consolidatedData.data} headers={props.consolidatedData.headers}/>
+        <HeaderArrayTable data={data.data} headers={data.headers}/>
         </div>
     );
 }

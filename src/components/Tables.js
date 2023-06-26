@@ -6,6 +6,7 @@ import { useTable/*, useGroupBy, useExpanded*/ } from 'react-table'
 
 import Table from 'react-bootstrap/Table';
 import Nav from 'react-bootstrap/Nav';
+import Button from 'react-bootstrap/Button';
 import {SimpleDropdown} from './Dropdown';
 import {PartRow, EmptyOffer} from './Offer';
 import {IdCheckbox} from './Checkbox';
@@ -132,6 +133,11 @@ export function SimpleArrayTable(props){
 }
 
 export function HeaderArrayTable(props){
+    function handleDelete(i){
+        return function(){
+            if(props.onDelete) props.onDelete(i);
+        }
+    }
     return(
         <Table>
             <thead className={props.headerClass}>
@@ -139,6 +145,7 @@ export function HeaderArrayTable(props){
                 {props.headers.map((h, i) => 
                 <th key={i}>{h.label}</th>
                 )}
+                {props.delete && <th></th>}
                 </tr>
             </thead>
             <tbody>
@@ -147,6 +154,7 @@ export function HeaderArrayTable(props){
                         {props.headers.map((h, j) =>
                             <td key={j}>{row[h.accessor]}</td>
                         )}
+                        {props.delete && <td><Button onClick={handleDelete(i)} variant='danger'>X</Button></td>}
                     </tr>
                 )}
             </tbody>
@@ -158,15 +166,17 @@ export function PaginationHeaderTable(props){
     const [pageSize, setPageSize] = useState(10);
     const [maxPages, setMaxPages] = useState(0);
     const [filteredData, setFilteredData] = useState(props.data);
-    
+    const [page, setPage] = useState(0);
     useEffect(() => {
         const fd = props.data.slice(0, pageSize);
         setMaxPages(Math.floor(props.data.length/pageSize));
         setFilteredData(fd);
+        setPage(0);
     }, [props.data]);
     function handlePageClick(pn){
         const fd = props.data.slice(pn*pageSize, +(pn*pageSize) + +pageSize);
         setFilteredData(fd);
+        setPage(pn);
         //setCurrPage(pn);
     }
     function handlePageSizeChange(nps){
@@ -174,13 +184,21 @@ export function PaginationHeaderTable(props){
         setPageSize(nps);
         setMaxPages(Math.floor(props.data.length/nps));
         const fd = props.data.slice(0, nps);
+        setPage(0);
         setFilteredData(fd);
+    }
+    function getLine(i){
+        return props.data[(page*pageSize)+i];
+    }
+    function handleDelete(i){
+        const line = getLine(i);
+        if(props.onDelete) props.onDelete(line);
     }
     return(
         <>
         <div className='MainTable'>
             <HeaderArrayTable data={filteredData} headers={props.headers} 
-            headerClass={props.headerClass}/>
+            headerClass={props.headerClass} delete={props.delete} onDelete={handleDelete}/>
         </div>
         <div className='PageInterface'>
             <div>
@@ -193,7 +211,9 @@ export function PaginationHeaderTable(props){
 }
 
 export function SearchPaginationTable(props){
-    const [filteredData, setFilteredData] = useState(props.data);
+    const [filteredData, setFilteredData] = useState(props.data.map((line, i) => {
+        return {...line, lineId: i};
+    }));
     const [searchTerm, setSearchTerm] = useState('');
     const [searchField, setSearchField] = useState(props.searchField);
     const [resetPage, setResetPage] = useState(0);
@@ -233,16 +253,20 @@ export function SearchPaginationTable(props){
         setResetPage(resetPage+1);
         setFieldIndex(i);
     }
+    //function handleDelete(i){
+
+    //}
     //console.log(filteredData);
     return(
         <>
-        <div className='Hori'>
+        <div className={'HoriCenter '+props.className}>
+            {props.searchName}
             <TextControl onChange={handleChangeSearch}/>
             {props.fieldOptions && <SimpleDropdown items={props.headers.map((h) => h.label)} 
             selected={props.headers[fieldIndex].label} onChange={handleFieldChange}/>}
         </div>
         <PaginationHeaderTable headers={props.headers} data={filteredData} headerClass={props.headerClass}
-        reset={resetPage}/>
+        reset={resetPage} delete={props.delete} onDelete={props.onDelete}/>
         </>
     );
 }

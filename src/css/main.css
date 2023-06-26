@@ -292,10 +292,34 @@ tr.HighlightedRow{
 }
 
 .ToggleItem{
+    cursor: pointer;
     background-color: white;
 }
 
 .ToggleItem:active{
     background-color: #0d6efd;
     color: white;
+}
+
+.StaticTable{
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: auto;
+    overflow-y: auto;
+}
+
+.StickyColumn{
+    position: sticky;
+    left: 0px;
+}
+
+.VerticalForm{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+input{
+    max-width: 500px;
 }

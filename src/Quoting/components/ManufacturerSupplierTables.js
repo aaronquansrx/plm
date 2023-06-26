@@ -12,6 +12,7 @@ import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { HeaderArrayTable, PaginationHeaderTable, SearchPaginationTable } from '../../components/Tables';
 import { TabPages } from '../../components/Tabs';
 import { ButtonChooseSearcher } from '../../components/Searcher';
+import { DeleteModal, TemplateModal } from '../../components/Modals';
 
 
 //to test
@@ -41,7 +42,8 @@ export function MasterManufacturers(props){
                 <MasterManufacturerAdder updateData={updateDatas}/>
             </div>
             <SearchPaginationTable data={masterManufacturerData} headers={headers} 
-            headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}/>
+            headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}
+            searchName={'Search: '} />
         </>
     );
 }
@@ -81,115 +83,14 @@ export function AlternateManufacturerReference(props){
         setMasterManufacturerData(data.manufacturer_master);
         setManufacturerMap(data.manufacturer_map);
     }
-    /*
-    function handleChangeInputs(inp){
-        return function(e){
-            setManuInputs(update(manuInputs, {
-                [inp]: {$set: e.target.value}
-            }));
-        }
-    }
-    function handleDeselectManufacturer(){
-        setChosenManufacturer(null);
-        setManufacturerResults([]);
-    }
-    function handleAddManufacturer(){
-        console.log(manuInputs);
-        setManuInputs(update(manuInputs, {
-            string: {$set: ''}
-        }));
-        const hasManufacturerString = manuInputs.manufacturer in manufacturerMap && 
-        manufacturerMap[manuInputs.manufacturer].includes(manuInputs.string);
-        if(!hasManufacturerString){
-        }
-        if(chosenManufacturer && manuInputs.string !== ''){
-            console.log(chosenManufacturer);
-            //call new add reference
-            const postData = {function: 'manufacturer_string_id', 
-            id: chosenManufacturer.id, string: manuInputs.string}
-            console.log(postData);
-            postPLMRequest('srx_records', postData, (res) => {
-                console.log(res.data);
-            },
-            (res) => {
-                console.log(res.data);
-            });
-        }
-    }
-    */
-    /*
-    function handleSearch(s){
-        if(s !== ''){
-            const getData = {
-                function: 'search_manufacturer',
-                search: s,
-                limit: 5
-            }
-            getPLMRequest('srx_records', getData, 
-            (res) => {
-                console.log(res.data);
-                setManufacturerResults(res.data.results);
-            },
-            (res) => {
-                console.log(res.data);
-            });
-        }
-    }
-    function handleSelectManufacturer(i){
-        console.log(i);
-        setChosenManufacturer(manufacturerResults[i]);
-        setManufacturerResults([]);
-    }
-    */
-    /*
-    const tabPages = [
-        {name: 'Add Master Manufacturer',
-        content: <>
-            <Form>
-                <Form.Label>Manufacturer Name</Form.Label>
-                <Form.Control type='text' value={addMasterInputs.name} onChange={handleChangeMasterName}/>
-            </Form>
-            <Form>
-                <Form.Label>Website</Form.Label>
-                <Form.Control type='text' value={addMasterInputs.website} onChange={handleChangeMasterWebsite}/>
-            </Form>
-            <Button onClick={handleAddMasterManufacturer}>Add</Button>
-        </>
-        },
-        {name: 'Add Alternative Manufacturer',
-        content:<><span>Master Manufacturer</span>
-            <ButtonChooseSearcher searchResults={manufacturerResults.map((r)=>r.name)} chosen={chosenManufacturer} 
-            onDeselect={handleDeselectManufacturer} name={chosenManufacturer ? chosenManufacturer.name : ''}
-            onClick={handleSelectManufacturer} onSearch={handleSearch}/>
-            <Form>
-                <Form.Label>Alternative Manufacturer Name</Form.Label>
-                <Form.Control type='text' value={manuInputs.string} onChange={handleChangeInputs('string')}/>
-            </Form>
-            <Button onClick={handleAddManufacturer}>Add Manufacturer</Button>
-            </>
-        }
-    ];*/
-
     return (
         <>
-        {/*<Button variant='secondary' onClick={handleBack}>Back</Button>*/}
         <div className='FlexNormal'>
-            {/*<TabPages tabs={tabPages}/>*/}
-            {/*
-            <span>Manufacturer</span>
-            <ButtonChooseSearcher searchResults={manufacturerResults.map((r)=>r.name)} chosen={chosenManufacturer} 
-            onDeselect={handleDeselectManufacturer} name={chosenManufacturer ? chosenManufacturer.name : ''}
-            onClick={handleSelectManufacturer} onSearch={handleSearch}/>
-            <Form>
-                <Form.Label>Alternative Manufacturer Name</Form.Label>
-                <Form.Control type='text' value={manuInputs.string} onChange={handleChangeInputs('string')}/>
-            </Form>
-            <Button onClick={handleAddManufacturer}>Add</Button>
-            */}
             <AlternateManufacturerAdder updateData={updateDatas}/>
         </div>
         <SearchPaginationTable data={masterManufacturerData} headers={headers} 
-        headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}/>
+        headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}
+        searchName={'Search: '} />
         </>
     );
 }
@@ -226,11 +127,9 @@ export function MasterManufacturerAdder(props){
     }
     return(
         <>
-        <Form>
+        <Form className={'VerticalForm'}>
             <Form.Label>Manufacturer Name</Form.Label>
             <Form.Control type='text' value={addMasterInputs.name} onChange={handleChangeMasterName}/>
-        </Form>
-        <Form>
             <Form.Label>Website</Form.Label>
             <Form.Control type='text' value={addMasterInputs.website} onChange={handleChangeMasterWebsite}/>
         </Form>
@@ -305,7 +204,7 @@ export function AlternateManufacturerAdder(props){
         <ButtonChooseSearcher searchResults={manufacturerResults.map((r)=>r.name)} chosen={chosenManufacturer} 
         onDeselect={handleDeselectManufacturer} name={chosenManufacturer ? chosenManufacturer.name : ''}
         onClick={handleSelectManufacturer} onSearch={handleSearch}/>
-        <Form>
+        <Form className={'VerticalForm'}>
             <Form.Label>Alternative Manufacturer Name</Form.Label>
             <Form.Control type='text' value={manuInputs.string} onChange={handleChangeInputs('string')}/>
         </Form>
@@ -356,18 +255,17 @@ export function SupplierTable(props){
             console.log(res.data);
         });
     }
+    function handleDelete(i){
+        console.log(i);
+    };
     return(
         <>
         <div className='FlexNormal'>
-        <Form>
+        <Form className={'VerticalForm'}>
             <Form.Label>Name</Form.Label>
             <Form.Control type='text' value={addSupplier.name} onChange={handleChangeSupplier('name')}/>
-        </Form>
-        <Form>
             <Form.Label>Phone</Form.Label>
             <Form.Control type='text' value={addSupplier.phone} onChange={handleChangeSupplier('phone')}/>
-        </Form>
-        <Form>
             <Form.Label>Email</Form.Label>
             <Form.Control type='text' value={addSupplier.email} onChange={handleChangeSupplier('email')}/>
         </Form>
@@ -375,17 +273,26 @@ export function SupplierTable(props){
         </div>
         
         <SearchPaginationTable data={supplierData} headers={headers} 
-            headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}/>
+            headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}
+            searchName={'Search: '} />
         </>
     );
 }
 
 export function ManufacturerSupplierTable(props){
-    console.log(props.region);
+    //console.log(props.region);
     const [tableData, setTableData] = useState([]);
     const [chosenManufacturer, setChosenManufacturer] = useState(null);
     const [chosenSupplier, setChosenSupplier] = useState(null);
+
+    //const [page, setPage] = useState(0);
+
+    const [deleteLine, setDeleteLine] = useState(null);
+    const [deleteModal, setDeleteModal] = useState(false);
     useEffect(() => {
+        getTableData();
+    }, []);
+    function getTableData(){
         const getData = {function: 'manufacturer_supplier', region: props.region};
         getPLMRequest('srx_records', getData, 
         (res) => {
@@ -395,7 +302,7 @@ export function ManufacturerSupplierTable(props){
         (res) => {
             console.log(res.data);
         });
-    }, []);
+    }
     function handleSelectManufacturer(manu){
         setChosenManufacturer(manu);
     }
@@ -433,18 +340,62 @@ export function ManufacturerSupplierTable(props){
         {label: 'Supplier', accessor: 'supplier_name'}, 
         {label: 'Email', accessor: 'email'}
     ];
+    function handleDelete(i){
+        //console.log(i);
+        //console.log(tableData[i]);
+        setDeleteLine(i);
+        setDeleteModal(true);
+    };
+    function handleConfirmDelete(){
+        const postData = {
+            function: 'delete_manufacturer_supplier', 
+            manufacturer_id: deleteLine.manufacturer_id,
+            supplier_id: deleteLine.supplier_id,
+            region: props.region
+        }
+        postPLMRequest('srx_records', postData,
+        (res) => {
+            console.log(res.data);
+            getTableData();
+        },
+        (res) => {
+            console.log(res.data);
+        });
+        setDeleteLine(null);
+        setDeleteModal(false);
+    }
+    function handleClose(){
+        setDeleteLine(null);
+        setDeleteModal(false);
+    }
+    const body = <>
+        <div>Manufacturer: {deleteLine !== null && deleteLine.manufacturer_name}</div>
+        <div>Supplier: {deleteLine !== null && deleteLine.supplier_name}</div>
+    </>
+    const footer = <>
+        <Button onClick={handleConfirmDelete}>Confirm</Button>
+        <Button onClick={handleClose} variant={'secondary'}>Cancel</Button>
+    </>
     return(
         <>
         <div className='FlexNormal'>
         <ManufacturerButtonChooser chosenManufacturer={chosenManufacturer}
         onDeselectManufacturer={handleDeselectManufacturer} onSelectManufacturer={handleSelectManufacturer}
         />
-        <SupplierButtonChooser chosenSupplier={chosenSupplier}
+        <SupplierButtonChooser chosenSupplier={chosenSupplier} name={'Supplier'}
         onDeselectSupplier={handleDeselectSupplier} onSelectSupplier={handleSelectSupplier}
         />
         <Button onClick={addManufacturerSupplier}>Add</Button>
         </div>
-        <HeaderArrayTable data={tableData} headers={headers}/>
+        <SearchPaginationTable data={tableData} headers={headers} 
+            headerClass={'TableHeading'} searchField={'manufacturer_name'} 
+            fieldOptions={headers.map((h) => h.accessor)}
+            searchName={'Search: '} 
+            delete={true} onDelete={handleDelete}
+            />
+        <TemplateModal show={deleteModal} title={'Delete Manufacturer Supplier'} 
+        body={body} footer={footer} onClose={handleClose}/>
+        {/*<HeaderArrayTable data={tableData} headers={headers}/>*/}
         </>
     );
 }

@@ -15,7 +15,7 @@ export function NamedCheckBox(props){
 
 export function IdCheckbox(props){
     function handleChange(){
-        props.onChange(props.i);
+        if(props.onChange) props.onChange(props.i);
     }
     return (
         <input className="form-check-input" type="checkbox" checked={props.checked} onChange={handleChange}/>

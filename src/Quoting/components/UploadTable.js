@@ -57,7 +57,7 @@ const defaultHeaders = [
     {label: 'Notes', accessor: 'notes', size: 100},
     {label: 'Comments', accessor: 'comments', size: 1000},
     {label: 'Batch Qty', accessor: 'batch_qty'},
-    {label: 'Customer Price', accescustomersor: 'customer_price'},
+    {label: 'Customer Price', accessor: 'customer_price_string', size: 100},
     {label: 'Critical Components', accessor: 'critical_components', size: 100},
     {label: 'Custom 1', accessor: 'custom1', size: 1000},
     {label: 'Custom 2', accessor: 'custom2', size: 1000},
@@ -461,7 +461,7 @@ export function UploadTableSingle(props){
         if(props.sheets && props.sheets.length > 0){
             setSheetId(0);
         }
-    }, props.sheets);
+    }, [props.sheets]);
     useEffect(() => {
         if(props.sheets && props.sheets.length > sheetId && props.sheets[sheetId].array.length > 0){
             setDropdownHeaders(props.sheets[sheetId].array[0].map(() => '_remove'));
@@ -538,6 +538,7 @@ export function UploadTableSingle(props){
         const headerSet = new Set(headers.map(h => h.label));
         const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
         if(usingDropdown){
+            console.log(dropdownHeaders);
             console.log('data');
             const startRow = selectedRow ? selectedRow.row+1 : 0;
             const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
@@ -562,6 +563,7 @@ export function UploadTableSingle(props){
                 }, {});
                 objs2.push(obj);
             }
+            console.log(objs2);
             sheetState.current = objs2;
             if(truncatedFields.size === 0){
                 const postData = {product_sheet: objs2, function: 'add_product_sheet', user: props.user, 

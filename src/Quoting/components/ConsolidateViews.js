@@ -1,9 +1,10 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useRef} from 'react';
 
 import update from 'immutability-helper';
 import XLSX from 'xlsx';
 
 import Button from 'react-bootstrap/Button';
+import ListGroup from 'react-bootstrap/ListGroup';
 import Table from 'react-bootstrap/Table';
 
 import { Notification } from './Notifications';
@@ -15,15 +16,16 @@ import { MasterManufacturerAdder, AlternateManufacturerAdder, SupplierButtonChoo
 
 import { excelSheetToArray } from '../../scripts/ExcelHelpers';
 
+import { IdCheckbox } from '../../components/Checkbox';
 import { ExcelDropzone } from '../../components/Dropzone';
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 import { bestPriceOffer } from '../../scripts/PLMAlgorithms';
 import { TabPages } from '../../components/Tabs';
-import { LabeledTextInput } from '../../components/Forms';
+import { LabeledTextInput, TextInput } from '../../components/Forms';
 import { pickKeysObject, objectToArray } from '../../scripts/General';
 import { SimpleDropdown } from '../../components/Dropdown';
 import { MasterWorkingUploadTable } from './UploadTable';
-import { ToggleButtonList } from '../../components/ButtonList';
+import { ToggleButtonList, ToggleButton } from '../../components/ButtonList';
 
 
 export function ConsolidateView(props){
@@ -500,7 +502,7 @@ export function SupplierMapping(props){
     });
     const customOptions = ['custom1', 'custom2', 'custom3', 'custom4', 'custom5', 'cms', 'comments',
         'commodity', 'designator', 'fitted', 'footprint', 'notes', 'srx_pn', 'supplier', 'spn',
-        'critical_components', 'value', 'customer_price'
+        'critical_components', 'value', 'customer_price_string'
     ];
     function handleBack(){
         if(props.changePageState){
@@ -642,7 +644,27 @@ export function SupplierMapping(props){
                 //console.log(supplier);
                 //updateSupplierMappingData(res.data.manufacturer_supplier_map,
                 //    res.data.quote_mapping_details.custom_supplier_manufacturer);
-                console.log(res.data);
+                const postData2 = {
+                    function: 'supplier_mapping', quote_id: props.quote.id,
+                    user: props.user, manufacturer_list: props.manufacturerList, 
+                    region: props.region
+                };
+                postPLMRequest('quote', postData2, 
+                (res) => {
+                    console.log(res.data);
+                    if(res.data.success){
+                        updateSupplierMappingData(res.data.manufacturer_supplier_map,
+                            res.data.quote_mapping_details.custom_supplier_manufacturer);
+                        setSupplierInputs(update(supplierInputs, {
+                            [i]: {$set: null}
+                        }));
+                    }
+                },
+                (res) => {
+                    console.log(res.data);
+                });
+
+                /*
                 const newData = props.supplierMappingData.map((line) => {
                     const newLine = {...line};
                     if(newLine.master_manufacturer === props.supplierMappingData[i].master_manufacturer){
@@ -662,12 +684,13 @@ export function SupplierMapping(props){
                     return newLine;
                 });
                 console.log(newData);
-                //updateSupplierMappingData()
                 
-                props.setSupplierMappingData(newData);
+                updateSupplierMappingData(res.data.manufacturer_supplier_map,
+                    res.data.quote_mapping_details.custom_supplier_manufacturer);
                 setSupplierInputs(update(supplierInputs, {
                     [i]: {$set: null}
-                }));
+                }));  
+                */      
             },
             (res) => {
                 console.log(res.data);
@@ -675,9 +698,9 @@ export function SupplierMapping(props){
         }
     }
     function handleAddQuoteSupplier(i, supplier){
-        console.log(supplier);
+        //console.log(supplier);
         const master_manufacturer = props.supplierMappingData[i].full_master_manufacturer;
-        console.log(master_manufacturer);
+        //console.log(master_manufacturer);
         if(master_manufacturer){
             const postData = {
                 function: 'add_quote_custom_supplier', supplier_id: supplier.id, 
@@ -891,7 +914,8 @@ function SupplierMappingTable(props){
                             let cell = '';
                             if(!hasSupplierChooser){
                                 if(row['supplier'+j] === undefined){
-                                    cell = <div style={{position: 'relative', height: 'auto'}}><SupplierButtonChooser chosenSupplier={props.supplierInputs[i]}
+                                    cell = <div style={{position: 'relative', height: 'auto'}}>
+                                        <SupplierButtonChooser chosenSupplier={props.supplierInputs[i]}
                                     onSelectSupplier={handleSelectSupplierInput(i)}
                                     onDeselectSupplier={handleDeselectSupplierInput(i)}/>
                                     {props.supplierInputs[i] && 
@@ -1050,9 +1074,8 @@ export function RFQTable(props){
 }
 
 export function MasterWorkingFile(props){
-    //const [data, setData] = useState(props.RFQData);
     const [showExport, setShowExport] = useState(false);
-    const [showMPNFilterModal, setShowMPNFilterModal] = useState(false);
+    const [stickyTable, setStickyTable] = useState(false);
     const batchHeaders = Array.from(Array(props.numBatches)).map((_, i) => {
         return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
     });
@@ -1060,27 +1083,37 @@ export function MasterWorkingFile(props){
         return {accessor: header, label: header, type: 'custom'};
     });
     const mpnValues = new Set(props.RFQData.map((l) => l.mpn));
-    const [validMPNs, setValidMPNs] = useState(mpnValues);
+    const mfrValues = new Set(props.RFQData.map((l) => l.manufacturer));
+    const supplierValues = new Set(props.RFQData.map((l) => l.supplier));
+    const cpnValues = new Set(props.RFQData.map((l) => l.cpn));
+    const [filters, setFilters] = useState({
+        mpn: {items: mpnValues, active: mpnValues, display: 'MPN Filter', show: false}, 
+        manufacturer: {items: mfrValues, active: mfrValues, display: 'Manufacturer Filter', show: false},
+        supplier: {items: supplierValues, active: supplierValues, display: 'Supplier Filter', show: false},
+        cpn: {items: cpnValues, active: cpnValues, display: 'CPN Filter', show: false}
+    });
     const [filteredData, setFilteredData] = useState(props.RFQData);
-    //console.log(props.RFQData);
-    useState(() => {
-        console.log(validMPNs);
+
+    useEffect(() => {
         const newData = props.RFQData.reduce((arr, line) => {
-            if(validMPNs.has(line.mpn)){
-                arr.push(line);
-            }
+            let notHave = true;
+            Object.entries(filters).forEach(([key,value]) => {
+                if(!value.active.has(line[key])){
+                    notHave = false;
+                }
+            });
+            if(notHave) arr.push(line);
             return arr;
         }, []);
-        console.log(newData);
         setFilteredData(newData);
-    }, [validMPNs]);
+    }, [filters, props.RFQData]);
     const masterHeaders = props.uploadMasterHeaders.reduce((arr, header) => {
         if(header.display){
             arr.push(header);
         }
         return arr;
     }, []);
-    const headers = [
+    const mainHeaders = [
         {accessor: 'system', label: 'System Unique ID'}, 
         {accessor: 'cpn', label: 'CPN'},
         {accessor: 'description', label: 'Description'},
@@ -1088,16 +1121,26 @@ export function MasterWorkingFile(props){
         {accessor: 'mpn', label: 'Approved MPN'},
         {accessor: 'manufacturer', label: 'Approved MFR'},
         {accessor: 'supplier', label: 'Supplier'},
+    ];
+    const otherHeaders = [
         ...customHeaders,
         ...batchHeaders,
         {accessor: 'sum_eau', label: 'Total EAU'},
         {accessor: 'packaging', label: 'Packaging'},
         {accessor: 'plc', label: 'Product Life Cycle'},
-        {accessor: 'customer_price', label: 'Customer Price'},
+        {accessor: 'customer_price_string', label: 'Customer Price'},
         {accessor: 'plm_price', label: 'PLM Price'},
         {accessor: 'distributor', label: 'Distributor'},
+        {accessor: 'selection', label: 'Selection'},
         {accessor: 'status', label: 'Status'},
+        {accessor: 'mqa', label: 'MQA Remarks'},
+        {accessor: 'est_total_po', label: 'Est. Total PO cost (USD)'},
+        {accessor: 'excess', label: 'Excess (USD)'},
         ...masterHeaders
+    ];
+    const headers = [
+        ...mainHeaders,
+        ...otherHeaders
     ];
 
     function handleBack(){
@@ -1110,22 +1153,59 @@ export function MasterWorkingFile(props){
             props.changePageState(5);
         }
     }
-    function handleShowMPNFilter(){
-        setShowMPNFilterModal(true);
-    }
-    function handleCloseMPNFilter(){
-        setShowMPNFilterModal(false);
-    }
-    function handleMPNChangeList(items){
-        const mpnSet = new Set(items);
-        setValidMPNs(new Set(items));
-        const newData = props.RFQData.reduce((arr, line) => {
-            if(mpnSet.has(line.mpn)){
-                arr.push(line);
+    function handleChangeFilterItem(filter, item){
+        console.log(item);
+        let list = new Set(filters[filter].active);
+        if(filters[filter].active.has(item)){
+            list.delete(item);
+        }else{
+            list.add(item);
+        }
+        console.log(list);
+        setFilters(update(filters, {
+            [filter]: {
+                active: {$set: new Set(list)}
             }
-            return arr;
-        }, []);
-        setFilteredData(newData);
+        }));
+    }
+    /*
+    function handleChangeFilterList(filter, list){
+        setFilters(update(filters, {
+            [filter]: {
+                active: {$set: new Set(list)}
+            }
+        }));
+    }*/
+    function handleShowFilter(filter){
+        setFilters(update(filters, {
+            [filter]: {
+                show: {$set: true}
+            }
+        }));
+    }
+    function handleCloseFilter(filter){
+        return function(){
+            console.log(filter);
+            setFilters(update(filters, {
+                [filter]: {
+                    show: {$set: false}
+                }
+            }));
+        }
+    }
+    function handleSelectAllFilter(filter){
+        setFilters(update(filters, {
+            [filter]: {
+                active: {$set: new Set(filters[filter].items)}
+            }
+        }));
+    }
+    function handleDeselectAllFilter(filter){
+        setFilters(update(filters, {
+            [filter]: {
+                active: {$set: new Set()}
+            }
+        }));
     }
     function handleShowExport(){
         setShowExport(true);
@@ -1133,13 +1213,19 @@ export function MasterWorkingFile(props){
     function handleCloseExport(){
         setShowExport(false);
     }
+    function getFilterValues(filter){
+        return filters[filter].items;
+    }
     function handleExportExcel(fn){
         const keys = headers.map((h) => h.accessor);
         const labels = headers.map((h) => h.label);
-        const formattedData2 = props.RFQData.map((line) => {
+        const formattedData = props.RFQData.map((line) => {
             return objectToArray(line, keys);
         });
-        const excelData = [labels].concat(formattedData2);
+        formattedData.forEach(line => {
+            line.selection = line.selection ? 1 : 0;
+        });
+        const excelData = [labels].concat(formattedData);
         console.log(excelData);
         
         const sheet = XLSX.utils.aoa_to_sheet(excelData);
@@ -1148,81 +1234,296 @@ export function MasterWorkingFile(props){
         XLSX.writeFile(wb, fn+'.xlsx');
         handleCloseExport();
     }
+    function toggleStickyTable(){
+        setStickyTable(!stickyTable);
+    }
+    function handleClickSelection(i){
+        i = getRealLineNum(i);
+        const newValue = !props.RFQData[i].selection;
+        const updateData = {
+            [i]: {
+                selection: {$set: newValue}
+            }
+        }
+        const selectionValueInt = newValue ? 1 : 0;
+        const updateDataWF = [
+            {update_fields: [{accessor: 'selection', value: selectionValueInt, type: 'integer'}], line: props.RFQData[i]}
+        ];
+        if(newValue){
+            const findIndex = props.RFQData.reduce((ln, line, n) => {
+                if(line.cpn === props.RFQData[i].cpn){
+                    if(line.selection){
+                        ln = n;
+                    }
+                }
+                return ln;
+            }, null);
+            if(findIndex !== null && i !== findIndex){
+                Object.assign(updateData, {[findIndex] : {
+                    selection: {$set: false}
+                }});
+                updateDataWF.push({
+                    update_fields: [{accessor: 'selection', value: 0, type: 'integer'}], 
+                    line: props.RFQData[findIndex]
+                });
+            }
+        }
+        updateRFQData(updateDataWF);
+        props.setRFQData(update(props.RFQData, updateData));
+    }
+    function updateRFQData(updateData){
+        const postData = {
+            function: 'update_working_file', quote_id: props.quote.id, user: props.user,
+            update_data: updateData
+        }
+        postPLMRequest('quote', postData,
+        (res) => {
+            console.log(res.data);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
+    function handleClearFilters(){
+        //todo
+    }
+    function handleChangeStatus(ln, newStatus){
+        ln = getRealLineNum(ln);
+        const updateData = [{
+            update_fields:[{accessor: 'status', value: newStatus, type: 'string'}],
+            line: props.RFQData[ln]
+        }];
+        updateRFQData(updateData);
+    }
+    function handleChangeMQA(ln, newMQA){
+        //console.log(filteredData);
+        //console.log(ln);
+        ln = getRealLineNum(ln);
+        //console.log(ln);
+        props.setRFQData(update(props.RFQData, {
+            [ln]: {mqa: {$set: newMQA}}
+        }));
+        const updateData = [{
+            update_fields:[{accessor: 'mqa', value: newMQA, type: 'string'}],
+            line: props.RFQData[ln]
+        }];
+        updateRFQData(updateData);
+    }
+    function getRealLineNum(i){
+        return filteredData[i].lineNum;
+    }
     return(
         <>
         {props.navigation}
-        <div className='FlexNormal'>
+        <div className='FlexNormal' style={{display: 'flex', flexDirection: 'row', justifyContent: 'center'}}>
             <Button variant='secondary' onClick={handleBack}>Back</Button>
             <Button onClick={handleUpload}>Upload</Button>
+            <Button onClick={handleClearFilters}>Clear Filters</Button>
+            <ListGroup.Item className={'ToggleItem'} onClick={toggleStickyTable} active={stickyTable}>
+                Freeze Pane
+            </ListGroup.Item>
             <Button onClick={handleShowExport}>Export</Button>
         </div>
         <div className='MainTable'>
-            <MasterWorkingTable data={filteredData} headers={headers} 
-            onClickMPN={handleShowMPNFilter}/>
+            <MasterWorkingTable data={filteredData} headers={headers} stickyTable={stickyTable}
+            mainHeaders={mainHeaders} otherHeaders={otherHeaders}
+            filterNames={Object.keys(filters)} onClickFilter={handleShowFilter}
+            onClickSelection={handleClickSelection}
+            onChangeStatus={handleChangeStatus}
+            onChangeMQA={handleChangeMQA}
+            />
         </div>
-        <MPNFilterModal show={showMPNFilterModal} mpns={mpnValues} onClose={handleCloseMPNFilter}
-        validMPNs={validMPNs} onChangeList={handleMPNChangeList}/>
+        {Object.entries(filters).map(([key, value], i) => {
+            return <FilterModal key={i} show={value.show} title={value.display} 
+            items={getFilterValues(key)} onClose={handleCloseFilter(key)} 
+            itemsActive={value.active} filter={key}
+            onSelectAll={handleSelectAllFilter} onDeselectAll={handleDeselectAllFilter}
+            onChangeItem={handleChangeFilterItem}/>
+        })}
         <ExcelExportModal show={showExport} onClose={handleCloseExport} onExport={handleExportExcel}/>
         </>
     );
 }
 
 function MasterWorkingTable(props){
+    const stickyColumnRefs = useRef([]);
+    const [editMQA, setEditMQA] = useState(null);
+    const [leftColumn, setLeftColumn] = useState(props.mainHeaders.map(() => 0));
     const statusOptions = ['Pending RFQ', 'RFQ Failed', 'Pending Quote', 'Missing Info', 'Quoted'];
-
-    function handleClickMpn(){
-        props.onClickMPN();
+    //console.log(props.filterNames);
+    useEffect(() => {
+        let left = 0;
+        const lefts = [];
+        console.log(stickyColumnRefs);
+        stickyColumnRefs.current.map(r => {
+            lefts.push(left);
+            if(r != null){
+                left += r.clientWidth;
+            }
+        });
+        setLeftColumn(lefts);
+        //console.log(stickyColumnRefs);
+    }, [stickyColumnRefs, props.stickyTable, props.data]);
+    useEffect(() => {
+        setEditMQA(null);
+    }, [props.data]);
+    function handleClickHeader(headerName){
+        return function(){  
+            props.onClickFilter(headerName);
+        }
+    }
+    function renderMainHeaders(){
+        return props.mainHeaders.map((h, i) => {
+            const sty = props.stickyTable ? {position: 'sticky', left: leftColumn[i]+'px', zIndex: 5} : {};
+            if(props.filterNames.includes(h.accessor)){
+                return <th key={i} onClick={handleClickHeader(h.accessor)} className='Select' style={sty} ref={r => stickyColumnRefs.current[i] = r}>
+                    {<SimplePopover popoverBody={'Filter '+h.label} trigger={['hover', 'focus']} placement='auto'><div>{h.label}</div></SimplePopover>}
+                </th>
+            }
+            return <th key={i} ref={r => stickyColumnRefs.current[i] = r} style={sty}>{h.label}</th>;
+        })
+    }
+    function renderOtherHeaders(){
+        return props.otherHeaders.map((h, i) => {
+            return <th key={i}>{h.label}</th>;
+        });
+    }
+    function handleClickData(i, j, accessor){
+        return function(){
+            if(accessor === 'selection'){
+                //console.log(i + ' ' + j);
+            }
+            if(accessor === 'mqa'){
+                console.log(i + ' ' + j);
+                setEditMQA(i);
+            }
+        }
+    }
+    function handleClickSelection(i){
+        return function(){
+            props.onClickSelection(i);
+        }
+    }
+    function handleMQAEdit(ln){
+        return function(str){
+            //console.log(e);
+            props.onChangeMQA(ln, str)
+            setEditMQA(null);
+        }
+    }
+    function handleChangeStatus(ln){
+        return function(item){
+            props.onChangeStatus(ln, item);
+        }
     }
     return(
+        <>
         <Table>
         <thead className={'TableHeading'}>
             <tr>
-            {props.headers.map((h, i) => {
-                if(h.accessor === 'mpn'){
-                    return <th key={i} onClick={handleClickMpn}>{h.label}</th>
+            {props.mainHeaders.map((h, i) => {
+                const sty = props.stickyTable ? {position: 'sticky', left: leftColumn[i]+'px', background: 'rgb(202, 205, 207)' } : {};
+                if(props.filterNames.includes(h.accessor)){
+                    return <th key={i} onClick={handleClickHeader(h.accessor)} className='Select' 
+                    ref={r => stickyColumnRefs.current[i] = r} style={sty}> 
+                        {<SimplePopover popoverBody={'Filter '+h.label} trigger={['hover', 'focus']} placement='auto'>
+                            <div>{h.label}</div>
+                        </SimplePopover>}
+                    </th>
                 }
-                return <th key={i}>{h.label}</th>;
-            }
-            )}
+                return <th key={i} style={sty}
+                ref={r => stickyColumnRefs.current[i] = r}>
+                    {h.label}
+                    </th>;
+            })}
+            {props.otherHeaders.map((h, i) => {
+                const sty = i === 0 ? {} : {}
+                return <th key={i} style={sty}>{h.label}</th>;
+            })}
             </tr>
         </thead>
         <tbody>
             {props.data.map((row, i) => {
-                //const cn = selectedRow === i ? 'HighlightedRow' : '';
+                //const lineNum = row.lineNum;
+                //console.log(lineNum);
                 return(
-                <tr key={i} className={''} /*onClick={handleSelectLine(i)}*/>
+                <tr key={i} className={''}>
                     {props.headers.map((h, j) => {
                         let contents = <></>;
+                        const sty = props.stickyTable && j < leftColumn.length ? 
+                        {position: 'sticky', left: leftColumn[j]+'px', background: 'white', zIndex: 6} 
+                        : {};
                         if(h.type === 'custom'){
                             if(row[h.accessor].length > 0){
                                 contents = row[h.accessor][0];
                             }
+                        }else if(h.accessor === 'mqa'){
+                            contents = editMQA !== null && editMQA === i ? <LabeledTextInput onBlur={handleMQAEdit(i)}/> : row[h.accessor];
                         }else{
                             if(h.accessor === 'status'){
-                                contents = <SimpleDropdown selected={row.status} items={statusOptions}/>
+                                contents = <SimpleDropdown selected={row.status} items={statusOptions} 
+                                onChange={handleChangeStatus(i)}/>
+                            }else if(h.accessor === 'selection'){
+                                contents = <IdCheckbox checked={row.selection} onChange={handleClickSelection(i)}/>
+                            }else if((h.accessor === 'est_total_po' || h.accessor === 'excess') && row[h.accessor] !== null){
+                                contents = row[h.accessor].toFixed(2);
                             }else{
                                 contents = row[h.accessor];
                             }
                         }
-                        return <td key={j}>{contents}</td>;
+                        return <td key={j} onClick={handleClickData(i, j, h.accessor)} style={sty}>{contents}</td>;
                     })}
                 </tr>
                 )}
             )}
         </tbody>
     </Table> 
+    </>
     );
 }
 
-function MPNFilterModal(props){
+function FilterModal(props){
+    const [searchTerm, setSearchTerm] = useState('');
+    const [buttonList, setButtonList] = useState([...props.items]);
     function handleChangeList(items){
-        props.onChangeList(items);
+        if(props.onChangeList) props.onChangeList(props.filter, items);
     }
+    function handleChangeItem(item, i){
+        console.log(item);
+        if(props.onChangeItem) props.onChangeItem(props.filter, item);
+    }
+    function handleSelectAll(){
+        if(props.onSelectAll) props.onSelectAll(props.filter);
+    }
+    function handleDeselectAll(){
+        if(props.onDeselectAll) props.onDeselectAll(props.filter);
+    }
+    function handleChangeTerm(st){
+        console.log(st);
+        if(st !== ''){
+            const buttons = [...props.items].reduce((arr, item) => {
+                const lowerItem = item.toLowerCase();
+                if(lowerItem.includes(st.toLowerCase())){
+                    arr.push(item);
+                }
+                return arr;
+            }, []);
+            setButtonList(buttons);
+        }else{
+            setButtonList([...props.items]);
+        }
+        setSearchTerm(st);
+    }
+    //console.log(props.itemsActive);
+    //console.log([...props.itemsActive]);
     const body = <>
-        <ToggleButtonList items={[...props.mpns]} onChangeList={handleChangeList}/>
-    </>
+        <Button onClick={handleSelectAll}>Select All</Button>
+        <Button onClick={handleDeselectAll}>Deselect All</Button>
+        <LabeledTextInput onChange={handleChangeTerm}/>
+        <ToggleButtonList items={buttonList} itemsActive={[...props.itemsActive]} onToggleItem={handleChangeItem} onChangeList={handleChangeList}/>
+    </>;
     return(
-        <TemplateModal show={props.show} body={body} onClose={props.onClose}/>
+        <TemplateModal show={props.show} title={props.title} body={body} onClose={props.onClose}/>
     );
 }
 

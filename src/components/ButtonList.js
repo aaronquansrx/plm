@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 
 import update from 'immutability-helper';
 import { ListGroup } from 'react-bootstrap';
+import Button from 'react-bootstrap/Button'
 
 export function ChooseButtonList(props){
     //const [chosen, setChosen] = useState('');
@@ -48,7 +49,19 @@ export function ChooseButtonList(props){
 }
 
 export function ToggleButtonList(props){
-    const [itemState, setItemState] = useState(props.state ? props.state : props.items.map(() => true));
+    const [itemState, setItemState] = useState(getItemState());
+    useEffect(() => {
+        if(props.itemsActive){
+            console.log(props.itemsActive);
+            setItemState(getItemState());
+        }
+    }, [props.itemsActive]);
+    function getItemState(){
+        return props.itemsActive ? props.items.map((item) => {
+            if(props.itemsActive.includes(item)) return true;
+            return false;
+        }) : props.items.map(() => true);
+    }
     function handleToggle(item, i){
         return function(){
             if(props.onToggleItem) props.onToggleItem(item, i);
@@ -66,10 +79,22 @@ export function ToggleButtonList(props){
     return(
         <ListGroup style={{width: 'fit-content', cursor: 'pointer'}}>
             {props.items.map((item, i) => 
-            <ListGroup.Item key={i} className={'ToggleItem'} onClick={handleToggle(item, i)} active={itemState[i]}>
+            <ListGroup.Item key={i} className={'ToggleItem'} onMouseDown={handleToggle(item, i)} active={itemState[i]}>
                 {item}
             </ListGroup.Item>
             )}
         </ListGroup>
+    );
+}
+
+export function ToggleButton(props){
+    const [isOn, setIsOn] = useState(props.init ? props.init : false);
+    function handleToggle(){
+        const newOn = !isOn;
+        if(props.onToggle) props.onToggle(newOn);
+        setIsOn(newOn);
+    }
+    return(
+        <Button onClick={handleToggle} active={isOn}></Button>
     );
 }

@@ -18,6 +18,7 @@ import {ExcelDropzone} from '../../components/Dropzone';
 import {IdCheckbox} from '../../components/Checkbox';
 import { HeaderArrayTable } from '../../components/Tables';
 import { DeleteModal } from '../../components/Modals';
+import { WarningToolTipButton } from '../../components/Tooltips';
 
 import ListGroup from 'react-bootstrap/ListGroup';
 import Badge from 'react-bootstrap/Badge';
@@ -106,6 +107,12 @@ function QuotingMain(props){
 
 function Main(props){
     const clientUrl = useClientUrl();
+    const [errorMessage, setErrorMessage] = useState(null);
+    useEffect(() => {
+        if(props.user){
+            setErrorMessage(null);
+        }
+    }, [props.user]);
     function handleDrop(wb, file){
         console.log(wb);
         const sheetNames = wb.SheetNames;
@@ -113,57 +120,17 @@ function Main(props){
             const sheetArray = excelSheetToArray(wb.Sheets[sn]);
             return {name: sn, array: sheetArray};
         });
-        /*
-        const ws = wb.Sheets['Material'];
-        const data = XLSX.utils.sheet_to_json(ws, {header: 1});
-        const colRange = XLSX.utils.decode_range(ws['!ref']).e.c+1;
-        const passData = data.reduce((arr,l) => {
-            const line = [];
-            let activeLine = false; // check if line has content other than ''
-            for(let i=0; i<colRange; i++){
-                if(l[i]){
-                    line.push(l[i].toString());
-                    activeLine = true;
-                }else{
-                    line.push('');
-                }
-            }
-            if(activeLine) arr.push(line);
-            return arr;
-        }, []);
-        */
-
-        /*
-
-        const wbh = new WorkbookHandler(wb);
-        //const esp = new ExcelSheetParser(wbh.getSheet('Material'));
-        const espStructure = new ExcelSheetParser(wbh.getSheet('Structure'));
-        const structureObject = espStructure.toObjectArray(0);
-        console.log(structureObject);
-        const products = structureObject.map((obj) => obj.Products);
-        console.log(products);
-        const quoteSheets = products.reduce((obj, p) => {
-            const esp = new ExcelSheetParser(wbh.getSheet(p));
-            const arr = esp.toObjectArray(0, quoteHeaders);
-            obj[p] = arr;
-            return obj;
-        }, {});
-        console.log(quoteSheets);
-
-        */
-
-        //const obj = esp.toObjectArray(4);
-        //console.log(obj);
-
-        //console.log(passData);
-        //console.log('drop');
         props.droppedFile(sheets);
     }
     function os(r){
         console.log(r);
     }
     function handleCreateQuote(){
-        props.changePageState(2);
+        if(props.user){
+            props.changePageState(2);
+        }else{
+            setErrorMessage('Not logged in');
+        }
     }
     function handleTemplates(){
         props.changePageState(4);
@@ -178,7 +145,8 @@ function Main(props){
                 <p>Upload Quotes</p>
             </ExcelDropzone>
             */}
-            <Button onClick={handleCreateQuote}>Create Quote</Button>
+            <WarningToolTipButton onClick={handleCreateQuote} buttonText={'Create Quote'}>{errorMessage}</WarningToolTipButton>
+            {/*<Button onClick={handleCreateQuote}>Create Quote</Button>*/}
             {/*<Button onClick={handleTemplates}>Templates</Button>*/}
             <h2>Quote List</h2>
             {/*
