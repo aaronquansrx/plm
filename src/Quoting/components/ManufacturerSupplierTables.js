@@ -379,13 +379,15 @@ export function ManufacturerSupplierTable(props){
     return(
         <>
         <div className='FlexNormal'>
-        <ManufacturerButtonChooser chosenManufacturer={chosenManufacturer}
-        onDeselectManufacturer={handleDeselectManufacturer} onSelectManufacturer={handleSelectManufacturer}
-        />
-        <SupplierButtonChooser chosenSupplier={chosenSupplier} name={'Supplier'}
-        onDeselectSupplier={handleDeselectSupplier} onSelectSupplier={handleSelectSupplier}
-        />
-        <Button onClick={addManufacturerSupplier}>Add</Button>
+            <div className='VerticalForm'>
+            <ManufacturerButtonChooser chosenManufacturer={chosenManufacturer}
+            onDeselectManufacturer={handleDeselectManufacturer} onSelectManufacturer={handleSelectManufacturer}
+            />
+            <SupplierButtonChooser chosenSupplier={chosenSupplier} name={'Supplier'}
+            onDeselectSupplier={handleDeselectSupplier} onSelectSupplier={handleSelectSupplier}
+            />
+            <Button onClick={addManufacturerSupplier}>Add</Button>
+            </div>
         </div>
         <SearchPaginationTable data={tableData} headers={headers} 
             headerClass={'TableHeading'} searchField={'manufacturer_name'} 

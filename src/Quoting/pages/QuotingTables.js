@@ -22,7 +22,9 @@ function QuotingTables(props){
     ];
     return(
         <>
+        <div className='FlexNormal'>
         <TabPages tabs={tabsContent}/>
+        </div>
         </>
     );
 }
