@@ -104,7 +104,7 @@ function QuoteView(props){
         //setConsolidateStatus('Consolidate running');
     }
     function renderView(){
-        const numBatches = consolidatedData ? consolidatedData.num_batches : 0;
+        //const numBatches = consolidatedData ? consolidatedData.num_batches : 0;
         switch(pageState.current){
             case 0:
                 return <MainQuoteView quote={props.quote} updateProducts={updateProducts} products={products} 
@@ -123,7 +123,7 @@ function QuoteView(props){
                 quote={props.quote} user={props.user} />
 
             case 3:
-                return <ConsolidatePage user={props.user} quote={props.quote} numBatches={numBatches}
+                return <ConsolidatePage user={props.user} quote={props.quote}
                 highlightedProduct={highlightedProduct}
                 store={props.store} currency={props.currency} changeQuotePageState={changeQuotePageState}/>
             case 4:
@@ -141,26 +141,27 @@ function QuoteView(props){
 }
 
 function ConsolidatePage(props){
+    const messageTime = 3000;
     const numSupplierColumns = 5;
     const [pageState, setPageState] = useState({current:0, last: null});
     const [customHeaders, setCustomHeaders] = useState([]);
     const [consolidatedData, setConsolidatedData] = useState({
-        data: [], headers: [], manufacturers: {}, totals: null, num_batches: 0
+        data: [], headers: [], manufacturers: {}, totals: null, num_batches: 0, success: false
     });
     //const [priceConsolidatedData, setPriceConsolidatedData] = useState([]);
     const [priceSupplierMappingData, setPriceSupplierMappingData] = useState([]);
     const [RFQData, setRFQData] = useState([]);
-    const [consolidateStatus, setConsolidateStatus] = useState({success: false,  message: null});
+    const [consolidateStatus, setConsolidateStatus] = useState({success: false,  message: null}); // success not used anymore (uses consolidatedData.success)
     //const [selectedPriceData, setSelectedPriceData] = useState(null);
     const [priceGroups, setPriceGroups] = useState([]);
     const [region, setRegion] = useState('AU');
     useState(() => {
-        getAllConsolidateData();
+        if(!consolidatedData.success) getAllConsolidateData();
     }, []);
     function getAllConsolidateData(){
         const getData = props.highlightedProduct === null ? {function: 'consolidate_quote', user: props.user, quote_id: props.quote.id} 
         : {function: 'consolidate_product', user: props.user, product_id: props.highlightedProduct};
-        setConsolidateStatus('Consolidate running');
+        setConsolidateStatus({success: false, message: 'Consolidate running'});
         getPLMRequest('quote', getData,
         (res)=>{
             console.log(res.data);
@@ -172,17 +173,23 @@ function ConsolidatePage(props){
             setPriceSupplierMappingData(spd);
             requestInitialPriceData(res.data.data, res.data.manufacturers);
             //requestSupplierMapping(res.data.data, res.data.manufacturers);
-            setConsolidateStatus('Consolidate completed');
+            //setTimeout(() => setConsolidateStatus({success: true, message: 'Consolidate completed'}), 4000);
+            setConsolidateStatus({success: true, message: 'Consolidate completed'})
             setTimeout(() => {
-                setConsolidateStatus(null);
-            }, 2000);
+                setConsolidateStatus(update(consolidateStatus, {
+                    success: {$set: true},
+                    message: {$set: null}
+                }));
+            }, messageTime);
         },
         (res)=>{
             console.log(res.data);
             setConsolidateStatus('Consolidate error');
             setTimeout(() => {
-                setConsolidateStatus(null);
-            }, 2000);
+                setConsolidateStatus(update(consolidateStatus, {
+                    message: {$set: null}
+                }));
+            }, messageTime);
         });
         const getPriceGroupData = {
             function: 'price_groups', quote_id: props.quote.id, user: props.user
@@ -399,10 +406,17 @@ function ConsolidatePage(props){
         return compRFQData;
     }
     function changePageState(i){
-        setPageState(update(pageState, {
-            current: {$set: i},
-            last: {$set: pageState.last}
-        }));
+        if(consolidatedData.success){
+            setPageState(update(pageState, {
+                current: {$set: i},
+                last: {$set: pageState.last}
+            }));
+        }else{
+            setConsolidateStatus(update(consolidateStatus, {
+                message: {$set: 'Wait for consolidate completion'}
+            }));
+            setTimeout(() => setConsolidateStatus(update(consolidateStatus, {message: {$set: null}}), messageTime));
+        }
     }
     const masterWorkingHeaders = [
         {accessor: 'mpn', label: 'Approved MPN', display: false},
@@ -499,7 +513,7 @@ function ConsolidatePage(props){
                 requestSupplierMapping={requestSupplierMapping}
                 />
             case 2:
-                return <SupplierMapping numBatches={props.numBatches} consolidatedData={consolidatedData}
+                return <SupplierMapping numBatches={consolidatedData.num_batches} consolidatedData={consolidatedData}
                 changePageState={changePageState} supplierMappingData={priceSupplierMappingData}
                 setSupplierMappingData={setPriceSupplierMappingData} setCustomHeaders={setCustomHeaders}
                 region={region} setRegion={setRegion} quote={props.quote} user={props.user}
@@ -509,10 +523,10 @@ function ConsolidatePage(props){
                 updateRFQData={updateRFQData}
                 />
             case 3:
-                return <RequestForQuoteList numBatches={props.numBatches} RFQData={RFQData} 
+                return <RequestForQuoteList numBatches={consolidatedData.num_batches} RFQData={RFQData} 
                 changePageState={changePageState} setRFQData={setRFQData} customHeaders={customHeaders}/>
             case 4:
-                return <MasterWorkingFile RFQData={RFQData} setRFQData={setRFQData}
+                return <MasterWorkingFile numBatches={consolidatedData.num_batches} RFQData={RFQData} setRFQData={setRFQData}
                 changePageState={changePageState} customHeaders={customHeaders} 
                 uploadMasterHeaders={masterWorkingHeaders}
                 loadIntoRFQData={loadIntoRFQData} quote={props.quote} user={props.user}
@@ -525,7 +539,7 @@ function ConsolidatePage(props){
         <>
         <ConsolidateNavigation changeQuotePageState={props.changeQuotePageState} changePageState={changePageState} selected={pageState.current}/>
         <div>
-            {consolidateStatus}
+            {consolidateStatus.message}
         </div>
         {renderView()}
         </>

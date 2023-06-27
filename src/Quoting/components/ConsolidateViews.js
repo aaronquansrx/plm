@@ -481,6 +481,7 @@ export function SupplierMapping(props){
     const batchHeaders = Array.from(Array(props.numBatches)).map((_, i) => {
         return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
     });
+    console.log(batchHeaders);
     const [errorText, setErrorText] = useState(null);
     useEffect(() => {
         if(errorText !== null) setTimeout(() => setErrorText(null), 2000);
@@ -955,26 +956,11 @@ function SupplierMappingTable(props){
 }
 
 export function RequestForQuoteList(props){
-    //const [data, setData] = useState(getRFQData());
     const [showExportModal, setShowExportModal] = useState(false);
-    /*
-    function getRFQData(){
-        const newData = props.editedData.reduce((arr, line) => {
-            const lines = line.suppliers.map((sup,i) => {
-                const sys = line.system+'.'+i;
-                return {...line, system: sys, supplier: sup.supplier_name, email: sup.email};
-            });
-            return arr.concat(lines);
-        }, []);
-        return newData;
-    }
-    useEffect(() => {
-        props.setRFQData(data);
-    }, [data]);
-    */
     const batchHeaders = Array.from(Array(props.numBatches)).map((_, i) => {
         return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
     });
+    
     const customHeaders = props.customHeaders.map((header) => {
         return {accessor: header, label: header, type: 'custom'};
     });
