@@ -257,7 +257,7 @@ function TableInterface(props){
     //const tbodyClass = ;
     return(
     <div>
-        <ExportModal show={showExportModal} hideAction={handleCloseExport} exportAction={handleExport}/>
+        <ExportComponentAttributeModal show={showExportModal} hideAction={handleCloseExport} exportAction={handleExport}/>
         <div>
             <Button onClick={handleAddColumn}>Add Column</Button>
         {error === null ? <Button onClick={handleDataLookup}>Data Lookup</Button> : 
@@ -320,7 +320,7 @@ function TableInterface(props){
     );
 }
 
-function ExportModal(props){
+export function ExportComponentAttributeModal(props){
     const [fn, setFn] = useState('');
     const [csv, setCsv] = useState(false);
     const handleClose = () => props.hideAction();

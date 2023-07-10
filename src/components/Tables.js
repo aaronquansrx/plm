@@ -58,7 +58,7 @@ export function TabbedSheetTable(props){
 }
 
 export function EditTable(props){
-    const [editValue, setEditValue] = useState(null);
+    const [editValue, setEditValue] = useState('');
     const [editCell, setEditCell] = useState(null);
     function handleEdit(i, j, val){
         return function(){
@@ -193,6 +193,7 @@ export function PaginationHeaderTable(props){
     function handleDelete(i){
         const line = getLine(i);
         if(props.onDelete) props.onDelete(line);
+        setPage(0);
     }
     return(
         <>
@@ -253,9 +254,10 @@ export function SearchPaginationTable(props){
         setResetPage(resetPage+1);
         setFieldIndex(i);
     }
-    //function handleDelete(i){
-
-    //}
+    function handleDelete(i){
+        setResetPage(resetPage+1);
+        if(props.onDelete) props.onDelete(i);
+    }
     //console.log(filteredData);
     return(
         <>
@@ -265,8 +267,9 @@ export function SearchPaginationTable(props){
             {props.fieldOptions && <SimpleDropdown items={props.headers.map((h) => h.label)} 
             selected={props.headers[fieldIndex].label} onChange={handleFieldChange}/>}
         </div>
-        <PaginationHeaderTable headers={props.headers} data={filteredData} headerClass={props.headerClass}
-        reset={resetPage} delete={props.delete} onDelete={props.onDelete}/>
+        <PaginationHeaderTable headers={props.headers} data={filteredData} 
+        headerClass={props.headerClass}
+        reset={resetPage} delete={props.delete} onDelete={handleDelete}/>
         </>
     );
 }

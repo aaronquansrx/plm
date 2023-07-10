@@ -9,6 +9,7 @@ import axios from 'axios';
 //import BOMInterface from './containers/BOMInterface';
 import PartDetails from './pages/PartDetails';
 import PartSearch from './pages/PartSearch';
+import QuotingUsers from './Quoting/pages/QuotingUsers';
 import Login from './pages/Login';
 import Index from './pages/Index';
 import BOMMain from './pages/BOMMain';
@@ -19,9 +20,11 @@ import QuotingMain from './Quoting/pages/QuotingMain';
 import QuotingTables from './Quoting/pages/QuotingTables';
 import Feedback from './pages/Feedback';
 import Test from './pages/Test';
+import SingleComponentAttribute from './pages/SingleComponentAttribute';
 import { MainNavbar } from './containers/Navbar';
 import { VersionModal } from './components/Modals';
 import useUsername from './hooks/useUsername';
+import { useLocalStorage, useSessionStorage } from './hooks/Storage';
 import './css/App.css';
 import CircularBufferTest from './pages/CircularBufferTest';
 
@@ -39,12 +42,14 @@ const inProduction = process.env.NODE_ENV === 'production';
 
 //use this
 const pages = [
-  {path: 'quoting', title: 'E-Quote', element: (params) => <QuotingMain user={params.user} 
-  store={params.options.store} currency={params.options.currency}/>},
-  {path: 'bomtool', title: 'Open Market BOM Search', element: (params) => <BOMMain options={params.options} changeLock={params.lock} user={params.user}/>},
+  {path: 'quoting', title: 'E-Quote', element: (params) => <QuotingMain username={params.username} 
+  store={params.options.store} currency={params.options.currency} user={params.user}/>},
+  {path: 'bomtool', title: 'Open Market BOM Search', element: (params) => <BOMMain options={params.options} 
+  changeLock={params.lock} username={params.username}/>},
   //{path: 'cbom', title: 'CBOM Exporter', element: () => <CBom/>},
   {path: 'partsearch', title: 'Open Market Part Search', element: () => <PartSearch/>},
-  {path: 'bomscrub', title: 'Components Attributes Search', element: () => <BOMScrub/>}
+  {path: 'bomscrub', title: 'Components Attributes Search', element: () => <BOMScrub/>},
+  {path: 'singlecomponent', title: 'Single Component Search', element: () => <SingleComponentAttribute/>}
 ];
 
 /*
@@ -56,6 +61,7 @@ if(!inProduction){
 function App() {
   const serverUrl = useServerUrl();
   const [saveUsername, username] = useUsername();
+  const [user, saveUser] = useSessionStorage('user');
   const [showVersionModal, setShowVersionModal] = useState(false);
   const [options, setOptions] = useState({store: stores[0].id, currency: currencies[0].id});
   const [dataProcessLock, setDataProcessLock] = useState(false);
@@ -93,6 +99,7 @@ function App() {
         const data = response.data;
         setOptions({store: data.store, currency: data.currency});
         saveUsername(u);
+        saveUser(response.data);
     });
   }
   function handleLogout(){
@@ -103,6 +110,7 @@ function App() {
     }).then(response => {
       console.log(response.data);
       saveUsername(false);
+      saveUser(null);
     });
   }
   function handleVersionClick(){
@@ -119,7 +127,8 @@ function App() {
   const pageParams = {
     options: options,
     lock: handleLock,
-    user: username
+    username: username,
+    user: user
   }
   return (
     <div className="App">
@@ -139,15 +148,26 @@ function App() {
         <Route path={path('partdetails/:partId')} element={<PartDetails/>}/>
         <Route path={path('excel')} element={<Excel/>}/>
         <Route path={path('test')} element={<Test/>}/>
-        <Route path={path('tables')} element={<QuotingTables/>}/>
+        <Route path={path('tables')} element={<QuotingTables user={user}/>}/>
+        <Route path={path('quoteusers')} element={<QuotingUsers username={username} user={user}/>}/>
         <Route path={path('feedback')} element={<Feedback/>}/>
-        {inProduction && <Route path={path('quoting')} element={<QuotingMain user={username}/>}/>}
+        {/*inProduction && <Route path={path('quoting')} element={<QuotingMain username={username}/>}/>*/}
       </Routes>
     </div>
   );
 }
 
 const versions = [
+  {
+    current: '1.3.0',
+    name: '1.3.0',
+    content:
+    <div>
+      <h3>Version 1.3.0</h3>
+      <p>E-Quote Tool Release</p>
+      <p>Single Component Search</p>
+    </div>
+  },
   {
       current: '1.2.4',
       name: '1.2',

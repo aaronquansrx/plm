@@ -18,6 +18,8 @@ import { DeleteModal, TemplateModal } from '../../components/Modals';
 //to test
 export function MasterManufacturers(props){
     const [masterManufacturerData, setMasterManufacturerData] = useState([]);
+    const [deleteLine, setDeleteLine] = useState(null);
+    const [deleteModal, setDeleteModal] = useState(false);
     useEffect(() => {
         getManufacturers();
     }, []);
@@ -36,6 +38,31 @@ export function MasterManufacturers(props){
     function updateDatas(data){
         setMasterManufacturerData(data.manufacturers);
     }
+    function handleDelete(i){
+        console.log(i);
+        setDeleteLine(i);
+        setDeleteModal(true);
+    };
+    function handleConfirmDelete(){
+        const postData = {
+            function: 'delete_master_manufacturer', 
+            manufacturer_id: deleteLine.id,
+        }
+        postPLMRequest('srx_records', postData,
+        (res) => {
+            console.log(res.data);
+            updateDatas(res.data);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+        setDeleteLine(null);
+        setDeleteModal(false);
+    }
+    function handleClose(){
+        setDeleteLine(null);
+        setDeleteModal(false);
+    }
     return (
         <>
             <div className='FlexNormal'>
@@ -43,7 +70,11 @@ export function MasterManufacturers(props){
             </div>
             <SearchPaginationTable data={masterManufacturerData} headers={headers} 
             headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}
-            searchName={'Search: '} />
+            searchName={'Search: '} delete={true} onDelete={handleDelete}/>
+            {
+            <TableDeleteLineModal show={deleteModal} title={'Delete Manufacturer Supplier'}
+            onClose={handleClose} onConfirmDelete={handleConfirmDelete}
+            manufacturer={deleteLine !== null && deleteLine.name}/>}
         </>
     );
 }
@@ -51,10 +82,9 @@ export function MasterManufacturers(props){
 
 //Manufacturer Master List
 export function AlternateManufacturerReference(props){
-    //const [manuInputs, setManuInputs] = useState({manufacturer: '', string: ''});
-    //const [addMasterInputs, setAddMasterInputs] = useState({name: '', website: ''});
-    //const [chosenManufacturer, setChosenManufacturer] = useState(null);
-    //const [manufacturerResults, setManufacturerResults] = useState([]);
+
+    const [deleteLine, setDeleteLine] = useState(null);
+    const [deleteModal, setDeleteModal] = useState(false);
     const [masterManufacturerData, setMasterManufacturerData] = useState([]);
     const [manufacturerMap, setManufacturerMap] = useState({});
     useEffect(() => {
@@ -83,6 +113,28 @@ export function AlternateManufacturerReference(props){
         setMasterManufacturerData(data.manufacturer_master);
         setManufacturerMap(data.manufacturer_map);
     }
+    function handleDelete(data){
+        console.log(data);
+        setDeleteLine(data);
+        setDeleteModal(true);
+        
+    }
+    function handleConfirmDelete(){
+        const postData = {function: 'delete_alternative_manufacturer', alt_id: deleteLine.mrs_id};
+        postPLMRequest('srx_records', postData, 
+        (res) => {
+            console.log(res.data);
+            updateDatas(res.data);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+        handleClose();
+    }
+    function handleClose(){
+        setDeleteLine(null);
+        setDeleteModal(false);
+    }
     return (
         <>
         <div className='FlexNormal'>
@@ -90,7 +142,11 @@ export function AlternateManufacturerReference(props){
         </div>
         <SearchPaginationTable data={masterManufacturerData} headers={headers} 
         headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}
-        searchName={'Search: '} />
+        searchName={'Search: '} delete={true} onDelete={handleDelete}/>
+        {<TableDeleteLineModal show={deleteModal} title={'Delete Manufacturer Supplier'}
+        onClose={handleClose} onConfirmDelete={handleConfirmDelete}
+        manufacturer={deleteLine !== null && deleteLine.name}
+        string={deleteLine !== null && deleteLine.string}/>}
         </>
     );
 }
@@ -200,14 +256,17 @@ export function AlternateManufacturerAdder(props){
     }
     return(
         <>
+        <div className='VerticalForm'>
         <span>Manufacturer</span>
         <ButtonChooseSearcher searchResults={manufacturerResults.map((r)=>r.name)} chosen={chosenManufacturer} 
         onDeselect={handleDeselectManufacturer} name={chosenManufacturer ? chosenManufacturer.name : ''}
         onClick={handleSelectManufacturer} onSearch={handleSearch}/>
+        </div>
         <Form className={'VerticalForm'}>
             <Form.Label>Alternative Manufacturer Name</Form.Label>
             <Form.Control type='text' value={manuInputs.string} onChange={handleChangeInputs('string')}/>
         </Form>
+
         <Button onClick={handleAddManufacturer}>Add</Button>
         </>
     );
@@ -216,6 +275,8 @@ export function AlternateManufacturerAdder(props){
 export function SupplierTable(props){
     const [supplierData, setSupplierData] = useState([]);
     const [addSupplier, setAddSupplier] = useState({name: '', phone: '', email: ''});
+    const [deleteLine, setDeleteLine] = useState(null);
+    const [deleteModal, setDeleteModal] = useState(false);
     const hasData = useRef(false);
     useEffect(() => {
         if(!hasData.current){
@@ -255,9 +316,27 @@ export function SupplierTable(props){
             console.log(res.data);
         });
     }
-    function handleDelete(i){
-        console.log(i);
+    function handleClose(){
+        setDeleteLine(null);
+        setDeleteModal(false);
+    }
+    function handleDelete(data){
+        console.log(data);
+        setDeleteLine(data);
+        setDeleteModal(true);
     };
+    function handleConfirmDelete(){
+        const postData = {function: 'delete_supplier', supplier_id: deleteLine.id};
+        postPLMRequest('srx_records', postData, 
+        (res) => {
+            console.log(res.data);
+            setSupplierData(res.data.suppliers);
+        },
+        (res) => {
+            console.log(res.data);
+        });
+        handleClose();
+    }
     return(
         <>
         <div className='FlexNormal'>
@@ -274,7 +353,10 @@ export function SupplierTable(props){
         
         <SearchPaginationTable data={supplierData} headers={headers} 
             headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}
-            searchName={'Search: '} />
+            searchName={'Search: '} delete={true} onDelete={handleDelete}/>
+        <TableDeleteLineModal show={deleteModal} title={'Delete Manufacturer Supplier'}
+        onClose={handleClose} onConfirmDelete={handleConfirmDelete}
+        supplier={deleteLine !== null && deleteLine.name}/>
         </>
     );
 }
@@ -395,11 +477,33 @@ export function ManufacturerSupplierTable(props){
             searchName={'Search: '} 
             delete={true} onDelete={handleDelete}
             />
-        <TemplateModal show={deleteModal} title={'Delete Manufacturer Supplier'} 
-        body={body} footer={footer} onClose={handleClose}/>
-        {/*<HeaderArrayTable data={tableData} headers={headers}/>*/}
+        {/*<TemplateModal show={deleteModal} title={'Delete Manufacturer Supplier'} 
+        body={body} footer={footer} onClose={handleClose}/>*/}
+        <TableDeleteLineModal show={deleteModal} title={'Delete Manufacturer Supplier'}
+        onClose={handleClose} onConfirmDelete={handleConfirmDelete}
+        manufacturer={deleteLine !== null && deleteLine.manufacturer_name}
+        supplier={deleteLine !== null && deleteLine.supplier_name}/>
         </>
     );
+}
+
+export function TableDeleteLineModal(props){
+
+    const body = <>
+        {props.manufacturer && 
+        <div>Manufacturer: {props.manufacturer}
+        </div>}
+        {props.supplier && <div>Supplier: {props.supplier}</div>}
+        {props.string && <div>String: {props.string}</div>}
+    </>
+    const footer = <>
+        <Button onClick={props.onConfirmDelete}>Confirm</Button>
+        <Button onClick={props.onClose} variant={'secondary'}>Cancel</Button>
+    </>
+    return(
+        <TemplateModal show={props.show} title={props.title} 
+        body={body} footer={footer} onClose={props.onClose}/>
+    )
 }
 
 export function SupplierButtonChooser(props){

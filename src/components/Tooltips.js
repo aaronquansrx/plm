@@ -56,7 +56,6 @@ export function WarningToolTipButtonFade(props){
     </Button>
     <Overlay target={target.current} show={show} placement={placement}>
     {(p) => {
-        //console.log(p);
         return(
         <Tooltip {...p}>
             {props.children}
@@ -105,5 +104,5 @@ export function SimplePopover(props){
         <OverlayTrigger trigger={props.trigger} placement={props.placement} overlay={popover}>
             {props.children}
         </OverlayTrigger>
-    )
+    );
 }

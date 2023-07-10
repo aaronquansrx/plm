@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useRef} from 'react';
 
 import { Link } from 'react-router-dom';
 
@@ -49,22 +49,47 @@ const quoteHeaders = ["Level","Commodity","CMs","Item No.","CPN","SRX PN",
 
 function QuotingMain(props){
     const [quotes, setQuotes] = useState([]);
+    const [duties, setDuties] = useState({});
     const [activeQuote, setActiveQuote] = useState(null);
     const [pageState, setPageState] = useState({current:0, last: null});
+    const isAdmin = useRef(false);
     useEffect(() => {
-        const getData = {function: 'get_quotes', user: props.user}
-        getPLMRequest('quote', getData,
-        (res) => {
-            console.log(res.data);
-            if(res.data.success){
-                setQuotes(res.data.quotes);
+        if(props.user){
+            isAdmin.current = props.user.is_admin;
+            const getUserDuty = {
+                function: 'user_role_duties', user_id: props.user.id
             }
-        },
-        (res) => {
-            console.log(res.data);
+            getPLMRequest('user', getUserDuty, 
+            (res) => {
+                console.log(res.data);
+                if(res.data.success && res.data.has_role){
+                    if(res.data.has_role){
+                        setDuties(res.data.duties);
+                    }
+                }
+            },
+            (res) => {
+                console.log(res.data);
+            });
+        }else{
+            isAdmin.current = false;
         }
-        );
-    }, [props.user]);
+        if(props.username && props.user){
+            const getData = {function: 'get_quotes', user: props.username, user_id: props.user.id}
+            getPLMRequest('quote', getData,
+            (res) => {
+                console.log(res.data);
+                if(res.data.success){
+                    setQuotes(res.data.quotes);
+                }
+            },
+            (res) => {
+                console.log(res.data);
+            });
+        }else{
+            setQuotes([]);
+        }
+    }, [props.user, props.username]);
 
     function handleOpenQuote(quote){
         return function(){
@@ -82,15 +107,16 @@ function QuotingMain(props){
     function renderView(){
         switch(pageState.current){
             case 0: // main quote list for user
-                return <Main user={props.user} quotes={quotes} setQuotes={setQuotes} onOpenQuote={handleOpenQuote} changePageState={changePageState}/>
+                return <Main user={props.user}  quotes={quotes} duties={duties} isAdmin={isAdmin.current}
+                setQuotes={setQuotes} onOpenQuote={handleOpenQuote} changePageState={changePageState}/>
             case 1: //quoteView
-                return <QuoteView quote={activeQuote} changePageState={changePageState} user={props.user} 
-                store={props.store} currency={props.currency}/>
+                return <QuoteView quote={activeQuote} changePageState={changePageState} 
+                user={props.username} store={props.store} currency={props.currency}/>
             case 2:
                 return <CreateQuote changePageState={changePageState} onCreateQuote={handleCreateProduct} 
-                lastPageState={pageState.last} user={props.user} setQuotes={setQuotes}/>
+                lastPageState={pageState.last} user={props.username} setQuotes={setQuotes}/>
             case 3:
-                return <EditQuote quote={activeQuote} user={props.user} changePageState={changePageState}
+                return <EditQuote quote={activeQuote} user={props.username} changePageState={changePageState}
                 lastPageState={pageState.last} setQuotes={setQuotes}/>
             case 4:
                 return <LinkProductUpload quote={activeQuote}/>
@@ -138,13 +164,11 @@ function Main(props){
     function handleToMaster(){
         props.changePageState(5);
     }
+    //console.log(props.duties);
+    const seeTable = 'table_access' in props.duties || props.isAdmin;
+    const seeQuoteUsers = 'role_edit' in props.duties || props.isAdmin;
     return(
         <div>
-            {/*
-            <ExcelDropzone class='DropFiles' onDrop={handleDrop}>
-                <p>Upload Quotes</p>
-            </ExcelDropzone>
-            */}
             <WarningToolTipButton onClick={handleCreateQuote} buttonText={'Create Quote'}>{errorMessage}</WarningToolTipButton>
             {/*<Button onClick={handleCreateQuote}>Create Quote</Button>*/}
             {/*<Button onClick={handleTemplates}>Templates</Button>*/}
@@ -165,9 +189,14 @@ function Main(props){
             */}
             {<QuoteTable quotes={props.quotes} user={props.user} onOpenQuote={props.onOpenQuote} setQuotes={props.setQuotes}/>}
             {/*<UploadTemplateEditor />*/}
-            <a href={clientUrl+"/tables"}>
+            {seeTable && <a href={clientUrl+"/tables"}>
                 <Button>Tables</Button>
+            </a>}
+            {seeQuoteUsers &&
+            <a href={clientUrl+"/quoteusers"}>
+                <Button>Users</Button>
             </a>
+            }
             {/*<Button onClick={handleToMaster}>Manufacturer Master List</Button>*/}
         </div>
     )
@@ -214,7 +243,7 @@ function QuoteTable(props){
             return arr;
         }, []);
         
-        const postData = {function: 'delete_quotes', user: props.user, quote_ids: qids};
+        const postData = {function: 'delete_quotes', user: props.user.name, quote_ids: qids};
         postPLMRequest('quote', postData,
         (res) => {
             console.log(res.data);

@@ -377,7 +377,7 @@ function ConsolidatePage(props){
         });
         compRFQData.forEach((line, i) => {
             const moq = parseInt(line.moq);
-            const batch = parseInt(line['sum0']);
+            const batch = parseFloat(line['sum0']);
             const spq = parseInt(line.spq);
             const price = parseFloat(line.price);
             const totalPo = (moq >= batch ? moq : Math.ceil(batch, spq)) * price;
@@ -910,7 +910,7 @@ const productSheetHeaders = [
     {label: 'CPN', accessor: 'cpn'},
     {label: 'SRX PN', accessor: 'srx_pn'},
     {label: 'Description', accessor: 'description'},
-    {label: 'Usage Per', accessor: 'usage_per'},
+    {label: 'Usage Per', accessor: 'usage_per_float'},
     {label: 'UOM', accessor: 'uom'},
     {label: 'Designator', accessor: 'designator'},
     {label: 'Approved MFR', accessor: 'mfr'},

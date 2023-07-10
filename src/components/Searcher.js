@@ -22,15 +22,15 @@ export function SuggestionSearcher(props){
     }, [props.searchTerm, props.updater]);
     function handleChangeTerm(e){
         const term = e.target.value
-        if(term !== ''){
+        if(term !== '' || props.showBaseSuggestions){
             setShowSuggestions(true);
         }
         setSearchText(term);
         if(props.onSearch) props.onSearch(term);
     }
-    function handleClickSuggestion(reco){
+    function handleClickSuggestion(reco, i){
         return function(){
-            if(props.onClickSuggestion) props.onClickSuggestion(reco);
+            if(props.onClickSuggestion) props.onClickSuggestion(reco, i);
         }
     }
     function handleClickOutside(){
@@ -52,10 +52,12 @@ export function SuggestionSearcher(props){
             ref={textInput}
         />}
         {props.recommends.length > 0 && showSuggestions && 
-        <ListGroup className='Pointer' style={{position: 'absolute', zIndex: 10}}>
+        <ListGroup className='Pointer' style={
+            {position: 'absolute', zIndex: 10, maxHeight: '200px', overflowY: 'auto'}
+        }>
             {[...Array(recoLength).keys()].map((i) => {
                 const reco = props.recommends[i];
-                return <ListGroup.Item key={i} onClick={handleClickSuggestion(reco)}>{reco}</ListGroup.Item>;
+                return <ListGroup.Item key={i} onClick={handleClickSuggestion(reco, i)}>{reco}</ListGroup.Item>;
             })}
         </ListGroup>
         }
@@ -143,13 +145,13 @@ export function ObjectSuggestionSearcher(props){
     const [showSuggestions, setShowSuggestions] = useState(false);
     const textInput = useRef(null);
     useEffect(() => {
-        if(props.searchTerm !== null){
+        if(props.searchTerm !== null && props.searchTerm !== undefined){
             setSearchText(props.searchTerm);
         }
     }, [props.searchTerm, props.updater]);
     function handleChangeTerm(e){
         const term = e.target.value
-        if(term !== ''){
+        if(term !== '' || props.showBaseSuggestions){
             setShowSuggestions(true);
         }
         setSearchText(term);
@@ -158,6 +160,7 @@ export function ObjectSuggestionSearcher(props){
     function handleClickSuggestion(reco){
         return function(){
             if(props.onClickSuggestion) props.onClickSuggestion(reco);
+            setShowSuggestions(false);
         }
     }
     function handleClickOutside(){
@@ -165,6 +168,7 @@ export function ObjectSuggestionSearcher(props){
     }
     const size = props.size ? props.size : 5;
     const recoLength = size < props.recommends.length ? size : props.recommends.length;
+    const style = {position: 'absolute', zIndex: 10, maxHeight: '200px', overflowY: 'auto'}
     return(
         <>
         <OutsideClickFunction func={handleClickOutside}>
@@ -178,7 +182,7 @@ export function ObjectSuggestionSearcher(props){
             ref={textInput}
         />
         {props.recommends.length > 0 && showSuggestions && 
-        <ListGroup className='Pointer' style={{position: 'absolute', zIndex: 10}}>
+        <ListGroup className='Pointer' style={style}>
             {[...Array(recoLength).keys()].map((i) => {
                 const reco = props.recommends[i];
                 return <ListGroup.Item key={i} onClick={handleClickSuggestion(reco)}>{reco.name}</ListGroup.Item>;
