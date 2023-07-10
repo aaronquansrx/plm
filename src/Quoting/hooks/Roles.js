@@ -4,10 +4,10 @@ import { getPLMRequest } from '../../scripts/APICall';
 
 export function useQuoteRoles(user){
     const [duties, setDuties] = useState({});
-    const isAdmin = useRef(false);
+    const [isAdmin, setIsAdmin] = useState(false);
     useEffect(() => {
         if(user){
-            isAdmin.current = user.is_admin;
+            setIsAdmin(user.is_admin);
             const getUserDuty = {
                 function: 'user_role_duties', user_id: user.id
             }
@@ -23,9 +23,9 @@ export function useQuoteRoles(user){
                 console.log(res.data);
             });
         }else{
-            isAdmin.current = false;
+            setIsAdmin(false);
         }
     }, [user]);
 
-    return [duties, isAdmin.current];
+    return [duties, isAdmin];
 }
