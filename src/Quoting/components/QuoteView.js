@@ -347,7 +347,16 @@ function ConsolidatePage(props){
             if(data.quoted_mpn in obj){
                 obj[data.quoted_mpn][data.quoted_supplier] = data;
             }else{
-                obj[data.quoted_mpn] = {[data.quoted_supplier]: data}
+                obj[data.quoted_mpn] = {[data.quoted_supplier]: data};
+            }
+            return obj;
+        }, {});
+        console.log(workingUploadData);
+        const cpnMap = workingUploadData.reduce((obj, data) => {
+            if(data.cpn in obj){
+                obj[data.cpn][data.quoted_supplier] = data;
+            }else{
+                obj[data.cpn] = {[data.quoted_supplier]: data};
             }
             return obj;
         }, {});
@@ -356,7 +365,6 @@ function ConsolidatePage(props){
             let newLine = {...line};
             if(loadDataMap !== null && newLine.mpn in loadDataMap){
                 if(newLine.supplier_id in loadDataMap[newLine.mpn]){
-                    //console.log(newLine.supplier_id);
                     newLine = {...newLine, ...loadDataMap[newLine.mpn][newLine.supplier_id]};
                 }
             }
@@ -364,7 +372,17 @@ function ConsolidatePage(props){
                 if(newLine.supplier in mpnMap[newLine.mpn]){
                     newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
                     if(loadDataMap === null){
-                        
+                        newLine.status = 'Quoted';
+                        updates.push({
+                            update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
+                            line: newLine
+                        });
+                    }
+                }
+            }else if(newLine.cpn in cpnMap){
+                if(newLine.supplier in cpnMap[newLine.cpn]){
+                    newLine = {...newLine, ...cpnMap[newLine.cpn][newLine.supplier]};
+                    if(loadDataMap === null){
                         newLine.status = 'Quoted';
                         updates.push({
                             update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
@@ -420,6 +438,8 @@ function ConsolidatePage(props){
     }
     const masterWorkingHeaders = [
         {accessor: 'mpn', label: 'Approved MPN', display: false},
+        {accessor: 'cpn', label: 'CPN', display: false},
+        //{accessor: 'quoted_mfr', label: 'Quoted MFR', display: false},
         {accessor: 'quoted_supplier', label: 'Quoted Supplier', display: true},
         {accessor: 'quoted_mpn', label: 'Quoted MPN', display: true},
         {accessor: 'quoted_mfr', label: 'Quoted MFR', display: true},

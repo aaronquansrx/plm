@@ -756,7 +756,6 @@ export function MasterWorkingUploadTable(props){
     function handleSubmit(){
         const headerSet = new Set(headers.map(h => h.label));
         const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
-            console.log('data');
         const startRow = selectedRow ? selectedRow.row+1 : 0;
         let hasMpn = false; let hasSupplier = false;
         const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {

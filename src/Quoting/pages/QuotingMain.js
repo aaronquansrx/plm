@@ -213,7 +213,6 @@ const quoteTableHeaders = [
 
 function QuoteTable(props){
     const [selectedQuotes, setSelectedQuotes] = useState([]);
-    console.log(selectedQuotes);
     useEffect(() => {
         setSelectedQuotes(props.quotes.map(() => false));
     }, [props.quotes]);
@@ -223,12 +222,6 @@ function QuoteTable(props){
             v = v[ra];
         })
         return v;
-    }
-    function handleClickQuote(quote){
-        return function(){
-            console.log(quote);
-            props.onOpenQuote(quote);
-        }
     }
     function handleCheckboxChange(i){
         setSelectedQuotes(update(selectedQuotes, {
@@ -242,8 +235,7 @@ function QuoteTable(props){
             }
             return arr;
         }, []);
-        
-        const postData = {function: 'delete_quotes', user: props.user.name, quote_ids: qids};
+        const postData = {function: 'delete_quotes', user: props.user.user, quote_ids: qids};
         postPLMRequest('quote', postData,
         (res) => {
             console.log(res.data);
@@ -254,10 +246,8 @@ function QuoteTable(props){
         (res) => {
             console.log(res.data);
         }
-        );
-        
+        );   
     }
-    //getVar(quote, h.resource)
     return(
         <div>
         <Table>

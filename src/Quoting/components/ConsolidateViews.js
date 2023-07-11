@@ -1154,14 +1154,6 @@ export function MasterWorkingFile(props){
             }
         }));
     }
-    /*
-    function handleChangeFilterList(filter, list){
-        setFilters(update(filters, {
-            [filter]: {
-                active: {$set: new Set(list)}
-            }
-        }));
-    }*/
     function handleShowFilter(filter){
         setFilters(update(filters, {
             [filter]: {
@@ -1271,7 +1263,20 @@ export function MasterWorkingFile(props){
         });
     }
     function handleClearFilters(){
-        //todo
+        setFilters(update(filters, {
+            mpn: {
+                active: {$set: mpnValues}
+            },
+            manufacturer: {
+                active: {$set: mfrValues}
+            },
+            supplier: {
+                active: {$set: supplierValues}
+            },
+            cpn: {
+                active: {$set: cpnValues}
+            }
+        }));
     }
     function handleChangeStatus(ln, newStatus){
         ln = getRealLineNum(ln);
@@ -1282,10 +1287,7 @@ export function MasterWorkingFile(props){
         updateRFQData(updateData);
     }
     function handleChangeMQA(ln, newMQA){
-        //console.log(filteredData);
-        //console.log(ln);
         ln = getRealLineNum(ln);
-        //console.log(ln);
         props.setRFQData(update(props.RFQData, {
             [ln]: {mqa: {$set: newMQA}}
         }));

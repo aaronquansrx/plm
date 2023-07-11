@@ -151,7 +151,6 @@ function App() {
         <Route path={path('tables')} element={<QuotingTables user={user}/>}/>
         <Route path={path('quoteusers')} element={<QuotingUsers username={username} user={user}/>}/>
         <Route path={path('feedback')} element={<Feedback/>}/>
-        {/*inProduction && <Route path={path('quoting')} element={<QuotingMain username={username}/>}/>*/}
       </Routes>
     </div>
   );

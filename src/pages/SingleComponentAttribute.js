@@ -9,7 +9,9 @@ import { getPLMRequest, postPLMRequest } from '../scripts/APICall';
 import {ExportComponentAttributeModal} from '../components/BOMScrubInterface';
 
 const attributes = [
-    'Description', 'RoHS', 'REACH', 'MSL', 'Lead', 'Mounting Type'
+    'Category', 'Datasheet', 'Description', 'Long Description', 
+    'RoHS', 'REACH', 'MSL', 'Lead', 'Mounting Type', 'Url'
+
 ];
 
 function SingleComponentAttribute(){
@@ -17,12 +19,15 @@ function SingleComponentAttribute(){
     const [statusMessage, setStatusMessage] = useState('');
     const [showExportModal, setShowExportModal] = useState(false);
     const [details, setDetails] = useState(null);
+    const [parameters, setParameters] = useState(null);
+    const [photo, setPhoto] = useState(null);
     const [mpn, setMpn] = useState(null);
     function handleChangeTerm(e){
         setSearchTerm(e.target.value);
     }
     function handleSearch(){
         setStatusMessage('Searching...');
+        setDetails(null);
         setMpn(searchTerm);
         const getData = {part: searchTerm};
         getPLMRequest('partdetails', getData,
@@ -30,6 +35,8 @@ function SingleComponentAttribute(){
             console.log(res.data);
             if(res.data.success){
                 setDetails(res.data.details);
+                setParameters(res.data.details.Parameters);
+                setPhoto(res.data.details.Photo);
                 setStatusMessage('');
             }else{
                 setStatusMessage('Search Failed');
@@ -45,9 +52,12 @@ function SingleComponentAttribute(){
         }
     }
     function handleExport(fn, options={}){
-        if(details){
+        if(details && fn !== ''){
             const tableData = [['MPN', ...attributes]].concat([[mpn, ...attributes.map(name => details[name])]]);
             const sheet = XLSX.utils.json_to_sheet(tableData, {skipHeader: true});
+            const paramData = Object.entries(details.Parameters);//[];
+            const paramSheet = XLSX.utils.json_to_sheet(paramData, {skipHeader: true});
+            
             if(options.csv){
                 const csv = XLSX.utils.sheet_to_csv(sheet);
                 const csvContent = "data:text/csv;charset=utf-8,"+csv;
@@ -58,7 +68,8 @@ function SingleComponentAttribute(){
                 link.click();
             }else{
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, sheet, 'lineData');
+                XLSX.utils.book_append_sheet(wb, sheet, 'Details');
+                XLSX.utils.book_append_sheet(wb, paramSheet, 'Parameters');
                 XLSX.writeFile(wb, fn+'.xlsx');
             }
         }
@@ -84,10 +95,26 @@ function SingleComponentAttribute(){
             {statusMessage}
             </span>
 
+
             {details &&
-                attributes.map((name) => {
-                    return <div>{name}: {details[name]}</div>
-                })
+                <>
+                {details.Photo && 
+                <div>
+                <img src={details.Photo} width='150px' height='150px'/>
+                </div>
+                }
+                {attributes.map((name, i) => {
+                    return <div key={i}>{name}: {details[name]}</div>
+                })}
+                {details.Parameters && 
+                    <>
+                    <h5>Parameters</h5>
+                    {Object.entries(details.Parameters).map(([key, value], i) => {
+                        return <div key={i}>{key}: {value}</div>
+                    })}
+                    </>
+                }
+                </>
             }
             <ExportComponentAttributeModal show={showExportModal} 
             hideAction={handleCloseExport} exportAction={handleExport}/>
