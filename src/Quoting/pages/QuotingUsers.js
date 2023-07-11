@@ -5,6 +5,7 @@ import Table from 'react-bootstrap/Table';
 import Button from 'react-bootstrap/Button';
 
 import { useQuoteRoles } from '../hooks/Roles';
+import { useClientUrl } from '../../hooks/Urls';
 
 import { TextControl } from '../../components/Forms';
 
@@ -22,6 +23,7 @@ import { IdCheckbox } from '../../components/Checkbox';
 function QuotingUsers(props){
     const [pageState, setPageState] = useState(0);
     const [duties, isAdmin] = useQuoteRoles(props.user);
+    
     function changePageState(i){
         setPageState(i);
     }
@@ -289,6 +291,7 @@ function RoleView(props){
 }
 
 function UserNavigation(props){
+    const clientUrl = useClientUrl();
     function handleNavChange(i){
         return function(){
             if(props.changePageState){
@@ -304,7 +307,7 @@ function UserNavigation(props){
         <div className='FlexNormal IconNav'>
             <div className='MainSwitchIcon'>
                 <HoverOverlay tooltip={'Back to Quote Main'} placement='bottom'>
-                    <a href={'/quoting'}><div className={'Pointer'}>
+                    <a href={clientUrl+'/quoting'}><div className={'Pointer'}>
                         Back to Quote Main
                     </div></a>
                 </HoverOverlay>
