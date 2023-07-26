@@ -267,14 +267,19 @@ function Main(props){
         }));
     }
     function handleClearFilters(){
-        setFilters(update(filters, {
+        const upd = {};
+        Object.entries(filters).forEach(([key,value]) => {
+            upd[key] = {active: {$set: props.quoteValues[key]}}
+        });
+        setFilters(update(filters, upd));
+        /*{
             rfq: {
                 active: {$set: props.quoteValues.rfq}
             },
             owner: {
                 active: {$set: props.quoteValues.owner}
             }
-        }));
+        }));*/
     }
     function handleOpenOptions(){
         setShowOptions(true);
