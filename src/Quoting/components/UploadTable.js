@@ -757,7 +757,7 @@ export function MasterWorkingUploadTable(props){
         const headerSet = new Set(headers.map(h => h.label));
         const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
         const startRow = selectedRow ? selectedRow.row+1 : 0;
-        let hasMpn = false; let hasSupplier = false;
+        let hasMpn = false; let hasSupplier = false; let hasCpn = false;
         const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
             if(h !== '_remove'){
                 arr.push({...headerMap[h], index: i});
@@ -767,6 +767,9 @@ export function MasterWorkingUploadTable(props){
             }
             if(h === 'Quoted Supplier'){
                 hasSupplier = true;
+            }
+            if(h === 'CPN'){
+                hasCpn = true;
             }
             return arr;
         }, []);
@@ -781,12 +784,19 @@ export function MasterWorkingUploadTable(props){
                         truncatedFields.add(h.label);
                     }
                 }
-                o[h.accessor] = activeSheet[r][h.index];
+                if(h.accessor === 'selection'){
+                    o[h.accessor] = cellValue === '1' || cellValue.toLowerCase() === 'true' ? true : false;
+                }else if(h.accessor === 'status'){
+                    o[h.accessor] = props.statusOptions.includes(cellValue) ? cellValue : null;
+                }else{
+                    o[h.accessor] = cellValue;
+                }
                 return o;
             }, {});
             objs.push(obj);
         }
-        if(hasMpn && hasSupplier){
+        console.log(objs);
+        if((hasMpn && hasSupplier) || (hasCpn && hasSupplier)){
             props.onMasterUpload(objs);
         }
     }

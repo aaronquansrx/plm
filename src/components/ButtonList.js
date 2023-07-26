@@ -50,9 +50,10 @@ export function ChooseButtonList(props){
 
 export function ToggleButtonList(props){
     const [itemState, setItemState] = useState(getItemState());
+    //console.log(props.items);
     useEffect(() => {
         if(props.itemsActive){
-            console.log(props.itemsActive);
+            //console.log(props.itemsActive);
             setItemState(getItemState());
         }
     }, [props.itemsActive]);
@@ -79,8 +80,8 @@ export function ToggleButtonList(props){
     return(
         <ListGroup style={{width: 'fit-content', cursor: 'pointer'}}>
             {props.items.map((item, i) => 
-            <ListGroup.Item key={i} className={'ToggleItem'} onMouseDown={handleToggle(item, i)} active={itemState[i]}>
-                {item}
+            <ListGroup.Item key={i} className={'ToggleItem'} style={{minHeight: '40px'}} onMouseDown={handleToggle(item, i)} active={itemState[i]}>
+                {item === '' ? ' ' : item}
             </ListGroup.Item>
             )}
         </ListGroup>
@@ -95,6 +96,8 @@ export function ToggleButton(props){
         setIsOn(newOn);
     }
     return(
-        <Button onClick={handleToggle} active={isOn}></Button>
+        <ListGroup.Item className={'ToggleItem'} onClick={handleToggle} active={isOn}>
+                {isOn ? (props.onText ? props.onText : props.children) : (props.offText ? props.offText : props.children)}
+        </ListGroup.Item>
     );
 }

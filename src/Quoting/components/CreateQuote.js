@@ -71,90 +71,6 @@ const additionalInformationFields = [
     easyFormElement('comments', 'Comments', 'textarea', '')
 ];
 
-/*
-function CreateQuote(props){
-    const [formValues, setFormValues] = useState(formIdValueObject(quoteFormFields));
-    const [productInformationValues, setProductInformationValues] = useState(formIdValueObject(productInformationFields));
-
-    function formIdValueObject(fields){
-        return fields.reduce((obj, f) => {
-            obj[f.formId] = f.ivalue;
-            return obj;
-        }, {});
-    }
-    function handleFormChange(value, fid){
-        setFormValues(update(formValues, {
-            [fid]: {$set: value}
-        }));
-    }
-    function handleProductInfoChanges(value, fid){
-        setProductInformationValues(update(productInformationValues, {
-            [fid]: {$set: value}
-        }));
-    }
-    function handleCancel(){
-        props.changePageState(0);
-    }
-    function handleSubmit(){
-        console.log(formValues);
-        console.log(productInformationValues);
-        const postData = {create_details: formValues, function: 'create', user: props.user};
-        if(props.user){   
-            postPLMRequest('quote', postData,
-            (res) => {
-                console.log(res.data);
-                props.toCustomerBom(res.data.quote_id, res.data.quote); // add qid
-            },
-            (res) => {
-                console.log('error');
-                console.log(res);
-            }
-            );
-        }
-    }
-    function quoteValueSection(title){
-        return (<div style={{marginBottom: '15px', margin: '10px'}}>
-            {title}
-            <Form>
-
-            </Form>
-        </div>);
-    }
-    return(
-        <div>
-            <div style={{marginBottom: '15px', margin: '10px'}}>
-                <h3>Create Quote</h3>
-                <Form>
-                {quoteFormFields.map((e, i) => 
-                    <FlexFormGroup key={i} {...e} value={formValues[e.formId]} onChange={handleFormChange}/>
-                )}
-                </Form>
-            </div>
-            <div>
-                <h4>Product Information</h4>
-                <Form>
-                {productInformationFields.map((e, i) => 
-                    <FlexFormGroup key={i} {...e} onChange={handleProductInfoChanges}/>
-                )}
-                </Form>
-            </div>
-            <div>
-                <h5>Additional Information</h5>
-                <Form>
-                {additionalInformationFields.map((e, i) => 
-                    <FlexFormGroup key={i} {...e} onChange={handleProductInfoChanges}/>
-                )}
-                </Form>
-            </div>
-            <div>
-                <h4>SRX Internal</h4>
-            </div>
-            <Button variant={'secondary'} onClick={handleCancel}>Cancel</Button>
-            <Button onClick={handleSubmit}>Submit</Button>
-        </div>
-    )
-}*/
-
 export function CreateQuote(props){
     return(
         <ChangeQuoteTemplate title={'Create Quote'} changePageState={props.changePageState} 
@@ -163,7 +79,6 @@ export function CreateQuote(props){
 }
 
 export function EditQuote(props){
-    console.log(props.quote);
     return(
         <ChangeQuoteTemplate title={'Edit Quote'} quoteId={props.quote.id} changePageState={props.changePageState} 
         user={props.user} lastPageState={props.lastPageState} setQuotes={props.setQuotes}/>
@@ -210,14 +125,11 @@ function ChangeQuoteTemplate(props){
         props.changePageState(props.lastPageState);
     }
     function handleSubmit(){
-        console.log(formValues);
-        console.log(productInformationValues);
         const postData = {create_details: formValues, function: 'create', user: props.user};
         if(props.user){   
             postPLMRequest('quote', postData,
             (res) => {
                 if(res.data.success){
-                    console.log(res.data);
                     //props.toCustomerBom(res.data.quote_id, res.data.quote); // add qid
                     if(!props.quoteId){ //creating quote
                         props.onCreateQuote(res.data.quote);
@@ -228,7 +140,6 @@ function ChangeQuoteTemplate(props){
                 }
             },
             (res) => {
-                console.log('error');
                 console.log(res.data);
             }
             );
@@ -253,16 +164,11 @@ function ChangeQuoteTemplate(props){
     function handleUploadClose(){
         setShowUploadForm(false);
     }
-    //console.log(formValues.structure);
     return(
         <>
         <div className='FlexNormal' style={{overflow: 'auto'}}>
             <UploadModal show={showUploadForm} onClose={handleUploadClose} onSubmit={handleSubmitUploadDetails}/>
             <h3>Create Quote</h3> <Button onClick={handleUpload}>Upload</Button>
-            {/*<Form>
-            <FormIndexSelect formId='structure' value={formValues.structure.value} label='Structure' 
-            options={structureField.extras.options} onChange={handleStructureChange}/>
-            </Form>*/}
             <div style={{marginBottom: '15px', margin: '10px'}}>
                 <div className='Hori'>
                     <div>
@@ -282,13 +188,6 @@ function ChangeQuoteTemplate(props){
                 </div>
             </div>
             <div>
-                {/*
-                <h4>Product Information</h4>
-                <Form>
-                {productInformationFields.map((e, i) => 
-                    <FlexFormGroup key={i} {...e} onChange={handleProductInfoChanges}/>
-                )}
-                </Form>*/}
                 {quoteValueSection(<h4>Product Information</h4>, productInformationFields)}
             </div>
             <div>
@@ -318,7 +217,6 @@ const uploadButtonIdLabelMap = fieldUploadButtons.reduce((obj, b) => {
     obj[b.id] = b.label;
     return obj;
 }, {});
-//console.log(uploadButtonIdLabelMap);
 
 function UploadModal(props){
     const [sheets, setSheets] = useState(null);
@@ -361,7 +259,6 @@ function UploadModal(props){
     }, []);
 
     useEffect(() => {
-        console.log(labelsUsed);
         setFormLabels(fieldUploadButtons.filter((e => !labelsUsed.has(e.label))));
     }, [labelsUsed])
 
@@ -397,7 +294,6 @@ function UploadModal(props){
                 const labelUpdateObj = {
                     $add: [chosenButton.label]
                 }
-                //console.log(sheetValues[sheetId][y][x]);
                 if(sheetValues[sheetId][y][x] !== null){
                     labelUpdateObj.$remove = [sheetValues[sheetId][y][x].label];
                 }
@@ -410,7 +306,6 @@ function UploadModal(props){
                 }));
                 const newLabels = update(labelsUsed, labelUpdateObj);
                 setLabelsUsed(newLabels);
-                //setFormLabels(newFormLabels(newLabels));
             }else{
                 setFormLabels(newFormLabels());
             }
@@ -478,7 +373,6 @@ function UploadModal(props){
                 console.log(res.data);
                 const newSheetValues = nullSheetValues();
                 const newLabels = new Set();
-                console.log(newSheetValues);
                 res.data.cells.forEach((cell) => {
                     if(cell.sheetid < newSheetValues.length){
                         //const sheet = 
@@ -490,7 +384,6 @@ function UploadModal(props){
                         }
                     }
                 });
-                console.log(newSheetValues);
                 setSheetValues(newSheetValues);
                 setLabelsUsed(newLabels);
                 //setFormLabels(fieldUploadButtons.filter((e => !newLabels.has(e))));
@@ -548,8 +441,6 @@ function UploadModal(props){
 }
 
 function DragButtonGroup(props){
-    //const [selectedButton, setSelectedButton] = useState(null);
-    //const [mouse, setMouse] = useState({x: 0, y: 0});
     const [buttonMousePos, setButtonMousePos] = useState(0);
     function deselectButton(e){
         if(props.onDrop) props.onDrop(e);
@@ -594,11 +485,8 @@ function TestTable(props){
     const sheetValues = props.index !== null ? props.sheetValues[props.index] : [];
 
     function handleRemove(e){
-        //console.log(e.target.id);
         props.onRemove(e);
-        //const x = parseInt(e.target.attributes.x.value), y = parseInt(e.target.attributes.y.value);
     }   
-    //console.log(sheetValues);
     function Cell(p){
         return <>{p.sheetVal ? 
             <SimplePopover key={p.j} className={p.cn} popoverBody={p.sheetVal.label} trigger={['hover', 'focus']} placement='auto'>

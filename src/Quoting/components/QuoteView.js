@@ -19,13 +19,11 @@ import { Notification } from './Notifications';
 import { HoverOverlay } from '../../components/Tooltips';
 import { bestPriceOffer } from '../../scripts/PLMAlgorithms';
 
-
 import { 
     ConsolidatePricesView, ConsolidateView, 
     SupplierMapping, RequestForQuoteList,
     MasterWorkingFile, MasterUpload
 } from './ConsolidateViews';
-
 
 function QuoteView(props){
     const [products, setProducts] = useState([]); //products with child data
@@ -40,12 +38,10 @@ function QuoteView(props){
         data: [], headers: [], manufacturers: {}, totals: null, num_batches: 0
     });
     useEffect(() => {
-        console.log(pageState);
         if(pageState.current === 0){
             setSelectedProduct(null);
             setHighlightedProduct(null);
         }
-        console.log(selectedProduct);
     }, [pageState]);
 
     useEffect(() => {
@@ -225,7 +221,6 @@ function ConsolidatePage(props){
                     obj[p.mpn] = p;
                     return obj;
                 }, {});
-                //console.log(mpnPriceMap);
                 newPriceData = [...cd].map((line, i) => {
                     let newLine = {...line};
                     newLine = reformatPriceData(newLine);
@@ -279,7 +274,7 @@ function ConsolidatePage(props){
             if(manu !== null){
                 const suppliers = manufacturerSupplierMap[manu];
                 const customs = manu in customSupplierManufacturerMap ? customSupplierManufacturerMap[manu] : [];
-                console.log(customs);
+                //console.log(customs);
                 for(let j=0; j <= 5; j++){
                     delete newLine['supplier'+j.toString()];
                 }
@@ -299,7 +294,7 @@ function ConsolidatePage(props){
             }
             return newLine;
         });
-        console.log(newData);
+        //console.log(newData);
         setPriceSupplierMappingData(newData);
 
         return newData;
@@ -331,9 +326,9 @@ function ConsolidatePage(props){
         postPLMRequest('quote', postData, 
         (res) => {
             if(res.data.success){
-                console.log(res.data);
+                //console.log(res.data);
                 const compRFQData = loadIntoRFQData(res.data.upload_data, newRFQData, res.data.load_data_map);
-                console.log(compRFQData);
+                //console.log(compRFQData);
                 setRFQData(compRFQData);
             }
         },
@@ -343,6 +338,7 @@ function ConsolidatePage(props){
         //setRFQData(newRFQData);
     }
     function loadIntoRFQData(workingUploadData, newRFQData, loadDataMap=null){
+        //console.log(workingUploadData);
         const mpnMap = workingUploadData.reduce((obj, data) => {
             if(data.quoted_mpn in obj){
                 obj[data.quoted_mpn][data.quoted_supplier] = data;
@@ -351,7 +347,6 @@ function ConsolidatePage(props){
             }
             return obj;
         }, {});
-        console.log(workingUploadData);
         const cpnMap = workingUploadData.reduce((obj, data) => {
             if(data.cpn in obj){
                 obj[data.cpn][data.quoted_supplier] = data;
@@ -361,6 +356,36 @@ function ConsolidatePage(props){
             return obj;
         }, {});
         const updates = [];
+        function updateLine(newLine){
+            const oldStatus = newLine.status;
+            newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
+            if(loadDataMap === null){
+                //newLine.status = 'Quoted';
+                const updateFields = [
+                    {accessor: 'mqa', value: newLine.mqa, type: 'string'}, 
+                    {accessor: 'selection', value: newLine.selection, type: 'integer'}];
+                updates.push({
+                    update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
+                    line: newLine
+                });
+                if(newLine.mqa){
+                    updateFields.push({accessor: 'mqa', value: newLine.mqa, type: 'string'});
+                }
+                if(newLine.selection){
+                    updateFields.push({accessor: 'selection', value: newLine.selection, type: 'integer'});
+                }
+                if(newLine.status === null){ 
+                    newLine.status = oldStatus;
+                }else{
+                    updateFields.push({accessor: 'status', value: newLine.status, type: 'string'});
+                }
+                updates.push({
+                    update_fields: updateFields,
+                    line: newLine
+                });
+            }
+            return newLine;
+        }
         const compRFQData = newRFQData.map((line) => {
             let newLine = {...line};
             if(loadDataMap !== null && newLine.mpn in loadDataMap){
@@ -368,31 +393,36 @@ function ConsolidatePage(props){
                     newLine = {...newLine, ...loadDataMap[newLine.mpn][newLine.supplier_id]};
                 }
             }
+            
             if(newLine.mpn in mpnMap){
                 if(newLine.supplier in mpnMap[newLine.mpn]){
-                    newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
-                    if(loadDataMap === null){
-                        newLine.status = 'Quoted';
-                        updates.push({
-                            update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
-                            line: newLine
-                        });
-                    }
+                    newLine = updateLine(newLine);
+                    //const old
+                    // newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
+                    // if(loadDataMap === null){
+                    //     //newLine.status = 'Quoted';
+                    //     updates.push({
+                    //         update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
+                    //         line: newLine
+                    //     });
+                    // }
                 }
             }else if(newLine.cpn in cpnMap){
                 if(newLine.supplier in cpnMap[newLine.cpn]){
-                    newLine = {...newLine, ...cpnMap[newLine.cpn][newLine.supplier]};
-                    if(loadDataMap === null){
-                        newLine.status = 'Quoted';
-                        updates.push({
-                            update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
-                            line: newLine
-                        });
-                    }
+                    newLine = updateLine(newLine);
+                    // newLine = {...newLine, ...cpnMap[newLine.cpn][newLine.supplier]};
+                    // if(loadDataMap === null){
+                    //     //newLine.status = 'Quoted';
+                    //     updates.push({
+                    //         update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
+                    //         line: newLine
+                    //     });
+                    // }
                 }
             }
             return newLine;
         });
+        console.log(compRFQData);
         compRFQData.forEach((line, i) => {
             const moq = parseInt(line.moq);
             const batch = parseFloat(line['sum0']);
@@ -439,7 +469,11 @@ function ConsolidatePage(props){
     const masterWorkingHeaders = [
         {accessor: 'mpn', label: 'Approved MPN', display: false},
         {accessor: 'cpn', label: 'CPN', display: false},
-        //{accessor: 'quoted_mfr', label: 'Quoted MFR', display: false},
+
+        {accessor: 'selection', label: 'Selection', display: false},
+        {accessor: 'status', label: 'Status', display: false},
+        {accessor: 'mqa', label: 'MQA Remarks', display: false},
+        
         {accessor: 'quoted_supplier', label: 'Quoted Supplier', display: true},
         {accessor: 'quoted_mpn', label: 'Quoted MPN', display: true},
         {accessor: 'quoted_mfr', label: 'Quoted MFR', display: true},
@@ -465,42 +499,6 @@ function ConsolidatePage(props){
     function handleMasterUpload(uploadData){
         const compRFQData = loadIntoRFQData(uploadData, RFQData);
         setRFQData(compRFQData);
-        /* 
-        const mpnMap = objs.reduce((obj, data) => {
-            if(data.mpn in obj){
-                obj[data.mpn][data.quoted_supplier] = data;
-            }else{
-                obj[data.mpn] = {[data.quoted_supplier]: data}
-            }
-            return obj;
-        }, {});
-        const newRFQData = RFQData.map((line) => {
-            let newLine = {...line};
-            if(newLine.mpn in mpnMap){
-                if(newLine.supplier in mpnMap[newLine.mpn]){
-                    newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
-                    newLine.status = 'Quoted';
-                }
-            }
-            return newLine;
-        });
-        newRFQData.forEach((line) => {
-            const moq = parseInt(line.moq);
-            const batch = parseInt(line['sum0']);
-            const spq = parseInt(line.spq);
-            const price = parseFloat(line.price);
-            const totalPo = (moq >= batch ? moq : Math.ceil(batch, spq)) * price;
-            const excess = ((moq >= batch ? moq : Math.ceil(batch, spq))-batch) * price;
-
-            if(!isNaN(totalPo)){
-                line.est_total_po = totalPo;
-            }
-            if(!isNaN(excess)){
-                line.excess = excess;
-            }
-        });
-        setRFQData(newRFQData);
-        */
         const postData = {
             function: 'upload_quote_master_file_data', quote_id: props.quote.id, user: props.user,
             upload_data: uploadData, 
@@ -513,7 +511,6 @@ function ConsolidatePage(props){
             console.log(res.data);
         });
         changePageState(4);
-        
     }
     function renderView(){
         switch(pageState.current){
@@ -687,21 +684,6 @@ function MainQuoteView(props){
     }
     function handleConsolidate(){
         props.onConsolidate();
-        /*
-        const getData = highlightedProduct === null ? {function: 'consolidate_quote', user: props.user, quote_id: props.quote.id} 
-        : {function: 'consolidate_product', user: props.user, product_id: highlightedProduct};
-        getPLMRequest('quote', getData,
-        (res) => {
-            console.log(res.data);
-            props.onConsolidate(res.data);
-            props.changeQuotePageState(3);
-        },
-        (res) => {
-            console.log(res.data);
-            props.onConsolidateError();
-        });
-        props.changeQuotePageState(3);
-        */
     }
     
     function handlePartUsage(){

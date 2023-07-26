@@ -169,7 +169,7 @@ export function PaginationHeaderTable(props){
     const [page, setPage] = useState(0);
     useEffect(() => {
         const fd = props.data.slice(0, pageSize);
-        setMaxPages(Math.floor(props.data.length/pageSize));
+        setMaxPages(Math.ceil(props.data.length/pageSize));
         setFilteredData(fd);
         setPage(0);
     }, [props.data]);
@@ -180,9 +180,8 @@ export function PaginationHeaderTable(props){
         //setCurrPage(pn);
     }
     function handlePageSizeChange(nps){
-        //nps = parseInt(nps);
         setPageSize(nps);
-        setMaxPages(Math.floor(props.data.length/nps));
+        setMaxPages(Math.ceil(props.data.length/nps));
         const fd = props.data.slice(0, nps);
         setPage(0);
         setFilteredData(fd);

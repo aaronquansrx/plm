@@ -19,8 +19,8 @@ function SingleComponentAttribute(){
     const [statusMessage, setStatusMessage] = useState('');
     const [showExportModal, setShowExportModal] = useState(false);
     const [details, setDetails] = useState(null);
-    const [parameters, setParameters] = useState(null);
-    const [photo, setPhoto] = useState(null);
+    //const [parameters, setParameters] = useState(null);
+    //const [photo, setPhoto] = useState(null);
     const [mpn, setMpn] = useState(null);
     function handleChangeTerm(e){
         setSearchTerm(e.target.value);
@@ -35,8 +35,8 @@ function SingleComponentAttribute(){
             console.log(res.data);
             if(res.data.success){
                 setDetails(res.data.details);
-                setParameters(res.data.details.Parameters);
-                setPhoto(res.data.details.Photo);
+                //setParameters(res.data.details.Parameters);
+                //setPhoto(res.data.details.Photo);
                 setStatusMessage('');
             }else{
                 setStatusMessage('Search Failed');
@@ -82,7 +82,7 @@ function SingleComponentAttribute(){
     }
     return(
         <div className='FlexNormal'>
-            <h4>Single Component Search</h4>
+            <h4>Single Component Attribute Search</h4>
             <span className='MPNRequest'>
             <Form.Control
             type="text"
@@ -104,6 +104,9 @@ function SingleComponentAttribute(){
                 </div>
                 }
                 {attributes.map((name, i) => {
+                    if(name === 'Datasheet' || name === 'Url'){
+                        return <div key={i}>{name}: <a href={details[name]}>{details[name]}</a></div>
+                    }
                     return <div key={i}>{name}: {details[name]}</div>
                 })}
                 {details.Parameters && 

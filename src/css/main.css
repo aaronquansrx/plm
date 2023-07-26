@@ -221,6 +221,14 @@ td.NHL{
     background-color: #f19494;
 }
 
+tr.HLC{
+    background-color: #f1c694;
+}
+
+tr.NHL{
+    background-color: #f19494;
+}
+
 .Primary{
     background-color: "#0d6efd"
 }

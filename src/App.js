@@ -49,7 +49,7 @@ const pages = [
   //{path: 'cbom', title: 'CBOM Exporter', element: () => <CBom/>},
   {path: 'partsearch', title: 'Open Market Part Search', element: () => <PartSearch/>},
   {path: 'bomscrub', title: 'Components Attributes Search', element: () => <BOMScrub/>},
-  {path: 'singlecomponent', title: 'Single Component Search', element: () => <SingleComponentAttribute/>}
+  {path: 'singlecomponent', title: 'Single Component Attribute Search', element: () => <SingleComponentAttribute/>}
 ];
 
 /*

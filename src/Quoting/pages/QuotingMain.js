@@ -19,6 +19,10 @@ import {IdCheckbox} from '../../components/Checkbox';
 import { HeaderArrayTable } from '../../components/Tables';
 import { DeleteModal } from '../../components/Modals';
 import { WarningToolTipButton } from '../../components/Tooltips';
+import {FilterModal} from '../components/ConsolidateViews';
+import { SimplePopover } from '../../components/Tooltips';
+import { TemplateModal } from '../../components/Modals';
+import { PaginationInterface } from '../../components/Pagination';
 
 import ListGroup from 'react-bootstrap/ListGroup';
 import Badge from 'react-bootstrap/Badge';
@@ -52,6 +56,7 @@ function QuotingMain(props){
     const [duties, setDuties] = useState({});
     const [activeQuote, setActiveQuote] = useState(null);
     const [pageState, setPageState] = useState({current:0, last: null});
+    const [quoteValues, setQuoteValues] = useState(getQuoteValues());
     const isAdmin = useRef(false);
     useEffect(() => {
         if(props.user){
@@ -90,7 +95,17 @@ function QuotingMain(props){
             setQuotes([]);
         }
     }, [props.user, props.username]);
-
+    useEffect(() => {
+        //console.log(quotes);
+        setQuoteValues(getQuoteValues());
+    }, [quotes]);
+    function getQuoteValues(){
+        return {
+            rfq: new Set(quotes.map(q => q.formatted.rfq)),
+            owner: new Set(quotes.map(q => q.owner)),
+            customer: new Set(quotes.map(q => q.customer))
+        }
+    }
     function handleOpenQuote(quote){
         return function(){
             setActiveQuote(quote)
@@ -108,7 +123,8 @@ function QuotingMain(props){
         switch(pageState.current){
             case 0: // main quote list for user
                 return <Main user={props.user}  quotes={quotes} duties={duties} isAdmin={isAdmin.current}
-                setQuotes={setQuotes} onOpenQuote={handleOpenQuote} changePageState={changePageState}/>
+                setQuotes={setQuotes} onOpenQuote={handleOpenQuote} changePageState={changePageState}
+                quoteValues={quoteValues}/>
             case 1: //quoteView
                 return <QuoteView quote={activeQuote} changePageState={changePageState} 
                 user={props.username} store={props.store} currency={props.currency}/>
@@ -134,6 +150,40 @@ function QuotingMain(props){
 function Main(props){
     const clientUrl = useClientUrl();
     const [errorMessage, setErrorMessage] = useState(null);
+    const [showOptions, setShowOptions] = useState(false);
+    const [filteredQuotes, setFilteredQuotes] = useState([]);
+    const [filters, setFilters] = useState({
+        rfq: {items: props.quoteValues.rfq, active: props.quoteValues.rfq, 
+            display: 'RFQ Filter', show: false},
+        owner: {items: props.quoteValues.owner, active: props.quoteValues.owner, 
+            display: 'Owner Filter', show: false},
+        customer: {items: props.quoteValues.customer, active: props.quoteValues.customer, 
+            display: 'Customer Filter', show: false}
+    });
+    useEffect(() => {
+        const cusValues = props.quoteValues.customer ? props.quoteValues.customer : new Set();
+        setFilters(update(filters, {
+            rfq: {items: {$set: props.quoteValues.rfq}, active: {$set: props.quoteValues.rfq}},
+            owner: {items: {$set: props.quoteValues.owner}, active: {$set: props.quoteValues.owner}},
+            customer: {items: {$set: cusValues}, active: {$set: cusValues}}
+        }));
+    }, [props.quoteValues]);
+    useEffect(() => {
+        const newQuotes = props.quotes.reduce((arr, line) => {
+            let notHave = true;
+            Object.entries(filters).forEach(([key,value]) => {
+                if(!value.active.has(line[key])){
+                    notHave = false;
+                }
+            });
+            if(notHave) arr.push(line);
+            return arr;
+        }, []);
+        setFilteredQuotes(newQuotes);
+    }, [filters, props.quotes]);
+    function getRFQValues(){
+        return new Set(props.quotes.map(q => q.rfq));
+    }
     useEffect(() => {
         if(props.user){
             setErrorMessage(null);
@@ -167,39 +217,109 @@ function Main(props){
     //console.log(props.duties);
     const seeTable = 'table_access' in props.duties || props.isAdmin;
     const seeQuoteUsers = 'role_edit' in props.duties || props.isAdmin;
+    function handleChangeFilterItem(filter, item){
+        console.log(item);
+        let list = new Set(filters[filter].active);
+        if(filters[filter].active.has(item)){
+            list.delete(item);
+        }else{
+            list.add(item);
+        }
+        console.log(list);
+        setFilters(update(filters, {
+            [filter]: {
+                active: {$set: new Set(list)}
+            }
+        }));
+    }
+    function getFilterValues(filter){
+        return filters[filter].items;
+    }
+    function handleShowFilter(filter){
+        setFilters(update(filters, {
+            [filter]: {
+                show: {$set: true}
+            }
+        }));
+    }
+    function handleCloseFilter(filter){
+        return function(){
+            console.log(filter);
+            setFilters(update(filters, {
+                [filter]: {
+                    show: {$set: false}
+                }
+            }));
+        }
+    }
+    function handleSelectAllFilter(filter){
+        setFilters(update(filters, {
+            [filter]: {
+                active: {$set: new Set(filters[filter].items)}
+            }
+        }));
+    }
+    function handleDeselectAllFilter(filter){
+        setFilters(update(filters, {
+            [filter]: {
+                active: {$set: new Set()}
+            }
+        }));
+    }
+    function handleClearFilters(){
+        setFilters(update(filters, {
+            rfq: {
+                active: {$set: props.quoteValues.rfq}
+            },
+            owner: {
+                active: {$set: props.quoteValues.owner}
+            }
+        }));
+    }
+    function handleOpenOptions(){
+        setShowOptions(true);
+    }
+    function handleCloseOptions(){
+        setShowOptions(false);
+    }
     return(
-        <div>
+        <>
+        <div className='FlexNormal'>
             <WarningToolTipButton onClick={handleCreateQuote} buttonText={'Create Quote'}>{errorMessage}</WarningToolTipButton>
-            {/*<Button onClick={handleCreateQuote}>Create Quote</Button>*/}
-            {/*<Button onClick={handleTemplates}>Templates</Button>*/}
-            <h2>Quote List</h2>
-            {/*
-            <ListGroup>
-                {props.quotes && props.quotes.map((q, i) => 
-                    <ListGroup.Item key={i} onClick={props.onOpenQuote(q)} className="Pointer Quote">
-                    <span>{q.id}</span>
-                    <Badge bg="secondary">{q.details.customer}</Badge>
-                    {q.users.map((user, u) => 
-                        <Badge key={u}>{user.name}</Badge>
-                    )}
-                    <Badge bg="warning">{q.details.currency}</Badge>
-                    </ListGroup.Item>
-                )}
-            </ListGroup>
-            */}
-            {<QuoteTable quotes={props.quotes} user={props.user} onOpenQuote={props.onOpenQuote} setQuotes={props.setQuotes}/>}
-            {/*<UploadTemplateEditor />*/}
             {seeTable && <a href={clientUrl+"/tables"}>
                 <Button>Tables</Button>
             </a>}
             {seeQuoteUsers &&
             <a href={clientUrl+"/quoteusers"}>
                 <Button>Users</Button>
-            </a>
-            }
-            {/*<Button onClick={handleToMaster}>Manufacturer Master List</Button>*/}
+            </a>}
+            <Button onClick={handleOpenOptions}>
+                Options
+            </Button>
         </div>
+        {Object.entries(filters).map(([key, value], i) => {
+            //console.log(value);
+            return <FilterModal key={i} show={value.show} title={value.display} 
+            items={value.items} onClose={handleCloseFilter(key)} 
+            itemsActive={value.active} filter={key}
+            onSelectAll={handleSelectAllFilter} onDeselectAll={handleDeselectAllFilter}
+            onChangeItem={handleChangeFilterItem}/>
+        })}
+        {<QuoteTable quotes={filteredQuotes} user={props.user} onOpenQuote={props.onOpenQuote} 
+        onClickFilter={handleShowFilter} setQuotes={props.setQuotes} filterNames={Object.keys(filters)}/>}
+        <QuoteOptionsModal show={showOptions} onClearFilters={handleClearFilters} onClose={handleCloseOptions}/>
+        </>
     )
+}
+
+function QuoteOptionsModal(props){
+    
+    const body = <div>
+        <Button onClick={props.onClearFilters}>Clear Filters</Button>
+    </div>
+    return(
+        <TemplateModal show={props.show} title='Options' body={body} onClose={props.onClose}/>
+    );
 }
 
 const quoteTableHeaders = [
@@ -208,14 +328,38 @@ const quoteTableHeaders = [
     {name: 'Site',  resource: ['internal', 'manufacturing_location'], accessor: 'site'},
     {name: 'Customer', resource: ['details', 'customer'], accessor: 'customer'},
     {name: 'Product Description', resource: ['details', 'description'], accessor: 'description'},
-    {name: 'Application', resource: ['details', 'application'], accessor: 'application'}
+    {name: 'Application', resource: ['details', 'application'], accessor: 'application'},
+    {name: 'Date Created', resource: ['date_created'], accessor: 'date_created'},
+    //{name: 'Last Modified', resource: ['last_modified'], accessor: 'last_modified'},
+    {name: 'Due Date', resource: ['internal', 'due_date'], accessor: 'due_date'}
 ];
 
 function QuoteTable(props){
     const [selectedQuotes, setSelectedQuotes] = useState([]);
+    const [pageSize, setPageSize] = useState(10);
+    const [maxPages, setMaxPages] = useState(0);
+    const [page, setPage] = useState(0);
+    const [filteredData, setFilteredData] = useState(props.quotes);
+    console.log(maxPages);
     useEffect(() => {
         setSelectedQuotes(props.quotes.map(() => false));
+        const fd = props.quotes.slice(0, pageSize);
+        setMaxPages(Math.ceil(props.quotes.length/pageSize));
+        setFilteredData(fd);
+        setPage(0);
     }, [props.quotes]);
+    function handlePageClick(pn){
+        const fd = props.quotes.slice(pn*pageSize, +(pn*pageSize) + +pageSize);
+        setFilteredData(fd);
+        setPage(pn);
+    }
+    function handlePageSizeChange(nps){
+        setPageSize(nps);
+        setMaxPages(Math.ceil(props.quotes.length/nps));
+        const fd = props.quotes.slice(0, nps);
+        setPage(0);
+        setFilteredData(fd);
+    }
     function getVar(obj, resourceArray){
         let v = obj;
         resourceArray.forEach((ra) => {
@@ -231,10 +375,13 @@ function QuoteTable(props){
     function handleDelete(){
         const qids = selectedQuotes.reduce((arr, v, i) => {
             if(v){
-                arr.push(props.quotes[i].id);
+                arr.push(filteredData[i].id);
             }
             return arr;
         }, []);
+        console.log(qids);
+        console.log(props.quotes);
+        /*
         const postData = {function: 'delete_quotes', user: props.user.user, quote_ids: qids};
         postPLMRequest('quote', postData,
         (res) => {
@@ -246,30 +393,58 @@ function QuoteTable(props){
         (res) => {
             console.log(res.data);
         }
-        );   
+        );
+        */
+    }
+
+    function handleClickHeader(headerName){
+        return function(){  
+            props.onClickFilter(headerName);
+        }
     }
     return(
-        <div>
+        <div className='MainTable'> 
         <Table>
-            <thead>
-                <tr>
-                    <th></th>
-                    {quoteTableHeaders.map((h, i) => {
-                        return <th key={i}>{h.name}</th>;
+        <thead>
+            <tr>
+                <th></th>
+                {quoteTableHeaders.map((h, i) => {
+                    if(props.filterNames.includes(h.accessor)){
+                        return <th key={i} onClick={handleClickHeader(h.accessor)}
+                        className='Select'>
+                            {<SimplePopover popoverBody={'Filter '+h.name} trigger={['hover', 'focus']} placement='auto'>
+                        <div>{h.name}</div>
+                            </SimplePopover>}
+                        </th>
+                    }
+                    return <th key={i} onClick={handleClickHeader(h.accessor)}>{h.name}</th>;
+                })}
+            </tr>
+        </thead>
+        <tbody>
+            {filteredData.map((quote, i) => {
+                return <tr key={i} onMouseOver={() => {}} className='RowSelector'>
+                    <td>{<IdCheckbox i={i} onChange={handleCheckboxChange} checked={selectedQuotes.length > i ? selectedQuotes[i] : false}/>}</td>
+                    {quoteTableHeaders.map((h, j) => {
+                        let val = h.resource.reduce((v, r) => {
+                            if(v && r in v){
+                                return v[r];
+                            }
+                            return v;
+                        }, quote);
+                        if(typeof val === 'object') val = '';
+                        return <td key={j} className='Pointer' onClick={props.onOpenQuote(quote)}>{val}</td>
                     })}
                 </tr>
-            </thead>
-            <tbody>
-                {props.quotes.map((quote, i) => {
-                    return <tr key={i} onMouseOver={() => {}} className='RowSelector'>
-                        <td>{<IdCheckbox i={i} onChange={handleCheckboxChange} checked={selectedQuotes.length > i ? selectedQuotes[i] : false}/>}</td>
-                        {quoteTableHeaders.map((h, j) => {
-                            return <td key={j} className='Pointer' onClick={props.onOpenQuote(quote)}>{quote.formatted[h.accessor]}</td>
-                        })}
-                    </tr>
-                })}
-            </tbody>
+            })}
+        </tbody>
         </Table>
+        <div className='PageInterface'>
+        <div>
+            <PaginationInterface page={page} displayWidth={2} onPageClick={handlePageClick} 
+            pageSize={pageSize} max={maxPages} onPageChangeSize={handlePageSizeChange}/>
+        </div>
+        </div>
         <DeleteModal deleteName='Quotes' onConfirm={handleDelete}/>
         </div>
     );

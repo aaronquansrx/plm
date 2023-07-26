@@ -28,21 +28,16 @@ import { MasterWorkingUploadTable } from './UploadTable';
 import { ToggleButtonList, ToggleButton } from '../../components/ButtonList';
 
 
+//const statusOptions = ['Pending RFQ', 'RFQ Failed', 'Pending Quote', 'Missing Info', 'Quoted']; // old
+const statusOptions = ['No Bid', 'Quoted', 'Pending Quote', 'Missing Info', 'Pending RFQ'];
+
 export function ConsolidateView(props){
     const [modalDetails, setModalDetails] = useState(null);
     const [showExportModal, setShowExportModal] = useState(false);
-    const [indexesWithoutManufacturer, setIndexesWithoutManufacturer] = useState([]);
-
+    const [filteredData, setFilteredData] = useState(props.consolidatedData.data);
     const headers = props.consolidatedData.headers;
     useEffect(() => {
-        const withoutManufacturer = props.consolidatedData.data.reduce((arr, line, i) => {
-            if(!line.status.manu_found){
-                arr.push(i);
-            }
-            return arr;
-        }, []);
-        console.log(withoutManufacturer);
-        setIndexesWithoutManufacturer(withoutManufacturer);
+        setFilteredData(props.consolidatedData.data);
     }, [props.consolidatedData]);
     function handleBack(){
         //if(props.changeQuotePageState) props.changeQuotePageState(0);
@@ -78,19 +73,6 @@ export function ConsolidateView(props){
 
     }
     function handleUpdateExisting(){
-        /*
-        const sameManuAdd = props.consolidatedData.data.reduce((obj, row, rn) => {
-            if(row.manufacturer === modalDetails.manufacturer){
-                //obj.push(rn);
-                obj[rn] = {status: {manu_found: {$set: row.manufacturer}}};
-            }
-            return obj;
-        }, {});
-        console.log(sameManuAdd);
-        props.setConsolidatedData(update(props.consolidatedData, {
-            data: sameManuAdd
-        }));
-        */
         props.getAllConsolidateData();
         setModalDetails(null);
     }
@@ -134,19 +116,32 @@ export function ConsolidateView(props){
     function handleCloseExport(){
         setShowExportModal(false);
     }
+    function handleToggle(b){
+        if(b){
+            const withoutManufacturer = props.consolidatedData.data.reduce((arr, line, i) => {
+                if(!line.status.manu_found){
+                    arr.push(line);
+                }
+                return arr;
+            }, []);
+            setFilteredData(withoutManufacturer);
+        }else{
+            setFilteredData(props.consolidatedData.data);
+        }
+    }
+    const buttonListStyle = {display: 'flex', flexDirection: 'row', justifyContent: 'center'};
     return(
         <>
         {props.navigation}
-        <div className='FlexNormal'>
+        <div className='FlexNormal' style={buttonListStyle}>
         <ExcelExportModal show={showExportModal} onClose={handleCloseExport} onExport={handleExportExcel}/>
         <Button variant='secondary' onClick={handleBack}>Back</Button>
         <Button onClick={handleExportModal}>Export</Button>
+        <ToggleButton onToggle={handleToggle} init={false}>Filter Missing Master</ToggleButton>
         <Button onClick={handlePrices}>Data Mapping</Button>
-
-        <Notification data={props.consolidatedData}/>
         </div>
         <div className='MainTable'>
-        <ConsolidateHeaderArrayTable data={props.consolidatedData.data} headers={headers}
+        <ConsolidateHeaderArrayTable data={filteredData} headers={headers}
         onRowClick={handleRowClick}/>
         </div>
         <div className='FlexNormal'>
@@ -175,7 +170,6 @@ function TotalsDisplay(props){
 
 function ConsolidateHeaderArrayTable(props){
     const [popup, setPopup] = useState(null);
-    console.log(props.data);
     function handleRowClick(r){
         return function(){
             const hasFound = props.data[r].status.manu_found;
@@ -276,15 +270,6 @@ export function ConsolidatePricesView(props){
     const [partData, finished, requestParts, finishedParts] = usePartData(mpnSet, 0, props.currency, props.store);
     const [showProgress, setShowProgress] = useState(false);
     const [selectedGroup, setSelectedGroup] = useState(null)
-    /*
-    const [priceData, setPriceData] = useState(props.consolidatedData.data.map((line) => {
-        const uom = line.uom.length > 0 ? line.uom[0] : '';
-        return { ...line, uom: uom, price: null,
-            distributor: null, packaging: null, plc: null
-        };
-    }));
-    */
-    //const [priceGroups, setPriceGroups] = useState([]);
     const headers = [
         {accessor: 'cpn', label: 'CPN'},
         {accessor: 'mpn', label: 'MPN'},  
@@ -302,8 +287,6 @@ export function ConsolidatePricesView(props){
     }, [props.priceGroups]);
     useEffect(() => {
         if(finished){
-            //console.log(partData);
-            //const newData = [...props.priceSupplierMappingData];
             const newData = props.priceSupplierMappingData.map((line, i) => {
                 const newLine = reformatPriceData(line);
                 if(partData.has(line.mpn)){
@@ -330,12 +313,10 @@ export function ConsolidatePricesView(props){
             //setPriceData(newData);
             props.setPriceSupplierMappingData(newData);
         }
-        //getPriceGroups();
-        //console.log(finished);
     }, [finished]);
     function reformatPriceData(line){
         const newData = {distributor: null, plm_price: null, packaging: null,
-        plc: null};
+        plc: ''};
         return {...line, ...newData};
     }
     function handleBack(){
@@ -393,20 +374,6 @@ export function ConsolidatePricesView(props){
             console.log(res.data);
         });
     }
-    /*
-    function getPriceGroups(){
-        const getData = {
-            function: 'price_groups', quote_id: props.quote.id, user: props.user
-        };
-        getPLMRequest('quote', getData,
-        (res) => {
-            console.log(res.data);
-            setPriceGroups(res.data.groups);
-        },
-        (res) => {
-            console.log(res.data);
-        });
-    }*/
     function handleOpenSaveModal(){
         setShowSaveModal(true);
     }
@@ -433,7 +400,6 @@ export function ConsolidatePricesView(props){
                 }
                 return newLine;
             }, []);
-            //setPriceData(newPriceData);
             props.setPriceSupplierMappingData(newPriceData);
             props.requestSupplierMapping(newPriceData);
         },
@@ -478,6 +444,9 @@ export function SupplierMapping(props){
     const [customHeaders, setCustomHeaders] = useState([]);
     const [showExport, setShowExport] = useState(false);
     const [supplierInputs, setSupplierInputs] = useState(props.supplierMappingData.map(() => null));
+    const [filterNoSup, setFilterNoSup] = useState(false);
+    const [filteredData, setFilteredData] = useState(props.supplierMappingData);
+
     const batchHeaders = Array.from(Array(props.numBatches)).map((_, i) => {
         return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
     });
@@ -486,6 +455,39 @@ export function SupplierMapping(props){
     useEffect(() => {
         if(errorText !== null) setTimeout(() => setErrorText(null), 2000);
     }, [errorText]);
+    useEffect(() => {
+        const filtData = getFilterData();
+        setFilteredData(filtData);
+    }, [props.supplierMappingData, filterNoSup]);
+    useEffect(() => {
+        const getData = {
+            function: 'get_master_file_custom_header', quote_id: props.quote.id, user: props.user
+        };
+        getPLMRequest('quote', getData,
+        (res) => {
+            console.log(res.data);
+            if(res.data.success){
+                newCustomHeaders(res.data.header);
+            }
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }, []);
+    function getFilterData(){
+        const filt = props.supplierMappingData.reduce((arr, line) => {
+            if(filterNoSup){
+                if(line.suppliers.length === 0 && !('supplier0' in line)){
+                    arr.push(line);
+                }
+            }else{
+                arr.push(line);
+            }
+            return arr;
+        }, []);
+        return filt;
+    }
+
     const headers = [
         {accessor: 'system', label: 'System Unique ID'},  
         {accessor: 'cpn', label: 'CPN'},
@@ -552,6 +554,10 @@ export function SupplierMapping(props){
             console.log(res.data);
         });
     }
+    function newCustomHeaders(newHeaders){
+        setCustomHeaders(newHeaders);
+        props.setCustomHeaders(newHeaders);
+    }
     function handleChangeRegion(item){
         //setRegionSelector(item);
         props.setRegion(item);
@@ -571,11 +577,21 @@ export function SupplierMapping(props){
         });
     }
     function handleChangeCustom(val, i){
-        const newHeaders = update(customHeaders, {
-            [i]: {$set: val}
+        const headerId = customHeaders[i].id;
+        const postData = {
+            function: 'update_master_file_custom_header', quote_id: props.quote.id, 
+            header_id: headerId, user: props.user, header_name: val
+        }
+        postPLMRequest('quote', postData,
+        (res) => {
+            console.log(res.data);
+            if(res.data.success){   
+                newCustomHeaders(res.data.header);
+            }
+        },
+        (res) => {
+            console.log(res.data);
         });
-        setCustomHeaders(newHeaders);
-        props.setCustomHeaders(newHeaders);
     }
     function handleAddCustom(){
         const next = customOptions.reduce((n, curr) => {
@@ -585,24 +601,44 @@ export function SupplierMapping(props){
             return n;
         }, null);
         if(next){
-            const newHeaders = update(customHeaders, {
-                $push: [next]
+            const postData = {
+                function: 'add_master_file_custom_header', quote_id: props.quote.id, 
+                header_name: next, user: props.user
+            }
+            postPLMRequest('quote', postData,
+            (res) => {
+                console.log(res.data);
+                if(res.data.success){   
+                    newCustomHeaders(res.data.header);
+                }
+            },
+            (res) => {
+                console.log(res.data);
             });
-            setCustomHeaders(newHeaders);
-            props.setCustomHeaders(newHeaders);
         }
     }
     function handleDeleteCustom(i){
-        const newHeaders = update(customHeaders, {
-            $splice: [[i, 1]]
+        const headerId = customHeaders[i].id;
+        const postData = {
+            function: 'delete_master_file_custom_header', quote_id: props.quote.id, 
+            header_id: headerId, user: props.user
+        }
+        postPLMRequest('quote', postData,
+        (res) => {
+            console.log(res.data);
+            if(res.data.success){   
+                newCustomHeaders(res.data.header);
+            }
+        },
+        (res) => {
+            console.log(res.data);
         });
-        setCustomHeaders(newHeaders);
-        props.setCustomHeaders(newHeaders);
     }
     function handleShowExport(){
         setShowExport(true);
     }
     function handleExportExcel(fn){
+        const customHeaderNames = customHeaders.map(h=>h.header);
         const keys = headers.map((h) => h.accessor).concat(customHeaders);
         const labels = headers.map((h) => h.label);
         const supplierLabels = supplierHeaders.map((h) => h.label);
@@ -634,17 +670,14 @@ export function SupplierMapping(props){
         setShowExport(false);
     }
     function handleAddSupplier(i, supplier){
-        if(props.supplierMappingData[i].full_master_manufacturer){
-            const masterId = props.supplierMappingData[i].full_master_manufacturer.id;
+        if(filteredData[i].full_master_manufacturer){
+            const masterId = filteredData[i].full_master_manufacturer.id;
             const postData = {
                 function: 'add_manufacturer_supplier', supplier_id: supplier.id, 
                 manufacturer_id: masterId, region: props.region
             };
             postPLMRequest('srx_records', postData,
             (res) => {
-                //console.log(supplier);
-                //updateSupplierMappingData(res.data.manufacturer_supplier_map,
-                //    res.data.quote_mapping_details.custom_supplier_manufacturer);
                 const postData2 = {
                     function: 'supplier_mapping', quote_id: props.quote.id,
                     user: props.user, manufacturer_list: props.manufacturerList, 
@@ -663,35 +696,7 @@ export function SupplierMapping(props){
                 },
                 (res) => {
                     console.log(res.data);
-                });
-
-                /*
-                const newData = props.supplierMappingData.map((line) => {
-                    const newLine = {...line};
-                    if(newLine.master_manufacturer === props.supplierMappingData[i].master_manufacturer){
-                        newLine.suppliers = res.data.suppliers;
-                        for(let j=0; j <= numSupplierColumns; j++){
-                            delete newLine['supplier'+j.toString()];
-                        }
-                        res.data.suppliers.forEach((supplier, j) => {
-                            const supString = 'supplier'+j.toString();
-                            newLine[supString] = {name: supplier.supplier_name, type: 'global'};
-                        });
-                        newLine.custom_suppliers.forEach((custom, i) => {
-                            const supString = 'supplier'+(newLine.suppliers.length+i).toString();
-                            newLine[supString] = {name: custom.supplier_name, type: 'custom'};
-                        });
-                    }
-                    return newLine;
-                });
-                console.log(newData);
-                
-                updateSupplierMappingData(res.data.manufacturer_supplier_map,
-                    res.data.quote_mapping_details.custom_supplier_manufacturer);
-                setSupplierInputs(update(supplierInputs, {
-                    [i]: {$set: null}
-                }));  
-                */      
+                });      
             },
             (res) => {
                 console.log(res.data);
@@ -700,7 +705,7 @@ export function SupplierMapping(props){
     }
     function handleAddQuoteSupplier(i, supplier){
         //console.log(supplier);
-        const master_manufacturer = props.supplierMappingData[i].full_master_manufacturer;
+        const master_manufacturer = filteredData[i].full_master_manufacturer;
         //console.log(master_manufacturer);
         if(master_manufacturer){
             const postData = {
@@ -785,6 +790,10 @@ export function SupplierMapping(props){
             [i]: {$set: null}
         }));
     }
+    function handleToggle(togg){
+        setFilterNoSup(togg);
+    }
+    const buttonListStyle = {display: 'flex', flexDirection: 'row', justifyContent: 'center'};
     return(
         <>
         {props.navigation}
@@ -797,14 +806,15 @@ export function SupplierMapping(props){
         <Button onClick={handleAddCustom}>Add Custom Column</Button>
         <Button onClick={handleShowExport}>Export</Button>
         </div>
-        <div className='FlexNormal'>
-        <Button onClick={handleAutoMap} disabled={true}>Auto Map</Button>
-        <SimpleDropdown selected={props.region} items={regions} onChange={handleChangeRegion}/>
+        <div className='FlexNormal' style={buttonListStyle}>
+            <ToggleButton onToggle={handleToggle} init={filterNoSup}>Filter No Suppliers</ToggleButton>
+            {/*<Button onClick={handleAutoMap} disabled={true}>Auto Map</Button>*/}
+            <SimpleDropdown selected={props.region} items={regions} onChange={handleChangeRegion}/>
         </div>
         <div className='FlexNormal'>{errorText}</div>
         <div className='MainTable'>
-        <SupplierMappingTable data={props.supplierMappingData} headers={headers} 
-        customHeaders={customHeaders} customOptions={customOptions}
+        <SupplierMappingTable data={filteredData} headers={headers} 
+        customHeaders={customHeaders.map(h=>h.header)} customOptions={customOptions}
         supplierInputs={supplierInputs} numSupplierColumns={numSupplierColumns}
         onDeselectSupplierInput={handleDeselectSupplierInput}
         onSelectSupplierInput={handleSelectSupplierInput}
@@ -897,8 +907,11 @@ function SupplierMappingTable(props){
             </thead>
             <tbody>
                 {props.data.map((row, i) => {
+                    console.log(props.data);
                     let hasSupplierChooser = false;
-                    const cn = selectedRow === i ? 'HighlightedRow' : '';
+
+                    const cn = selectedRow === i ? 'HighlightedRow' : (!row.status.manu_found ? 'NHL' 
+                    : (row.suppliers.length === 0 && !('supplier0' in row) ? 'HLC' : ''));
                     return(
                     <tr key={i} className={cn} onClick={handleSelectLine(i)}>
                         {props.headers.map((h, j) => 
@@ -962,7 +975,7 @@ export function RequestForQuoteList(props){
     });
     
     const customHeaders = props.customHeaders.map((header) => {
-        return {accessor: header, label: header, type: 'custom'};
+        return {accessor: header.header, label: header.header, type: 'custom'};
     });
     const headers = [
         {accessor: 'system', label: 'System Unique ID'}, 
@@ -1038,11 +1051,13 @@ export function RFQTable(props){
         <tbody>
             {props.data.map((row, i) => {
                 //const cn = selectedRow === i ? 'HighlightedRow' : '';
+                console.log(row);
                 return(
                 <tr key={i} className={''} /*onClick={handleSelectLine(i)}*/>
                     {props.headers.map((h, j) => {
                         let contents = <></>;
                         if(h.type === 'custom'){
+                            console.log(h.accessor);
                             if(row[h.accessor].length > 0){
                                 contents = row[h.accessor][0];
                             }
@@ -1066,7 +1081,7 @@ export function MasterWorkingFile(props){
         return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
     });
     const customHeaders = props.customHeaders.map((header) => {
-        return {accessor: header, label: header, type: 'custom'};
+        return {accessor: header.header, label: header.header, type: 'custom'};
     });
     const mpnValues = new Set(props.RFQData.map((l) => l.mpn));
     const mfrValues = new Set(props.RFQData.map((l) => l.manufacturer));
@@ -1337,12 +1352,10 @@ function MasterWorkingTable(props){
     const stickyColumnRefs = useRef([]);
     const [editMQA, setEditMQA] = useState(null);
     const [leftColumn, setLeftColumn] = useState(props.mainHeaders.map(() => 0));
-    const statusOptions = ['Pending RFQ', 'RFQ Failed', 'Pending Quote', 'Missing Info', 'Quoted'];
-    //console.log(props.filterNames);
+    //const statusOptions = ['Pending RFQ', 'RFQ Failed', 'Pending Quote', 'Missing Info', 'Quoted'];
     useEffect(() => {
         let left = 0;
         const lefts = [];
-        console.log(stickyColumnRefs);
         stickyColumnRefs.current.map(r => {
             lefts.push(left);
             if(r != null){
@@ -1350,7 +1363,6 @@ function MasterWorkingTable(props){
             }
         });
         setLeftColumn(lefts);
-        //console.log(stickyColumnRefs);
     }, [stickyColumnRefs, props.stickyTable, props.data]);
     useEffect(() => {
         setEditMQA(null);
@@ -1382,7 +1394,7 @@ function MasterWorkingTable(props){
                 //console.log(i + ' ' + j);
             }
             if(accessor === 'mqa'){
-                console.log(i + ' ' + j);
+                //console.log(i + ' ' + j);
                 setEditMQA(i);
             }
         }
@@ -1470,9 +1482,12 @@ function MasterWorkingTable(props){
     );
 }
 
-function FilterModal(props){
+export function FilterModal(props){
     const [searchTerm, setSearchTerm] = useState('');
     const [buttonList, setButtonList] = useState([...props.items]);
+    useEffect(() => {
+        setButtonList([...props.items]);
+    }, [props.items])
     function handleChangeList(items){
         if(props.onChangeList) props.onChangeList(props.filter, items);
     }
@@ -1487,7 +1502,7 @@ function FilterModal(props){
         if(props.onDeselectAll) props.onDeselectAll(props.filter);
     }
     function handleChangeTerm(st){
-        console.log(st);
+        //console.log(st);
         if(st !== ''){
             const buttons = [...props.items].reduce((arr, item) => {
                 const lowerItem = item.toLowerCase();
@@ -1660,7 +1675,7 @@ export function MasterUpload(props){
                 <p>Upload</p>
             </ExcelDropzone>
         </div>
-        <MasterWorkingUploadTable headers={props.headers} sheets={sheets} 
+        <MasterWorkingUploadTable headers={props.headers} sheets={sheets} statusOptions={statusOptions}
         onMasterUpload={props.onMasterUpload}/>
         </>
     );
