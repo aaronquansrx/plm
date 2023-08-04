@@ -2,7 +2,7 @@ import {useState, useEffect, useMemo} from 'react';
 import styled from 'styled-components';
 import update from 'immutability-helper';
 
-import { useTable/*, useGroupBy, useExpanded*/ } from 'react-table'
+import { useTable } from 'react-table'
 
 import Table from 'react-bootstrap/Table';
 import Nav from 'react-bootstrap/Nav';
@@ -24,21 +24,15 @@ import { TextControl } from './Forms';
 
 
 export function TabbedSheetTable(props){
-    //const [activeSheetIndex, setActiveSheetIndex] = useState(null);
-    //useEffect(() => {
-    //    setActiveSheetIndex(0);
-    //}, [props.sheets]);
     const activeSheet = useMemo(() => {
         if(props.sheets === null || props.sheetId === null) return [];
         return props.sheets.length > 0 ? props.sheets[props.sheetId].array : [];
     }, [props.sheetId, props.sheets]);
     function handleSheetChange(i){
         return function(){
-            //setActiveSheetIndex(i);
             if(props.onChangeSheet) props.onChangeSheet(i);
         }
     }
-    //console.log(props.sheets);
     return(
         <>
         <div className={props.tabsClass}>
@@ -62,6 +56,7 @@ export function EditTable(props){
     const [editCell, setEditCell] = useState(null);
     function handleEdit(i, j, val){
         return function(){
+            if(val === null) val = '';
             if(editCell !== null){
                 if(editCell.x !== i && editCell.y !== j){
                     submitCellValue();
@@ -85,13 +80,13 @@ export function EditTable(props){
     function submitCellValue(){
         if(props.onSubmit) props.onSubmit(editCell, editValue);
         setEditCell(null);
-        console.log('sub?');
     }
     return(
         <Table>
-        <thead>
+        <thead className='TableHeading'>
             <tr>
             {props.headers.map((h, i) => <th key={i}>{h.label}</th>)}
+            {props.delete && <th></th>}
             </tr>
         </thead>
         <tbody>
@@ -101,7 +96,7 @@ export function EditTable(props){
                     const isEditCell = editCell ? i === editCell.x && j === editCell.y : false;
                     return <td key={i} onMouseDown={handleEdit(i, j, l[h.accessor])}>
                         {isEditCell ? 
-                        <OutsideClickFunction func={() => {}}>
+                        <OutsideClickFunction func={submitCellValue}>
                         <Form.Control style={{minWidth: '100px'}} autoFocus type='text' 
                         value={editValue} onChange={handleEditChange} onKeyDown={handleSubmit}/> 
                         </OutsideClickFunction>
@@ -133,10 +128,42 @@ export function SimpleArrayTable(props){
 }
 
 export function HeaderArrayTable(props){
+    const [editValue, setEditValue] = useState('');
+    const [editCell, setEditCell] = useState(null);
     function handleDelete(i){
         return function(){
             if(props.onDelete) props.onDelete(i);
         }
+    }
+    function handleEdit(i, j, val){
+        return function(){
+            if(!props.headers[j].editing) return;
+            if(val === null) val = '';
+            if(editCell !== null){
+                if(editCell.x !== i && editCell.y !== j){
+                    submitCellValue();
+                    setEditCell({x: i, y: j});
+                    setEditValue(val);
+                }
+            }else{
+                setEditCell({x: i, y: j});
+                setEditValue(val);
+            }
+        }
+    }
+    function handleEditChange(e){
+        setEditValue(e.target.value);
+    }
+    function handleSubmit(e){
+        if(e.key === 'Enter'){
+            submitCellValue();
+        }
+    }
+    function submitCellValue(){
+        const header = props.headers[editCell.y].accessor;
+        const id = props.data[editCell.x].id;
+        if(props.onEditCell) props.onEditCell(id, header, editValue);
+        setEditCell(null);
     }
     return(
         <Table>
@@ -151,9 +178,17 @@ export function HeaderArrayTable(props){
             <tbody>
                 {props.data.map((row, i) => 
                     <tr key={i}>
-                        {props.headers.map((h, j) =>
-                            <td key={j}>{row[h.accessor]}</td>
-                        )}
+                        {props.headers.map((h, j) => {
+                            const isEditCell = editCell && props.editing && h.editing ? i === editCell.x && j === editCell.y : false;
+                            return <td key={j} onMouseDown={handleEdit(i, j, row[h.accessor])}>
+                                {isEditCell ? 
+                                <OutsideClickFunction func={submitCellValue}>
+                                <Form.Control style={{minWidth: '100px'}} autoFocus type='text' 
+                                value={editValue} onChange={handleEditChange} onKeyDown={handleSubmit}/> 
+                                </OutsideClickFunction>
+                                : row[h.accessor]}
+                            </td>
+                        })}
                         {props.delete && <td><Button onClick={handleDelete(i)} variant='danger'>X</Button></td>}
                     </tr>
                 )}
@@ -177,7 +212,6 @@ export function PaginationHeaderTable(props){
         const fd = props.data.slice(pn*pageSize, +(pn*pageSize) + +pageSize);
         setFilteredData(fd);
         setPage(pn);
-        //setCurrPage(pn);
     }
     function handlePageSizeChange(nps){
         setPageSize(nps);
@@ -197,7 +231,8 @@ export function PaginationHeaderTable(props){
     return(
         <>
         <div className='MainTable'>
-            <HeaderArrayTable data={filteredData} headers={props.headers} 
+            <HeaderArrayTable data={filteredData} headers={props.headers} editing={props.editing}
+            onEditCell={props.onEditCell}
             headerClass={props.headerClass} delete={props.delete} onDelete={handleDelete}/>
         </div>
         <div className='PageInterface'>
@@ -267,102 +302,15 @@ export function SearchPaginationTable(props){
             selected={props.headers[fieldIndex].label} onChange={handleFieldChange}/>}
         </div>
         <PaginationHeaderTable headers={props.headers} data={filteredData} 
-        headerClass={props.headerClass}
+        headerClass={props.headerClass} editing={props.editing} onEditCell={props.onEditCell}
         reset={resetPage} delete={props.delete} onDelete={handleDelete}/>
         </>
     );
 }
 
-/*
-const CC = styled.td`
-    &&
-    {
-    background-color: ${props => props.bgc ? props.bgc : 'white'}
-    }
-`;
-
-export function HighlightRowTable(props){
-    const [hr, setHr] = useState(null);
-    const [hc, setHc] = useState(null);
-    const [hls, setHls] = useState(props.data.map((d) => d.map((c) => "")));
-    const [colours, setColours] = useState(props.data.map((d) => d.map((c) => "white")))
-    function handleClickCell(i, j){
-        return function(e){
-            
-            if(e.ctrlKey){
-                setHls(update(hls, {
-                    [i]: {$set: hls[i].map(() => "HL")}
-                }));
-            }else{
-                setHls(update(hls, {
-                    [i]: {[j]: {$set: "HLC"}}
-                }));
-            }
-            if(props.palleteColour){
-                setColours(update(colours, {
-                    [i]: {[j]: {$set: props.palleteColour}}
-                }));
-            }
-        }
-    }
-    return(
-        <Table>
-            <tbody>
-                {props.data.map((row, i) => {
-                    return(
-                    <tr key={i} >
-                        {row.map((str, j) => {
-                            //const cnc = rch && i === hc.column ? "HLC" : "";
-                            //const cnc = hls[i][j]+' SmallCell';
-                            return <ColouredCell key={j} id="ColouredCell" className={'SmallCell'} //bgc={colours[i][j]}
-                            onClick={handleClickCell(i, j)} pallete={props.palleteColour} content={str} onColourChange={}/>
-                                {<div className={"FixedCell"} bgc={colours[i][j]}>{str}</div>
-                            </ColouredCell>}
-                        }
-                        )}
-                    </tr>
-                    )}
-                )}
-            </tbody>
-        </Table>
-    )
-}
-
-function ColouredCell(props){
-    const [colour, setColour]= useState('white');
-    function handleClick(){
-        if(props.pallete !== colour){
-            setColour(props.pallete);
-            if(props.onColourChange) props.onColourChange(props.pallete);
-        }
-    }
-    return <CC id="ColouredCell" className={'SmallCell'} bgc={colour}
-        onClick={handleClick}>
-            <div className={"FixedCell"}>{props.content}</div>
-        </CC>
-}*/
-
 export function BOMAPITable(props){
-    //const [init, setInit] = useState(false);
     const data = useMemo(() => props.data, [props.data]);
-    
     const columns = useMemo(() => {
-        //let bomAttrs = props.bomAttrs;
-        /*
-        if(bomAttrs[0].accessor !== 'checkbox'){
-            const checkboxColumn = {
-                Header: 'CBox',
-                accessor: 'checkbox',
-                Cell: (r) => {
-                    const i = r.row.index;
-                    return <IdCheckbox onChange={handleChangeCBox} checked={checkboxRows[i]} i={i}/>
-                }
-            }
-            bomAttrs.unshift(checkboxColumn);
-            //setInit(true);
-        }
-        bomAttrs = bomAttrs.concat(props.apis);
-        */
         return props.bomAttrs.concat(props.apis);
     }, [props.bomAttrs, props.apis]);
 

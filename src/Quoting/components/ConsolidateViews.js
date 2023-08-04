@@ -883,6 +883,12 @@ function SupplierMappingTable(props){
             props.onDeleteQuoteSupplier(i, j);
         }
     }
+    function handleChangeHeader(val){
+        return function(header){
+            console.log(val);
+            console.log(header);
+        }
+    }
     return(
         <Table>
             <thead className={'TableHeading'}>
@@ -907,7 +913,7 @@ function SupplierMappingTable(props){
             </thead>
             <tbody>
                 {props.data.map((row, i) => {
-                    console.log(props.data);
+                    //console.log(props.data);
                     let hasSupplierChooser = false;
 
                     const cn = selectedRow === i ? 'HighlightedRow' : (!row.status.manu_found ? 'NHL' 
@@ -918,9 +924,12 @@ function SupplierMappingTable(props){
                             <td key={j}>{row[h.accessor]}</td>
                         )}
                         {props.customHeaders.map((header, j) => {
+                            const out = row[header].length === 0 ? '' 
+                            : (row[header].length === 1 ? row[header][0] : <SimpleDropdown 
+                                 items={row[header]/*.concat('<ALL>')*/} onChange={handleChangeHeader(header)}/>);
                         return(
                             <td key={j}>
-                                {row[header]}
+                                {out}
                             </td>
                         )
                         })}

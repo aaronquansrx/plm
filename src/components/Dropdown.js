@@ -89,7 +89,6 @@ export function ListSelectDropdown(props){
     }
     function handleSelect(e){
         const id = parseInt(e.target.id);
-        //console.log(id);
         if(props.onSelect) props.onSelect(id);
         setOpen(false);
     }

@@ -35,6 +35,7 @@ import { useClientUrl } from '../../hooks/Urls';
 import { getPLMRequest, postPLMRequest } from '../../scripts/APICall';
 
 import '../../css/main.css';
+import { ListSelectDropdown, SimpleDropdown } from '../../components/Dropdown';
 
 /*
 const pageStates = [
@@ -103,7 +104,8 @@ function QuotingMain(props){
         return {
             rfq: new Set(quotes.map(q => q.formatted.rfq)),
             owner: new Set(quotes.map(q => q.owner)),
-            customer: new Set(quotes.map(q => q.customer))
+            customer: new Set(quotes.map(q => q.customer)),
+            site: new Set(quotes.map(q => q.site))
         }
     }
     function handleOpenQuote(quote){
@@ -146,7 +148,8 @@ function QuotingMain(props){
         </>
     );
 }
-
+const its = ['In Progress', 'Closed'];
+const statusVals = new Set([true, false]);
 function Main(props){
     const clientUrl = useClientUrl();
     const [errorMessage, setErrorMessage] = useState(null);
@@ -157,22 +160,33 @@ function Main(props){
             display: 'RFQ Filter', show: false},
         owner: {items: props.quoteValues.owner, active: props.quoteValues.owner, 
             display: 'Owner Filter', show: false},
+        site: {items: props.quoteValues.site, active: props.quoteValues.site, 
+            display: 'Site Filter', show: false},
         customer: {items: props.quoteValues.customer, active: props.quoteValues.customer, 
-            display: 'Customer Filter', show: false}
+            display: 'Customer Filter', show: false},
+        status: {items: new Set(its), active: new Set(its), display: 'Status Filter', show: false}
     });
     useEffect(() => {
         const cusValues = props.quoteValues.customer ? props.quoteValues.customer : new Set();
         setFilters(update(filters, {
             rfq: {items: {$set: props.quoteValues.rfq}, active: {$set: props.quoteValues.rfq}},
             owner: {items: {$set: props.quoteValues.owner}, active: {$set: props.quoteValues.owner}},
-            customer: {items: {$set: cusValues}, active: {$set: cusValues}}
+            site: {items: {$set: props.quoteValues.site}, active: {$set: props.quoteValues.site}},
+            customer: {items: {$set: cusValues}, active: {$set: cusValues}},
+            //status: {items: {$set: new Set(its)}, active: {$set: new Set(its)}}
         }));
     }, [props.quoteValues]);
     useEffect(() => {
         const newQuotes = props.quotes.reduce((arr, line) => {
             let notHave = true;
             Object.entries(filters).forEach(([key,value]) => {
-                if(!value.active.has(line[key])){
+                if(key === 'status'){
+                    const v = line[key] ? 'In Progress' : 'Closed';
+                    if(!value.active.has(v)){
+                        notHave = false;
+                    }
+                }
+                else if(!value.active.has(line[key])){
                     notHave = false;
                 }
             });
@@ -236,11 +250,13 @@ function Main(props){
         return filters[filter].items;
     }
     function handleShowFilter(filter){
-        setFilters(update(filters, {
-            [filter]: {
-                show: {$set: true}
-            }
-        }));
+        if(filter in filters){
+            setFilters(update(filters, {
+                [filter]: {
+                    show: {$set: true}
+                }
+            }));
+        }
     }
     function handleCloseFilter(filter){
         return function(){
@@ -272,14 +288,6 @@ function Main(props){
             upd[key] = {active: {$set: props.quoteValues[key]}}
         });
         setFilters(update(filters, upd));
-        /*{
-            rfq: {
-                active: {$set: props.quoteValues.rfq}
-            },
-            owner: {
-                active: {$set: props.quoteValues.owner}
-            }
-        }));*/
     }
     function handleOpenOptions(){
         setShowOptions(true);
@@ -334,8 +342,8 @@ const quoteTableHeaders = [
     {name: 'Customer', resource: ['details', 'customer'], accessor: 'customer'},
     {name: 'Product Description', resource: ['details', 'description'], accessor: 'description'},
     {name: 'Application', resource: ['details', 'application'], accessor: 'application'},
+    {name: 'Status', resource: ['status'], accessor: 'status'},
     {name: 'Date Created', resource: ['date_created'], accessor: 'date_created'},
-    //{name: 'Last Modified', resource: ['last_modified'], accessor: 'last_modified'},
     {name: 'Due Date', resource: ['internal', 'due_date'], accessor: 'due_date'}
 ];
 
@@ -345,7 +353,6 @@ function QuoteTable(props){
     const [maxPages, setMaxPages] = useState(0);
     const [page, setPage] = useState(0);
     const [filteredData, setFilteredData] = useState(props.quotes);
-    console.log(maxPages);
     useEffect(() => {
         setSelectedQuotes(props.quotes.map(() => false));
         const fd = props.quotes.slice(0, pageSize);
@@ -365,13 +372,6 @@ function QuoteTable(props){
         setPage(0);
         setFilteredData(fd);
     }
-    function getVar(obj, resourceArray){
-        let v = obj;
-        resourceArray.forEach((ra) => {
-            v = v[ra];
-        })
-        return v;
-    }
     function handleCheckboxChange(i){
         setSelectedQuotes(update(selectedQuotes, {
             [i]: {$set: !selectedQuotes[i]}
@@ -384,9 +384,6 @@ function QuoteTable(props){
             }
             return arr;
         }, []);
-        console.log(qids);
-        console.log(props.quotes);
-        /*
         const postData = {function: 'delete_quotes', user: props.user.user, quote_ids: qids};
         postPLMRequest('quote', postData,
         (res) => {
@@ -397,14 +394,30 @@ function QuoteTable(props){
         },
         (res) => {
             console.log(res.data);
-        }
-        );
-        */
+        });
     }
 
     function handleClickHeader(headerName){
         return function(){  
             props.onClickFilter(headerName);
+        }
+    }
+    function handleChangeStatus(i){
+        return function(newStatus){
+            const status = newStatus === 'In Progress' ? 1 : 0;
+            const postData = {
+                function: 'update_quote_status',
+                user: props.user.user,
+                quote_id: filteredData[i].id,
+                status: status
+            }
+            postPLMRequest('quote', postData, 
+            (res) => {
+                console.log(res.data);
+            },
+            (res) => {
+                console.log(res.data);
+            });
         }
     }
     return(
@@ -438,6 +451,12 @@ function QuoteTable(props){
                             return v;
                         }, quote);
                         if(typeof val === 'object') val = '';
+                        if(h.accessor === 'status'){
+                            return  <td key={j} className='Pointer'>{
+                                <SimpleDropdown selected={quote.status ? its[0] : its[1]} items={its}
+                                onChange={handleChangeStatus(i)}/>
+                            }</td>;
+                        }
                         return <td key={j} className='Pointer' onClick={props.onOpenQuote(quote)}>{val}</td>
                     })}
                 </tr>
