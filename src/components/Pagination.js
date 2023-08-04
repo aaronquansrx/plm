@@ -69,7 +69,7 @@ export function PaginationInterface(props){
         setCurrentPage(0);
     }, [props.resetPage]);
     useEffect(() => {
-        setCurrentPage(props.page);
+        //if(props.page != ) setCurrentPage(props.page);
     }, [props.page]);
     function prePages(){
         const pages = [];

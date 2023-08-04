@@ -23,7 +23,8 @@ export function MasterManufacturers(props){
     useEffect(() => {
         getManufacturers();
     }, []);
-    const headers = [{label: 'Manufacturer', accessor: 'name'}, {label: 'Website', accessor: 'website'}];
+    const headers = [{label: 'Manufacturer', accessor: 'name', editing: true}, 
+    {label: 'Website', accessor: 'website', editing: true}];
     function getManufacturers(){
         const getData = {function: 'master_manufacturer'};
         getPLMRequest('srx_records', getData, 
@@ -63,6 +64,22 @@ export function MasterManufacturers(props){
         setDeleteLine(null);
         setDeleteModal(false);
     }
+    function handleEditCell(id, field, value){
+        const postData = {
+            function: 'update_srx_records',
+            table: 'srx_manufacturer',
+            field: field,
+            value: value, id: id
+        }
+        postPLMRequest('srx_records', postData,
+        (res) => {
+            console.log(res.data);
+            getManufacturers();
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
     return (
         <>
             <div className='FlexNormal'>
@@ -70,7 +87,8 @@ export function MasterManufacturers(props){
             </div>
             <SearchPaginationTable data={masterManufacturerData} headers={headers} 
             headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}
-            searchName={'Search: '} delete={true} onDelete={handleDelete}/>
+            searchName={'Search: '} delete={true} onDelete={handleDelete}
+            onEditCell={handleEditCell} editing={true}/>
             {
             <TableDeleteLineModal show={deleteModal} title={'Delete Manufacturer Supplier'}
             onClose={handleClose} onConfirmDelete={handleConfirmDelete}
@@ -91,9 +109,9 @@ export function AlternateManufacturerReference(props){
         getManufacturers();
     }, []);
     const headers = [
-        {label: 'Master Manufacturer', accessor: 'name'}, 
-        {label: 'Website', accessor: 'website'}, 
-        {label: 'Alternative Manufacturer Name', accessor: 'string'}
+        {label: 'Master Manufacturer', accessor: 'name', editing: false}, 
+        {label: 'Website', accessor: 'website', editing: false}, 
+        {label: 'Alternative Manufacturer Name', accessor: 'string', editing: true}
     ];
     function handleBack(){
         props.changePageState(0);
@@ -135,6 +153,22 @@ export function AlternateManufacturerReference(props){
         setDeleteLine(null);
         setDeleteModal(false);
     }
+    function handleEditCell(id, field, value){
+        const postData = {
+            function: 'update_srx_records',
+            table: 'srx_manufacturer_reference_string',
+            field: field,
+            value: value, id: id
+        }
+        postPLMRequest('srx_records', postData,
+        (res) => {
+            console.log(res.data);
+            getManufacturers();
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
     return (
         <>
         <div className='FlexNormal'>
@@ -142,7 +176,8 @@ export function AlternateManufacturerReference(props){
         </div>
         <SearchPaginationTable data={masterManufacturerData} headers={headers} 
         headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}
-        searchName={'Search: '} delete={true} onDelete={handleDelete}/>
+        searchName={'Search: '} delete={true} onDelete={handleDelete}
+        onEditCell={handleEditCell} editing={true}/>
         {<TableDeleteLineModal show={deleteModal} title={'Delete Manufacturer Supplier'}
         onClose={handleClose} onConfirmDelete={handleConfirmDelete}
         manufacturer={deleteLine !== null && deleteLine.name}
@@ -280,23 +315,26 @@ export function SupplierTable(props){
     const hasData = useRef(false);
     useEffect(() => {
         if(!hasData.current){
-            const getData = {function: 'suppliers'};
-            getPLMRequest('srx_records', getData, 
-            (res) => {
-                console.log(res.data);
-                setSupplierData(res.data.suppliers);
-                hasData.current = true;
-            },
-            (res) => {
-                console.log(res.data);
-            });
+            getSuppliers();
         }
     }, []);
     const headers = [
-        {label: 'Supplier', accessor: 'name'}, 
-        {label: 'Phone', accessor: 'phone'},
-        {label: 'Email', accessor: 'email'}
+        {label: 'Supplier', accessor: 'name', editing: true}, 
+        {label: 'Phone', accessor: 'phone', editing: true},
+        {label: 'Email', accessor: 'email', editing: true}
     ];
+    function getSuppliers(){
+        const getData = {function: 'suppliers'};
+        getPLMRequest('srx_records', getData, 
+        (res) => {
+            console.log(res.data);
+            setSupplierData(res.data.suppliers);
+            hasData.current = true;
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
     function handleChangeSupplier(attr){
         return function(e){
             setAddSupplier(update(addSupplier, {
@@ -337,6 +375,22 @@ export function SupplierTable(props){
         });
         handleClose();
     }
+    function handleEditCell(id, field, value){
+        const postData = {
+            function: 'update_srx_records',
+            table: 'srx_supplier',
+            field: field,
+            value: value, id: id
+        }
+        postPLMRequest('srx_records', postData,
+        (res) => {
+            console.log(res.data);
+            getSuppliers();
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
     return(
         <>
         <div className='FlexNormal'>
@@ -353,7 +407,8 @@ export function SupplierTable(props){
         
         <SearchPaginationTable data={supplierData} headers={headers} 
             headerClass={'TableHeading'} searchField={'name'} fieldOptions={headers.map((h) => h.accessor)}
-            searchName={'Search: '} delete={true} onDelete={handleDelete}/>
+            searchName={'Search: '} delete={true} onDelete={handleDelete}
+            onEditCell={handleEditCell} editing={true}/>
         <TableDeleteLineModal show={deleteModal} title={'Delete Manufacturer Supplier'}
         onClose={handleClose} onConfirmDelete={handleConfirmDelete}
         supplier={deleteLine !== null && deleteLine.name}/>
