@@ -893,7 +893,7 @@ function SupplierMappingTable(props){
                 {props.customHeaders.map((header, i) => {
                     return(
                         <th key={i} onClick={handleDeleteCustom(i)}>
-                            <SimplePopover popoverBody='Shift+Click to delete' trigger={['hover', 'focus']} placement='auto'>
+                            <SimplePopover popoverBody='Shift+Click to delete' trigger={['hover', 'focus']} placement='top'>
                             <div><SimpleDropdown selected={header} 
                             items={props.customOptions} onChange={handleChange(i)}/></div>
                             </SimplePopover>
