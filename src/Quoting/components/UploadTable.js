@@ -713,6 +713,13 @@ export function MasterWorkingUploadTable(props){
             setDropdownHeaders(props.sheets[sheetId].array[0].map(() => '_remove'));
         }
     }, [sheetId]);
+    useEffect(() => {
+        if(errorMessage !== null){
+            setTimeout(() => {
+                //setErrorMessage(null);
+            }, 3000);
+        }
+    }, [errorMessage]);
     function handleChangeSheet(i){
         setSheetId(i);
         setErrorMessage(null);
@@ -746,8 +753,16 @@ export function MasterWorkingUploadTable(props){
             setSelectedRow({sheetId: sheetId, row: rowIndex});
         }
     }
-    function handleColumnChange(){
-
+    function handleColumnChange(i, item, itemNo){
+        setErrorMessage(null);
+        const headerIndex = dropdownHeaders.findIndex((h) => h === item);
+        const updateObj = {
+            [i]: {$set: item}
+        };
+        if(headerIndex !== -1){
+            updateObj[headerIndex] = {$set: '_remove'};
+        }
+        setDropdownHeaders(update(dropdownHeaders, updateObj));
     }
     const headerMap = headers.reduce((mp, h) => {
         mp[h.label] = h;
@@ -762,7 +777,7 @@ export function MasterWorkingUploadTable(props){
             if(h !== '_remove'){
                 arr.push({...headerMap[h], index: i});
             }
-            if(h === 'Approved MPN'){
+            if(h === 'Quoted MPN'){
                 hasMpn = true;
             }
             if(h === 'Quoted Supplier'){
@@ -795,15 +810,17 @@ export function MasterWorkingUploadTable(props){
             }, {});
             objs.push(obj);
         }
-        console.log(objs);
         if((hasMpn && hasSupplier) || (hasCpn && hasSupplier)){
             props.onMasterUpload(objs);
+        }else{
+            setErrorMessage("Requires 'Quoted Supplier' header and either 'Quoted MPN' or 'CPN' header");
         }
     }
     return(
         <>
         <div className='FlexNormal'>
         <Button onClick={handleSubmit}>Submit</Button>
+        <div style={{color: 'red'}}>{errorMessage}</div>
         </div>
         <TabbedSheetTable sheets={props.sheets} sheetId={sheetId}
         onChangeSheet={handleChangeSheet}
@@ -820,21 +837,7 @@ export function MasterWorkingUploadTable(props){
 }
 
 function CustomHeaderModal(props){
-    //const [headers, setHeaders] = useState([]);
     const [customHeaderName, setCustomHeaderName] = useState('');
-    /*
-    useEffect(() => {
-        const getData = {function: 'custom_headers', user: props.user};
-        getPLMRequest('quote', getData, 
-        (res) => {
-            console.log(res.data);
-            setHeaders(res.data.custom_headers);
-        },
-        (res) => {
-            console.log(res.data);
-        });
-    }, []);
-    */
     function handleAddHeader(){
         if(customHeaderName !== ''){
             const postData = {function: 'add_custom_header_name', user: props.user, header_name: customHeaderName};
@@ -846,7 +849,6 @@ function CustomHeaderModal(props){
             (res) => {
                 console.log(res.data);
             });
-            //setCustomHeaderName('');
         }
     }
     function handleChangeHeaderName(text){

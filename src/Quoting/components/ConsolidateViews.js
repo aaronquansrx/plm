@@ -638,32 +638,39 @@ export function SupplierMapping(props){
         setShowExport(true);
     }
     function handleExportExcel(fn){
+        //console.log(customHeaders);
         const customHeaderNames = customHeaders.map(h=>h.header);
-        const keys = headers.map((h) => h.accessor).concat(customHeaders);
+        const keys = headers.map((h) => h.accessor);
         const labels = headers.map((h) => h.label);
         const supplierLabels = supplierHeaders.map((h) => h.label);
-        const fullLabels = labels.concat(customHeaders).concat(supplierLabels);
+        const fullLabels = labels.concat(customHeaderNames).concat(supplierLabels);
 
         const formattedData = props.supplierMappingData.map((line) => {
             return objectToArray(line, keys);
         });
+        const customData = props.supplierMappingData.map((line) => {
+            return customHeaders.map(h => {
+                return line[h.header].join(' ');
+            });
+        });
         const supplierData = props.supplierMappingData.map((line) => {
             return Array.from(Array(numSupplierColumns)).reduce((arr, _, n) => {
-                const i = (n + 1).toString();
+                const i = (n).toString();
                 const val = line['supplier'+i.toString()] ? line['supplier'+i.toString()].name : '';
                 arr.push(val);
                 return arr;
             }, []);
         });
+        //console.log(formattedData);
         const fullFormatted = formattedData.map((form, i) => {
-            return form.concat(supplierData[i]);
+            return form.concat(customData[i], supplierData[i]);
         });
         console.log(fullFormatted);
         const excelData = [fullLabels].concat(fullFormatted);
         const sheet = XLSX.utils.aoa_to_sheet(excelData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, sheet, '');
-        XLSX.writeFile(wb, fn+'.xlsx');
+        //XLSX.writeFile(wb, fn+'.xlsx');
         
     }
     function handleCloseExport(){
@@ -704,9 +711,7 @@ export function SupplierMapping(props){
         }
     }
     function handleAddQuoteSupplier(i, supplier){
-        //console.log(supplier);
         const master_manufacturer = filteredData[i].full_master_manufacturer;
-        //console.log(master_manufacturer);
         if(master_manufacturer){
             const postData = {
                 function: 'add_quote_custom_supplier', supplier_id: supplier.id, 

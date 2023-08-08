@@ -326,41 +326,44 @@ function ConsolidatePage(props){
         postPLMRequest('quote', postData, 
         (res) => {
             if(res.data.success){
-                //console.log(res.data);
                 const compRFQData = loadIntoRFQData(res.data.upload_data, newRFQData, res.data.load_data_map);
-                //console.log(compRFQData);
                 setRFQData(compRFQData);
             }
         },
         (res) => {
             console.log(res.data);
         });
-        //setRFQData(newRFQData);
     }
     function loadIntoRFQData(workingUploadData, newRFQData, loadDataMap=null){
-        //console.log(workingUploadData);
         const mpnMap = workingUploadData.reduce((obj, data) => {
-            if(data.quoted_mpn in obj){
-                obj[data.quoted_mpn][data.quoted_supplier] = data;
-            }else{
-                obj[data.quoted_mpn] = {[data.quoted_supplier]: data};
+            if(data.quoted_mpn){
+                if(data.quoted_mpn in obj){
+                    obj[data.quoted_mpn][data.quoted_supplier] = data;
+                }else{
+                    obj[data.quoted_mpn] = {[data.quoted_supplier]: data};
+                }
             }
             return obj;
         }, {});
         const cpnMap = workingUploadData.reduce((obj, data) => {
-            if(data.cpn in obj){
-                obj[data.cpn][data.quoted_supplier] = data;
-            }else{
-                obj[data.cpn] = {[data.quoted_supplier]: data};
+            if(data.cpn){
+                if(data.cpn in obj){
+                    obj[data.cpn][data.quoted_supplier] = data;
+                }else{
+                    obj[data.cpn] = {[data.quoted_supplier]: data};
+                }
             }
             return obj;
         }, {});
         const updates = [];
-        function updateLine(newLine){
+        //console.log(mpnMap);
+        function updateLine(newLine, isMpn=true){
             const oldStatus = newLine.status;
-            newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
+            if(isMpn) newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
+            else{
+                newLine = {...newLine, ...cpnMap[newLine.cpn][newLine.supplier]};
+            }
             if(loadDataMap === null){
-                //newLine.status = 'Quoted';
                 const updateFields = [
                     {accessor: 'mqa', value: newLine.mqa, type: 'string'}, 
                     {accessor: 'selection', value: newLine.selection, type: 'integer'}];
@@ -393,7 +396,6 @@ function ConsolidatePage(props){
                     newLine = {...newLine, ...loadDataMap[newLine.mpn][newLine.supplier_id]};
                 }
             }
-            
             if(newLine.mpn in mpnMap){
                 if(newLine.supplier in mpnMap[newLine.mpn]){
                     newLine = updateLine(newLine);
@@ -409,7 +411,7 @@ function ConsolidatePage(props){
                 }
             }else if(newLine.cpn in cpnMap){
                 if(newLine.supplier in cpnMap[newLine.cpn]){
-                    newLine = updateLine(newLine);
+                    newLine = updateLine(newLine, false);
                     // newLine = {...newLine, ...cpnMap[newLine.cpn][newLine.supplier]};
                     // if(loadDataMap === null){
                     //     //newLine.status = 'Quoted';
