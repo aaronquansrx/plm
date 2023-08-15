@@ -852,7 +852,7 @@ function CustomHeaderModal(props){
         }
     }
     function handleChangeHeaderName(text){
-        console.log(text)
+        //console.log(text)
         setCustomHeaderName(text);
     }
     const body = <>

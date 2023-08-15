@@ -52,8 +52,8 @@ export function ConsolidateView(props){
         }
     }
     function handleRowClick(r){
-        console.log(props.consolidatedData.data[r]);
-        setModalDetails({manufacturer: props.consolidatedData.data[r].manufacturer, row: r})
+        console.log(filteredData[r]);
+        setModalDetails({manufacturer: filteredData[r].manufacturer, row: r})
     }
     function handleClose(){
         setModalDetails(null);
@@ -1101,11 +1101,13 @@ export function MasterWorkingFile(props){
     const mfrValues = new Set(props.RFQData.map((l) => l.manufacturer));
     const supplierValues = new Set(props.RFQData.map((l) => l.supplier));
     const cpnValues = new Set(props.RFQData.map((l) => l.cpn));
+    const statusValues = new Set(statusOptions);
     const [filters, setFilters] = useState({
         mpn: {items: mpnValues, active: mpnValues, display: 'MPN Filter', show: false}, 
         manufacturer: {items: mfrValues, active: mfrValues, display: 'Manufacturer Filter', show: false},
         supplier: {items: supplierValues, active: supplierValues, display: 'Supplier Filter', show: false},
-        cpn: {items: cpnValues, active: cpnValues, display: 'CPN Filter', show: false}
+        cpn: {items: cpnValues, active: cpnValues, display: 'CPN Filter', show: false},
+        status: {items: statusValues, active: statusValues, display: 'Status Filter', show: false}
     });
     const [filteredData, setFilteredData] = useState(props.RFQData);
 
@@ -1169,14 +1171,14 @@ export function MasterWorkingFile(props){
         }
     }
     function handleChangeFilterItem(filter, item){
-        console.log(item);
+        //console.log(item);
         let list = new Set(filters[filter].active);
         if(filters[filter].active.has(item)){
             list.delete(item);
         }else{
             list.add(item);
         }
-        console.log(list);
+        //console.log(list);
         setFilters(update(filters, {
             [filter]: {
                 active: {$set: new Set(list)}
@@ -1304,6 +1306,9 @@ export function MasterWorkingFile(props){
             },
             cpn: {
                 active: {$set: cpnValues}
+            },
+            status: {
+                active: {$set: statusValues}
             }
         }));
     }
@@ -1451,7 +1456,15 @@ function MasterWorkingTable(props){
                     </th>;
             })}
             {props.otherHeaders.map((h, i) => {
-                const sty = i === 0 ? {} : {}
+                const sty = i === 0 ? {} : {};
+                if(props.filterNames.includes(h.accessor)){
+                    return <th key={i} onClick={handleClickHeader(h.accessor)} className='Select' 
+                    ref={r => stickyColumnRefs.current[i] = r} style={sty}> 
+                        {<SimplePopover popoverBody={'Filter '+h.label} trigger={['hover', 'focus']} placement='auto'>
+                            <div>{h.label}</div>
+                        </SimplePopover>}
+                    </th>
+                }
                 return <th key={i} style={sty}>{h.label}</th>;
             })}
             </tr>

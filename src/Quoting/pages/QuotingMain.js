@@ -97,7 +97,6 @@ function QuotingMain(props){
         }
     }, [props.user, props.username]);
     useEffect(() => {
-        //console.log(quotes);
         setQuoteValues(getQuoteValues());
     }, [quotes]);
     function getQuoteValues(){
@@ -105,7 +104,8 @@ function QuotingMain(props){
             rfq: new Set(quotes.map(q => q.formatted.rfq)),
             owner: new Set(quotes.map(q => q.owner)),
             customer: new Set(quotes.map(q => q.customer)),
-            site: new Set(quotes.map(q => q.site))
+            site: new Set(quotes.map(q => q.site)),
+            status: new Set(['Closed', 'In Progress'])
         }
     }
     function handleOpenQuote(quote){
@@ -115,6 +115,10 @@ function QuotingMain(props){
         }
     }
     function handleCreateProduct(quote){
+        setActiveQuote(quote)
+        changePageState(1);
+    }
+    function handleEditQuote(quote){
         setActiveQuote(quote)
         changePageState(1);
     }
@@ -134,8 +138,8 @@ function QuotingMain(props){
                 return <CreateQuote changePageState={changePageState} onCreateQuote={handleCreateProduct} 
                 lastPageState={pageState.last} user={props.username} setQuotes={setQuotes}/>
             case 3:
-                return <EditQuote quote={activeQuote} user={props.username} changePageState={changePageState}
-                lastPageState={pageState.last} setQuotes={setQuotes}/>
+                return <EditQuote quote={activeQuote} user={props.username} onEditQuote={handleEditQuote} changePageState={changePageState}
+                lastPageState={pageState.last} setQuotes={setQuotes} details={activeQuote}/>
             case 4:
                 return <LinkProductUpload quote={activeQuote}/>
 

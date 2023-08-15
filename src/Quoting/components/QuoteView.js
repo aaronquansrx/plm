@@ -24,8 +24,10 @@ import {
     SupplierMapping, RequestForQuoteList,
     MasterWorkingFile, MasterUpload
 } from './ConsolidateViews';
+import { EditQuote } from './CreateQuote';
 
 function QuoteView(props){
+    //console.log(props.quote);
     const [products, setProducts] = useState([]); //products with child data
     const [productsList, setProductsList] = useState([]); // list of products, regardless of child status (no child info)
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -126,6 +128,9 @@ function QuoteView(props){
                 return <PartUsageView /*consolidatedData={consolidatedData}*/ 
                 user={props.user} quote={props.quote} 
                 changeQuotePageState={changeQuotePageState}/>
+            //case 5:
+            //    return <EditQuote quote={props.quote} changePageState={props.changePageState}
+            //    user={props.user} />
         }
     }
     return(

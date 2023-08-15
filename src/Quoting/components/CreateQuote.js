@@ -80,8 +80,9 @@ export function CreateQuote(props){
 
 export function EditQuote(props){
     return(
-        <ChangeQuoteTemplate title={'Edit Quote'} quoteId={props.quote.id} changePageState={props.changePageState} 
-        user={props.user} lastPageState={props.lastPageState} setQuotes={props.setQuotes}/>
+        <ChangeQuoteTemplate title={'Edit Quote'} onEditQuote={props.onEditQuote} quoteId={props.quote.id} changePageState={props.changePageState} 
+        user={props.user} lastPageState={props.lastPageState} setQuotes={props.setQuotes}
+        details={props.details}/>
     );
 }
 const structureField = easyFormElement('structure', 'BOM Structure', 'select', 
@@ -95,9 +96,18 @@ function ChangeQuoteTemplate(props){
     function mainFormInitial(){
         const leftFieldValues = formIdValueObject(quoteFormFieldsLeft);
         const rightFieldValues = formIdValueObject(quoteFormFieldsRight);
-        return {...leftFieldValues, ...rightFieldValues, 
+        let form = {...leftFieldValues, ...rightFieldValues, 
         structure: {id: 0, value: structureField.extras.options[0]}
         };
+        if(props.details){
+            form = {...form, ...props.details.details};
+            if(props.details.internal){
+                const due = props.details.internal.due_date.split(' ')[0];
+                form = {...form, ...props.details.internal, due_date: due};
+            }
+        }
+        return form;
+
     }
     function formIdValueObject(fields){
         return fields.reduce((obj, f) => {
@@ -125,16 +135,20 @@ function ChangeQuoteTemplate(props){
         props.changePageState(props.lastPageState);
     }
     function handleSubmit(){
-        const postData = {create_details: formValues, function: 'create', user: props.user};
+        const fun = !props.quoteId ? 'create' : 'edit';
+        const postData = {create_details: formValues, function: fun, user: props.user};
+        if(props.quoteId) postData.quote_id = props.quoteId;
         if(props.user){   
             postPLMRequest('quote', postData,
             (res) => {
+                console.log(res.data);
                 if(res.data.success){
                     //props.toCustomerBom(res.data.quote_id, res.data.quote); // add qid
                     if(!props.quoteId){ //creating quote
                         props.onCreateQuote(res.data.quote);
                     }else{
                         //editing existing
+                        props.onEditQuote(res.data.quote);
                     }
                     props.setQuotes(res.data.quotes);
                 }
@@ -146,6 +160,7 @@ function ChangeQuoteTemplate(props){
         }
     }
     function handleSubmitUploadDetails(uploadedDetails={}){
+        console.log(uploadedDetails);
         setFormValues({...formValues, ...uploadedDetails});
     }
     function quoteValueSection(title, fields){
@@ -168,7 +183,7 @@ function ChangeQuoteTemplate(props){
         <>
         <div className='FlexNormal' style={{overflow: 'auto'}}>
             <UploadModal show={showUploadForm} onClose={handleUploadClose} onSubmit={handleSubmitUploadDetails}/>
-            <h3>Create Quote</h3> <Button onClick={handleUpload}>Upload</Button>
+            <h3>{props.title}</h3> <Button onClick={handleUpload}>Upload</Button>
             <div style={{marginBottom: '15px', margin: '10px'}}>
                 <div className='Hori'>
                     <div>
