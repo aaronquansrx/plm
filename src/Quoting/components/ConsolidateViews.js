@@ -1692,6 +1692,16 @@ export function MasterUpload(props){
             const sheetArray = excelSheetToArray(wb.Sheets[sn]);
             return {name: sn, array: sheetArray};
         });
+        console.log(sheets);
+        sheets.forEach((sheet, n) => {
+            sheet.array.forEach((row, j) => {
+                row.forEach((val, i) => {
+                    if(!isNaN(val) && val.length > 18){
+                        sheets[n].array[j][i] = parseFloat(val).toFixed(4);
+                    }
+                });
+            })
+        })
         setSheets(sheets);
     }
     return(
