@@ -1371,7 +1371,6 @@ function MasterWorkingTable(props){
     const stickyColumnRefs = useRef([]);
     const [editMQA, setEditMQA] = useState(null);
     const [leftColumn, setLeftColumn] = useState(props.mainHeaders.map(() => 0));
-    //const statusOptions = ['Pending RFQ', 'RFQ Failed', 'Pending Quote', 'Missing Info', 'Quoted'];
     useEffect(() => {
         let left = 0;
         const lefts = [];
@@ -1486,6 +1485,8 @@ function MasterWorkingTable(props){
                             }
                         }else if(h.accessor === 'mqa'){
                             contents = editMQA !== null && editMQA === i ? <LabeledTextInput onBlur={handleMQAEdit(i)}/> : row[h.accessor];
+                        }else if(h.accessor === 'price'){
+                            contents = row[h.accessor] ? parseFloat(row[h.accessor]).toFixed(4) : '';
                         }else{
                             if(h.accessor === 'status'){
                                 contents = <SimpleDropdown selected={row.status} items={statusOptions} 

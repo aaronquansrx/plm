@@ -23,7 +23,7 @@ export function ExcelDropzone(props) {
         if(dropFunction) dropFunction(workbook, file);
       }
       reader.readAsBinaryString(file);
-    })
+    });
     
   }, [dropFunction])
   const {getRootProps, getInputProps} = useDropzone({onDrop});
