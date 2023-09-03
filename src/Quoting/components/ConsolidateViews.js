@@ -665,12 +665,12 @@ export function SupplierMapping(props){
         const fullFormatted = formattedData.map((form, i) => {
             return form.concat(customData[i], supplierData[i]);
         });
-        console.log(fullFormatted);
+        //console.log(fullFormatted);
         const excelData = [fullLabels].concat(fullFormatted);
         const sheet = XLSX.utils.aoa_to_sheet(excelData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, sheet, '');
-        //XLSX.writeFile(wb, fn+'.xlsx');
+        XLSX.writeFile(wb, fn+'.xlsx');
         
     }
     function handleCloseExport(){

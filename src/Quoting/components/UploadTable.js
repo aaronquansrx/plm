@@ -769,6 +769,59 @@ export function MasterWorkingUploadTable(props){
         return mp;
     }, {});
     function handleSubmit(){
+        const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
+        const startRow = selectedRow ? selectedRow.row+1 : 0;
+        let hasMpn = false; let hasSupplier = false; let hasCpn = false;
+        let hasMfr = false;
+        const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
+            if(h !== '_remove'){
+                arr.push({...headerMap[h], index: i});
+            }
+            if(h === 'Approved MPN'){
+                hasMpn = true;
+            }
+            if(h === 'Approved MFR'){
+                hasMfr = true;
+            }
+            if(h === 'CPN'){
+                hasCpn = true;
+            }
+            if(h === 'Quoted Supplier'){
+                hasSupplier = true;
+            }
+            return arr;
+        }, []);
+        if(hasMpn && hasCpn && hasSupplier && hasMfr){
+            const objs = [];
+            const truncatedFields = new Set();
+            for(let r=startRow; r < activeSheet.length; r++){
+                const obj = headerIndexes.reduce((o, h) => {
+                    let cellValue = activeSheet[r][h.index];
+                    if('size' in h){
+                        if(cellValue.length > h.size){
+                            cellValue = cellValue.substring(0, h.size);
+                            truncatedFields.add(h.label);
+                        }
+                    }
+                    if(h.accessor === 'selection'){
+                        o[h.accessor] = cellValue === '1' || cellValue.toLowerCase() === 'true' ? true : false;
+                    }else if(h.accessor === 'status'){
+                        o[h.accessor] = props.statusOptions.includes(cellValue) ? cellValue : null;
+                    }else{
+                        o[h.accessor] = cellValue;
+                    }
+                    return o;
+                }, {});
+                objs.push(obj);
+            }
+            console.log(objs);
+            props.onMasterUpload(objs);
+        }else{
+            //and 'Approved MFR'
+            setErrorMessage("Requires 'Quoted Supplier' and 'Approved MPN' and 'CPN' headers");
+        }
+    }
+    function handleSubmitOld(){
         const headerSet = new Set(headers.map(h => h.label));
         const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
         const startRow = selectedRow ? selectedRow.row+1 : 0;

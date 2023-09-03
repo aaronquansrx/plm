@@ -360,13 +360,40 @@ function ConsolidatePage(props){
             }
             return obj;
         }, {});
+        const isAll = true;
+        const allMap = workingUploadData.reduce((obj, data) => {
+            //if(data.cpn){
+                if(data.cpn in obj){
+                    obj[data.cpn].push(data);
+                }
+                else{
+                    obj[data.cpn] = [data];
+                }
+            //}
+            return obj;
+        }, {});
+        console.log(allMap);
         const updates = [];
         //console.log(mpnMap);
-        function updateLine(newLine, isMpn=true){
+        function updateLine(newLine, isMpn=true, isAll=false){
             const oldStatus = newLine.status;
-            if(isMpn) newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
-            else{
-                newLine = {...newLine, ...cpnMap[newLine.cpn][newLine.supplier]};
+            if(!isAll){
+                if(isMpn) newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
+                else{
+                    newLine = {...newLine, ...cpnMap[newLine.cpn][newLine.supplier]};
+                }
+            }else{
+                //if(newLine.cpn in allMap){
+                const lineObj = allMap[newLine.cpn].reduce((obj, data) => {
+                    if(data.quoted_mpn === newLine.mpn /*&& data.mfr === newLine.mfr*/ && data.quoted_supplier === newLine.supplier){
+                        return data;
+                    }
+                    return obj;
+                }, null);
+                if(lineObj) newLine = {...newLine, ...lineObj};
+                //}
+                console.log(lineObj);
+                //return;
             }
             if(loadDataMap === null){
                 const updateFields = [
@@ -401,30 +428,38 @@ function ConsolidatePage(props){
                     newLine = {...newLine, ...loadDataMap[newLine.mpn][newLine.supplier_id]};
                 }
             }
-            if(newLine.mpn in mpnMap){
-                if(newLine.supplier in mpnMap[newLine.mpn]){
-                    newLine = updateLine(newLine);
-                    //const old
-                    // newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
-                    // if(loadDataMap === null){
-                    //     //newLine.status = 'Quoted';
-                    //     updates.push({
-                    //         update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
-                    //         line: newLine
-                    //     });
-                    // }
+            if(!isAll){
+                if(newLine.mpn in mpnMap){
+                    if(newLine.supplier in mpnMap[newLine.mpn]){
+                        newLine = updateLine(newLine);
+                        //const old
+                        // newLine = {...newLine, ...mpnMap[newLine.mpn][newLine.supplier]};
+                        // if(loadDataMap === null){
+                        //     //newLine.status = 'Quoted';
+                        //     updates.push({
+                        //         update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
+                        //         line: newLine
+                        //     });
+                        // }
+                    }
+                }else if(newLine.cpn in cpnMap){
+                    if(newLine.supplier in cpnMap[newLine.cpn]){
+                        newLine = updateLine(newLine, false);
+                        // newLine = {...newLine, ...cpnMap[newLine.cpn][newLine.supplier]};
+                        // if(loadDataMap === null){
+                        //     //newLine.status = 'Quoted';
+                        //     updates.push({
+                        //         update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
+                        //         line: newLine
+                        //     });
+                        // }
+                    }
                 }
-            }else if(newLine.cpn in cpnMap){
-                if(newLine.supplier in cpnMap[newLine.cpn]){
-                    newLine = updateLine(newLine, false);
-                    // newLine = {...newLine, ...cpnMap[newLine.cpn][newLine.supplier]};
-                    // if(loadDataMap === null){
-                    //     //newLine.status = 'Quoted';
-                    //     updates.push({
-                    //         update_fields: [{accessor: 'status', value: 'Quoted', type: 'string'}],
-                    //         line: newLine
-                    //     });
-                    // }
+            }else{
+                console.log(newLine);
+                if(newLine.cpn in allMap){
+                    newLine = updateLine(newLine, false, isAll);
+                    console.log(newLine);
                 }
             }
             return newLine;
@@ -475,6 +510,7 @@ function ConsolidatePage(props){
     }
     const masterWorkingHeaders = [
         {accessor: 'mpn', label: 'Approved MPN', display: false},
+        {accessor: 'mfr', label: 'Approved MFR', display: false},
         {accessor: 'cpn', label: 'CPN', display: false},
 
         {accessor: 'selection', label: 'Selection', display: false},
@@ -506,6 +542,7 @@ function ConsolidatePage(props){
     function handleMasterUpload(uploadData){
         const compRFQData = loadIntoRFQData(uploadData, RFQData);
         setRFQData(compRFQData);
+        console.log(uploadData);
         const postData = {
             function: 'upload_quote_master_file_data', quote_id: props.quote.id, user: props.user,
             upload_data: uploadData, 
