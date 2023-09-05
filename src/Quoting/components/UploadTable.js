@@ -818,7 +818,7 @@ export function MasterWorkingUploadTable(props){
             props.onMasterUpload(objs);
         }else{
             //and 'Approved MFR'
-            setErrorMessage("Requires 'Quoted Supplier' and 'Approved MPN' and 'CPN' headers");
+            setErrorMessage("Requires 'Quoted Supplier' and 'Approved MPN' and 'Approved MFR' and 'CPN' headers");
         }
     }
     function handleSubmitOld(){

@@ -384,15 +384,17 @@ function ConsolidatePage(props){
                 }
             }else{
                 //if(newLine.cpn in allMap){
+                //console.log(allMap[newLine.cpn]);
+                //console.log(newLine);
                 const lineObj = allMap[newLine.cpn].reduce((obj, data) => {
-                    if(data.quoted_mpn === newLine.mpn /*&& data.mfr === newLine.mfr*/ && data.quoted_supplier === newLine.supplier){
+                    if(data.mpn === newLine.mpn && data.mfr === newLine.manufacturer && data.quoted_supplier === newLine.supplier){
                         return data;
                     }
                     return obj;
                 }, null);
                 if(lineObj) newLine = {...newLine, ...lineObj};
                 //}
-                console.log(lineObj);
+                //console.log(lineObj);
                 //return;
             }
             if(loadDataMap === null){
@@ -456,10 +458,10 @@ function ConsolidatePage(props){
                     }
                 }
             }else{
-                console.log(newLine);
+                //console.log(newLine);
                 if(newLine.cpn in allMap){
                     newLine = updateLine(newLine, false, isAll);
-                    console.log(newLine);
+                    //console.log(newLine);
                 }
             }
             return newLine;
