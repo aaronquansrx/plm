@@ -1120,7 +1120,7 @@ export function SingleAPITable(props){
         {props.data.map((dataObj, i) => {
                 return (
                     <APIRow key={i} data={dataObj} mainAttrs={mainAttrs} 
-                    offerAttrs={offerAttrs} stockMode={props.stockMode}/>
+                    offerAttrs={offerAttrs} stockMode={props.stockMode} quantity={props.quantity}/>
                 );
             })}
         </tbody>
@@ -1152,7 +1152,7 @@ function APIRow(props){
         {props.data.offers.length > 0 && props.offerAttrs.map((attr, i) => {
             return <APIAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom} 
             functions={fns} offerNum={0} api={props.data.distributor}
-            stockMode={props.stockMode}/>
+            stockMode={props.stockMode} quantity={props.quantity}/>
         })}
         </tr>
         {props.data.offers.length > 1 /*&& showAllOffers*/ && 
@@ -1163,32 +1163,30 @@ function APIRow(props){
                 {props.offerAttrs.map((attr, j) => {
                     return <APIAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom} 
                     functions={fns} offerNum={offerNum} api={props.data.distributor}
-                    stockMode={props.stockMode}/>
+                    stockMode={props.stockMode} quantity={props.quantity}/>
                 })}
             </tr>
             );
         })}
-        {/*props.data.offers.length > 1 && 
-            <tr onClick={changeShowOffers}>
-                <td colSpan={numTableCols} className='NoPadding'>
-                <HoverOverlay placement='auto' 
-                tooltip={showAllOffers ? 'Close offers' : 'Open offers'}>
-                <HoverToggleSolidColour toggle={showAllOffers}/>
-                </HoverOverlay>
-                </td>
-            </tr>
-        */}
         </>
     );
 }
 
 function SinglePricesRenderer(props){
-    //console.log(props.value);
+    const price = props.quantity > 1 ? props.value[getPriceIndex()].unit_price : props.value[0].unit_price;
+    function getPriceIndex(){
+        let n = 0;
+        while(n+1 < props.value.length && props.quantity >= props.value[n+1].break_quantity){
+            n++;
+        }
+        return n;
+    }
+    //const price = quantity.0;
     const table = <NewPricingTable pricing={props.value}/>;
     return(
         <SimplePopover popoverBody={table} trigger={['hover', 'focus']} placement='auto'>
             <div>
-            {props.value[0].unit_price}
+            {price.toFixed(4)}
             </div>
         </SimplePopover>
     );

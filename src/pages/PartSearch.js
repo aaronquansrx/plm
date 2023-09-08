@@ -5,7 +5,7 @@ import axios from 'axios';
 import { SingleAPITable } from '../components/BOMAPITable';
 import { evalApisV2 } from '../hooks/BOMTable';
 
-import {LabeledCheckbox} from '../components/Forms';
+import {LabeledCheckbox, NumberInput} from '../components/Forms';
 import {TemplateModal} from '../components/Modals';
 
 import Modal from 'react-bootstrap/Modal';
@@ -69,6 +69,7 @@ function SingleApiSearch(props){
     const [mpn, setMpn] = useState(null);
     const [statusMessage, setStatusMessage] = useState('');
     const [includeOctopart, setIncludeOctopart] = useState(false);
+    const [quantity, setQuantity] = useState(1);
     useEffect(() => {
         console.log(data);
     }, [data, shownDistributors]);
@@ -162,44 +163,7 @@ function SingleApiSearch(props){
             });
         }
     }
-    /*
-    function requestPart(){
-        axios({
-            method: 'GET',
-            url: serverUrl+'api/part',
-            params: {part: searchTerm}
-        }).then(res => {
-            if(typeof res.data !== 'object'){
-                console.log(res.data);
-                setStatusMessage('Part Search Error');
-            }else{
-                let hasOffers = false;
-                const apiData = res.data.apis;
-                const parsedApiData = Object.entries(apiData).reduce((arr, [api, data]) => {
-                    if(data.offers.length > 0){
-                        const dt = {
-                            distributor: apiNameMap[api],
-                            offers: data.offers
-                        }
-                        arr.push(dt);
-                        hasOffers = true;
-                    }
-                    return arr;
-                }, []);
-                const newData = new Map();
-                Object.entries(apiData).forEach(([api, data]) => {
-                    if(data.offers.length > 0){
-                        hasOffers = true;
-                        newData.set(apiNameMap[api], data.offers);
-                    }
-                });
-                setData(new Map([...newData, ...data]));
-                const statusMess = hasOffers ? '' : 'No Offers Found';
-                setStatusMessage(statusMess);
-                //setResults(parsedApiData);
-            }
-        });
-    }*/
+
     function requestMpn(){
         axios({
             method: 'GET',
@@ -259,6 +223,11 @@ function SingleApiSearch(props){
     function changeActiveManufacturers(activeManufacturers){
         setActiveManufacturers(activeManufacturers);
     }
+    function handleQuantity(q){
+        //console.log(q);
+        //console.log(results);
+        setQuantity(q);
+    }
     return(
         <div>
         <div><h4>Single Part Request</h4></div>
@@ -279,8 +248,15 @@ function SingleApiSearch(props){
         <Button onClick={showManuModal}>Show/Hide Manufacturers</Button>
         <ManufacturerModal show={manufacturersModal} manufacturers={offerManufacturers} onClose={closeManuModal} changeManufacturers={changeActiveManufacturers}/>
         </div>
-        {mpn && <div>API Request Data for <b>{mpn}</b> <Button onClick={handleOpenDetails}>Details</Button></div>}
-        <SingleAPITable apiAttrs={apiAttrs} data={results} stockMode='in_stock' displayManufacturers={offerManufacturers}/>
+        <span className='Hori' style={{justifyContent: 'center'}}><NumberInput label='Quantity:' onBlur={handleQuantity}/></span>
+        {mpn && 
+        <><div>API Request Data for <b>{mpn}</b> 
+        <Button onClick={handleOpenDetails}>Details</Button>
+        </div>
+        <div>
+        </div></>
+        }
+        <SingleAPITable apiAttrs={apiAttrs} data={results} quantity={quantity} stockMode='in_stock' displayManufacturers={offerManufacturers}/>
         <div>{statusMessage}</div>
         </div>
     )
