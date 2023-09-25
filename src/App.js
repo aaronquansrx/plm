@@ -18,6 +18,7 @@ import CBom from './pages/CBom';
 import BOMScrub from './pages/BOMScrub';
 import QuotingMain from './Quoting/pages/QuotingMain';
 import QuotingTables from './Quoting/pages/QuotingTables';
+import BOMUploadTable from './pages/BOMUploadTable';
 import Feedback from './pages/Feedback';
 import Test from './pages/Test';
 import SingleComponentAttribute from './pages/SingleComponentAttribute';
@@ -151,6 +152,8 @@ function App() {
         <Route path={path('tables')} element={<QuotingTables user={user}/>}/>
         <Route path={path('quoteusers')} element={<QuotingUsers username={username} user={user}/>}/>
         <Route path={path('feedback')} element={<Feedback/>}/>
+        <Route path={path('bomtable')} element={<BOMUploadTable/>}/>
+        <Route path={path('singlecomponent/:partId')} element={<SingleComponentAttribute/>}/>
       </Routes>
     </div>
   );

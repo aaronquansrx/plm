@@ -75,25 +75,6 @@ function SingleApiSearch(props){
     }, [data, shownDistributors]);
     useEffect(() => {
         updateResults();
-        /*
-        const newResults = Object.values(apiNameMap).reduce((arr, api) => {
-            if(data.has(api)){
-                const offers = data.get(api).reduce((ar, offer) => {
-                    if(activeManufacturers.has(offer.manufacturer)){
-                        ar.push(offer);
-                    }
-                    return ar;
-                }, []);
-                const dt = {
-                    distributor: api,
-                    offers: offers
-                }
-                arr.push(dt);
-            }
-            return arr;
-        }, []);
-        setResults(newResults);
-        */
     }, [activeManufacturers]);
     useEffect(() => {
         const combManus = [...new Set([...dataManufacturers, ...octoManufacturers])];
@@ -104,8 +85,8 @@ function SingleApiSearch(props){
         const octoDataMap = newOctoData !== null ? newOctoData : octoData;
         const actManus = am !== null ? am : activeManufacturers;
         function getResults([key, val]){
-            console.log(val);
-            console.log(key);
+            //console.log(val);
+            //console.log(key);
             const offers = val.reduce((ar, offer) => {
                 if(actManus.has(offer.manufacturer)){
                     ar.push(offer);
@@ -121,7 +102,7 @@ function SingleApiSearch(props){
         const dataResults = [...dataMap.entries()].map(getResults);
         const octoDataResults = [...octoDataMap.entries()].map(getResults);
         const mainResults = dataResults.concat(octoDataResults);
-        console.log(mainResults);
+        //console.log(mainResults);
         setResults(mainResults);
     }
     function handleChangeTerm(e){
@@ -252,6 +233,8 @@ function SingleApiSearch(props){
         {mpn && 
         <><div>API Request Data for <b>{mpn}</b> 
         <Button onClick={handleOpenDetails}>Details</Button>
+        <br/>
+        <span>Crtl+Click Line to open offer link</span>
         </div>
         <div>
         </div></>

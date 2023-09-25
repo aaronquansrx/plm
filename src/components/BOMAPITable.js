@@ -1001,13 +1001,7 @@ function OctopartRow(props){
         })}
         {props.data.offers.length > 0 && 
         <OctoOffer offer={props.data.offers[0]} functions={props.functions} offerAttrs={props.offerAttrs} stockMode={props.stockMode} rowNum={props.rowNum}
-        offerNum={0} octoRowNum={props.octoRowNum} api={props.data.distributor}/>
-        /*props.offerAttrs.map((attr, i) => {
-            return <APIAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom} 
-            stockMode={props.stockMode} url={props.data.offers[0].url} functions={props.functions} octopart
-            rowNum={props.rowNum} api={props.data.distributor} offerNum={0} octoRowNum={props.octoRowNum}/>
-        
-        })*/}
+        offerNum={0} octoRowNum={props.octoRowNum} api={props.data.distributor}/>}
         </tr>
         {props.data && props.data.offers.length > 1 && showAllOffers && 
         [...Array(props.data.offers.length-1).keys()].map((i) => {
@@ -1016,11 +1010,6 @@ function OctopartRow(props){
             <tr key={i}>
                 <OctoOffer offer={props.data.offers[offerNum]} functions={props.functions} offerAttrs={props.offerAttrs} stockMode={props.stockMode} rowNum={props.rowNum}
                 offerNum={offerNum} octoRowNum={props.octoRowNum} api={props.data.distributor}/>
-                {/*props.offerAttrs.map((attr, j) => {
-                    return <APIAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom} 
-                    stockMode={props.stockMode} url={props.data.offers[0].url} functions={props.functions} octopart
-                    rowNum={props.rowNum} api={props.data.distributor} offerNum={offerNum} octoRowNum={props.octoRowNum}/>
-                })*/}
             </tr>
             );
         })}
@@ -1151,7 +1140,7 @@ function APIRow(props){
         })}
         {props.data.offers.length > 0 && props.offerAttrs.map((attr, i) => {
             return <APIAttributeRenderer key={i} value={props.data.offers[0][attr.attribute]} custom={attr.custom} 
-            functions={fns} offerNum={0} api={props.data.distributor}
+            functions={fns} offerNum={0} api={props.data.distributor} url={props.data.offers[0].url}
             stockMode={props.stockMode} quantity={props.quantity}/>
         })}
         </tr>
@@ -1162,7 +1151,7 @@ function APIRow(props){
             <tr key={i}>
                 {props.offerAttrs.map((attr, j) => {
                     return <APIAttributeRenderer key={j} value={props.data.offers[offerNum][attr.attribute]} custom={attr.custom} 
-                    functions={fns} offerNum={offerNum} api={props.data.distributor}
+                    functions={fns} offerNum={offerNum} api={props.data.distributor} url={props.data.offers[offerNum].url}
                     stockMode={props.stockMode} quantity={props.quantity}/>
                 })}
             </tr>

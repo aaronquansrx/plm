@@ -7,7 +7,8 @@ import Form from 'react-bootstrap/Form';
 
 import { getPLMRequest, postPLMRequest } from '../scripts/APICall';
 import {ExportComponentAttributeModal} from '../components/BOMScrubInterface';
-
+import { LabeledCheckbox } from '../components/Forms';
+import { useParams } from 'react-router';
 const attributes = [
     'Category', 'Datasheet', 'Description', 'Long Description', 
     'RoHS', 'REACH', 'MSL', 'Lead', 'Mounting Type', 'Url'
@@ -15,21 +16,38 @@ const attributes = [
 ];
 
 function SingleComponentAttribute(){
+    const params = useParams();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusMessage, setStatusMessage] = useState('');
     const [showExportModal, setShowExportModal] = useState(false);
     const [details, setDetails] = useState(null);
+    const [includeOctopart, setIncludeOctopart] = useState(false);
+    const [octopartDetails, setOctopartDetails] = useState(null);
     //const [parameters, setParameters] = useState(null);
     //const [photo, setPhoto] = useState(null);
     const [mpn, setMpn] = useState(null);
+
+    useEffect(() => {
+        if(params.partId){
+            //console.log(params);
+            handleSearch(params.partId);
+            //setSearchTerm(params.partId);
+        }
+    }, []);
+
     function handleChangeTerm(e){
+        console.log(e.target.value);
         setSearchTerm(e.target.value);
     }
-    function handleSearch(){
+    function handleClickSearch(){
+        handleSearch();
+    }
+    function handleSearch(term=null){
+        const st = term ? term : searchTerm;
         setStatusMessage('Searching...');
         setDetails(null);
-        setMpn(searchTerm);
-        const getData = {part: searchTerm};
+        setMpn(st);
+        const getData = {part: st};
         getPLMRequest('partdetails', getData,
         (res) => {
             console.log(res.data);
@@ -45,6 +63,16 @@ function SingleComponentAttribute(){
             console.log(res.data);
             setStatusMessage('Server Error');
         });
+        if(includeOctopart){
+            const octopartParams = {
+                detail: true,
+                part: st
+            }
+            getPLMRequest('octopart', octopartParams, (res) => {
+                console.log(res.data);
+                setOctopartDetails(res.data.data);
+            });
+        }
     }
     function handleKeyDown(e){
         if(e.key == 'Enter'){
@@ -83,18 +111,24 @@ function SingleComponentAttribute(){
     return(
         <div className='FlexNormal'>
             <h4>Single Component Attribute Search</h4>
+            <div className='HoriCenter'>
             <span className='MPNRequest'>
             <Form.Control
             type="text"
             placeholder="MPN (exact match)"
             onChange={handleChangeTerm}
             onKeyDown={handleKeyDown}
+            //value={searchTerm}
             />
-            <Button variant="outline-success" onClick={handleSearch}>Request</Button>
+            </span>
+            <span style={{padding: '5px'}}>
+            <LabeledCheckbox label={'Include Octopart'} id={'includeOctopart'} className='Pointer'
+            checked={includeOctopart} onChange={() => setIncludeOctopart(!includeOctopart)}/>
+            </span>
+            <Button variant="outline-success" onClick={handleClickSearch}>Request</Button>
             <Button onClick={handleOpenExport}>Export</Button>
             {statusMessage}
-            </span>
-
+            </div>
 
             {details &&
                 <>
@@ -119,6 +153,19 @@ function SingleComponentAttribute(){
                 }
                 </>
             }
+            <br/>
+            {octopartDetails &&
+                <>
+                <h4>Octopart Details</h4>
+                <div>{octopartDetails.description}</div>
+                <div>
+                    {Object.entries(octopartDetails.specs).map(([key, value], i) => {
+                        return <div key={i}>{key}: {value}</div>
+                    })}
+                </div>
+                </>
+            }
+
             <ExportComponentAttributeModal show={showExportModal} 
             hideAction={handleCloseExport} exportAction={handleExport}/>
         </div>

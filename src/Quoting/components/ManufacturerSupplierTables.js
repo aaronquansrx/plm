@@ -40,7 +40,6 @@ export function MasterManufacturers(props){
         setMasterManufacturerData(data.manufacturers);
     }
     function handleDelete(i){
-        console.log(i);
         setDeleteLine(i);
         setDeleteModal(true);
     };
