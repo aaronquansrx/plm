@@ -41,6 +41,11 @@ export function BOMCompViewer(props){
                     <tr key={i}>
                         {props.headers.map((header, j) => {
                             let content = row[header.accessor];
+                            let style = {};
+                            if((header.accessor === 'quantity' || header.accessor === 'designator') 
+                            && !row.quanitity_designator_match){
+                                style.backgroundColor = '#F3AFAA'
+                            }
                             if(!singleLineView){
                                 if(header.accessor === 'mpn'){
                                     content = row[header.accessor].join(',');
@@ -52,7 +57,7 @@ export function BOMCompViewer(props){
                                 }
                             }
                             return(
-                                <td key={j}>{content}</td>
+                                <td key={j} style={style}>{content}</td>
                             );
                         })}
                     </tr>

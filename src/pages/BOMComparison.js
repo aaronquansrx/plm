@@ -24,13 +24,22 @@ function BOMComparison(props){
         setPageState(i);
     }
     function handleUpload(obj, fileName){
+
+        const uploadBom = obj.map((line) => {
+            //check quantity and designator match
+            line.quanitity_designator_match = parseInt(line.quantity) === line.designator.split(',').length;
+
+            return line;
+        });
+
+
         console.log(fileName);
         handleChangePageState(0);
-        const normalBom = lineSeperateBom(obj);
+        const normalBom = lineSeperateBom(uploadBom);
         if(uploadFor.current === 1){
-            setBom1({upload: obj, normal: normalBom, filename: fileName});
+            setBom1({upload: uploadBom, normal: normalBom, filename: fileName});
         }else if(uploadFor.current === 2){
-            setBom2({upload: obj, normal: normalBom, filename: fileName});
+            setBom2({upload: uploadBom, normal: normalBom, filename: fileName});
         }
     }
     function lineSeperateBom(bom){
@@ -90,7 +99,7 @@ function BOMCompMain(props){
         if(props.onChangePageState) props.onChangePageState(2);
     }
     function viewBom2(){
-        if(props.onChangePageState) props.onChangePageState(2);
+        if(props.onChangePageState) props.onChangePageState(3);
     }
     function compBom(){
         //console.log(tableHeaders);
