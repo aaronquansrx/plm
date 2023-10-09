@@ -18,7 +18,7 @@ import CBom from './pages/CBom';
 import BOMScrub from './pages/BOMScrub';
 import QuotingMain from './Quoting/pages/QuotingMain';
 import QuotingTables from './Quoting/pages/QuotingTables';
-import BOMUploadTable from './pages/BOMUploadTable';
+//import BOMUploadTable from './pages/BOMUploadTable';
 import Feedback from './pages/Feedback';
 import Test from './pages/Test';
 import SingleComponentAttribute from './pages/SingleComponentAttribute';
@@ -28,6 +28,7 @@ import useUsername from './hooks/useUsername';
 import { useLocalStorage, useSessionStorage } from './hooks/Storage';
 import './css/App.css';
 import CircularBufferTest from './pages/CircularBufferTest';
+import BOMComparison from './pages/BOMComparison';
 
 const stores = [
   {id: 'AU', label: 'AU'},
@@ -50,7 +51,9 @@ const pages = [
   //{path: 'cbom', title: 'CBOM Exporter', element: () => <CBom/>},
   {path: 'partsearch', title: 'Open Market Part Search', element: () => <PartSearch/>},
   {path: 'bomscrub', title: 'Components Attributes Search', element: () => <BOMScrub/>},
-  {path: 'singlecomponent', title: 'Single Component Attribute Search', element: () => <SingleComponentAttribute/>}
+  {path: 'singlecomponent', title: 'Single Component Attribute Search', element: () => <SingleComponentAttribute/>},
+  {path: 'bomcomparison', title: 'BOM Comparison', element: () => <BOMComparison/>}
+
 ];
 
 /*
@@ -152,7 +155,7 @@ function App() {
         <Route path={path('tables')} element={<QuotingTables user={user}/>}/>
         <Route path={path('quoteusers')} element={<QuotingUsers username={username} user={user}/>}/>
         <Route path={path('feedback')} element={<Feedback/>}/>
-        <Route path={path('bomtable')} element={<BOMUploadTable/>}/>
+        {/*<Route path={path('bomtable')} element={<BOMUploadTable/>}/>*/} 
         <Route path={path('singlecomponent/:partId')} element={<SingleComponentAttribute/>}/>
       </Routes>
     </div>

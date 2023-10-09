@@ -909,7 +909,6 @@ function OctopartRenderer(props){
         setShowModal(showModal+1);
         setModalOn(false)
     };
-    //const [octoData, setOctoData] = useState([]);
     useEffect(() => {
         if(modalOn /*&& !octoRequested*/){
             props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
@@ -921,10 +920,6 @@ function OctopartRenderer(props){
     function callbackOctoRequest(od){
         //setOctoData(od);
     }
-    /*
-    function onOctopart(){
-        props.functions.requestOctopart(props.rowNum, callbackOctoRequest);
-    }*/
     const title = 'Octopart Offers for '+props.mpn;
     const body = (
         <>

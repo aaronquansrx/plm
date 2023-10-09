@@ -8,10 +8,12 @@ import { ListGroup } from 'react-bootstrap';
 import './../css/main.css';
 
 export function SimpleDropdown(props){
+    //console.log(props.items.length > 0 ? props.items[0] : null);
     const [selected, setSelected] = useState(props.items.length > 0 ? props.items[0] : null);
     useEffect(() => {
         setSelected(props.selected);
     }, [props.selected]);
+    //console.log(selected);
     function handleChange(item, i){
         setSelected(item);
         if(props.onChange) props.onChange(item, i);
