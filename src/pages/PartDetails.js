@@ -10,7 +10,7 @@ process.env.REACT_APP_SERVER_URL : process.env.REACT_APP_TEST_URL;
 function PartDetails(props){
     const params = useParams();
     const [details, setDetails] = useState(null);
-    console.log(params);
+    //console.log(params);
     useEffect(() => {
         const part = params.partId;
         axios({
@@ -18,7 +18,7 @@ function PartDetails(props){
             url: server_url+'api/partdetails',
             params: {part: part, save: true}
         }).then(res =>{
-            console.log(res.data);
+            //console.log(res.data);
             if(res.data.status === 'success') setDetails(res.data.details);
             console.log(res.data.details);
         })

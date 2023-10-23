@@ -14,7 +14,7 @@ import {SimpleDropdown} from './Dropdown';
 import {BOMApiProgressBarV2} from './Progress';
 
 import {PageInterface} from './Pagination';
-import { LabeledCheckbox } from './Forms';
+import { LabeledCheckbox, TextInput } from './Forms';
 import {usePaging} from './../hooks/Paging';
 
 import {UploadIcon, EditIcon, SheetIcon} from '../components/Icons';
@@ -122,6 +122,8 @@ function TableInterface(props){
     //const [newColumns, setNewColumns] = useState(new Set());
     const [columnOrder, setColumnOrder] = useState(props.headers.concat(scrubHeaders));
     const [tableData, setTableData] = useState(props.body);
+    const [splitString, setSplitString] = useState('');
+    //const [rawData, setRawData] = useState(props.body);
     //const [data, setData] = useState(null);
     const [error, setError] = useState(null);
 
@@ -178,7 +180,7 @@ function TableInterface(props){
     function handleDataLookup(){
         setFinishedData(0);
         setShowProgress(true);
-        console.log('do batch details data lookup');
+        //console.log('Do batch details data lookup');
         if(mpnHeader !== null){
             const mpns = tableData.map((line) => line[mpnHeader]);
             axios({
@@ -254,11 +256,27 @@ function TableInterface(props){
     function handleCloseExport(){
         setShowExportModal(false);
     }
-    //const tbodyClass = ;
+    function handleSplitChange(val){
+        setSplitString(val);
+    }
+    function handleSplitMPN(){
+        if(mpnHeader !== null && splitString !== ''){
+            const newTableData = tableData.reduce((table, line) => {
+                const mpns = line.MPN.split(splitString);
+                const restLine = {...line};
+                delete restLine.MPN;
+                mpns.forEach((mpn) => {
+                    table.push({MPN: mpn, ...restLine});
+                })
+                return table;
+            }, []);
+            setTableData(newTableData);
+        }
+    }
     return(
     <div>
         <ExportComponentAttributeModal show={showExportModal} hideAction={handleCloseExport} exportAction={handleExport}/>
-        <div>
+        <div className='FlexNormal Hori' style={{justifyContent: 'center'}}>
             <Button onClick={handleAddColumn}>Add Column</Button>
         {error === null ? <Button onClick={handleDataLookup}>Data Lookup</Button> : 
         <SimplePopover popoverBody={error} trigger={['hover', 'focus']} placement='auto'>
@@ -266,6 +284,8 @@ function TableInterface(props){
         </SimplePopover>
         }
         <Button onClick={handleOpenExport}>Export</Button>
+        <TextInput onChange={handleSplitChange}/>
+        <Button onClick={handleSplitMPN}>Split MPN Field</Button>
         {error !== null && <div style={{color: 'red'}}>{error}</div>}
         </div>
         <BOMApiProgressBarV2 show={showProgress} numParts={1} onHideBar={() => setShowProgress(false)} numFinished={finishedData}/>

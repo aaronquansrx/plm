@@ -30,7 +30,7 @@ export function BOMCompViewer(props){
             <thead className='TableHeading'>
                 <tr>
                 {props.headers.map((h, i) => 
-                <th key={i}>{h.label}</th>
+                    <th key={i}>{h.label}</th>
                 )}
                 </tr>
             </thead>
