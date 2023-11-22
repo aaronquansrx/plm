@@ -6,6 +6,8 @@ import { Button, Table } from 'react-bootstrap';
 import {SimplePopover, HoverOverlay} from '../components/Tooltips';
 import { setIntersection, setSubtraction } from '../scripts/Set';
 
+import {getPLMRequest, postPLMRequest} from '../scripts/APICall';
+import {MoveXBOMFinder} from '../components/MoveXBoms';
 
 
 const tableHeaders = [
@@ -183,6 +185,10 @@ function BOMCompMain(props){
     }
     return(
         <>
+        <MoveXBOMFinder/>
+        <div>
+            <Button onClick={collectMoveXBomData}>Test</Button>
+        </div>
         <div className='FlexNormal Hori'>
         <div>
             <h4>BOM 1</h4>
