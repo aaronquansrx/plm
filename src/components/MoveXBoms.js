@@ -1,6 +1,6 @@
 import {useState, useEffect, useRef} from 'react';
 import { getPLMRequest, postPLMRequest } from '../scripts/APICall';
-
+import Button from 'react-bootstrap/Button'
 export function MoveXBOMFinder(){
     function collectMoveXBomData(){
         getPLMRequest('movex', {boms: ''}, (res) => {

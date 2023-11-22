@@ -186,9 +186,6 @@ function BOMCompMain(props){
     return(
         <>
         <MoveXBOMFinder/>
-        <div>
-            <Button onClick={collectMoveXBomData}>Test</Button>
-        </div>
         <div className='FlexNormal Hori'>
         <div>
             <h4>BOM 1</h4>
