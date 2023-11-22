@@ -250,6 +250,38 @@ function TableInterface(props){
             XLSX.writeFile(wb, fn+'.xlsx');
         }
     }
+    function handleCountTypes(){
+        //if
+        //onst 
+        const counts = displayTableData.reduce((cs, data) => {
+            //if(data['Mounting Type'])
+            if(data['Mounting Type'] !== null){
+                if(data['Mounting Type'].startsWith('Surface Mount')){
+                    if('Surface Mount' in cs){
+                        cs['Surface Mount']++;
+                    }else{
+                        cs['Surface Mount'] = 1;
+                    }
+                }else{
+                    if(data['Mounting Type'] in cs){
+                        cs[data['Mounting Type']]++;
+                    }else{
+                        cs[data['Mounting Type']] = 1;
+                    }
+                }
+            }else{
+                if('null' in cs){
+                    cs.null++;
+                }else{
+                    cs.null = 1;
+                }
+            }
+            console.log(data['Mounting Type']);
+            return cs;
+        }, {});
+        //console.log(counts);
+        return counts;
+    }
     function handleOpenExport(){
         setShowExportModal(true);
     }
@@ -261,12 +293,14 @@ function TableInterface(props){
     }
     function handleSplitMPN(){
         if(mpnHeader !== null && splitString !== ''){
-            const newTableData = tableData.reduce((table, line) => {
-                const mpns = line.MPN.split(splitString);
+            const parseSplitString = splitString.replace("\\n", '\n');
+            //console.log(parseSplitString);
+            const newTableData = tableData.reduce((table, line, i) => {
+                const mpns = line.MPN.split(parseSplitString);
                 const restLine = {...line};
                 delete restLine.MPN;
                 mpns.forEach((mpn) => {
-                    table.push({MPN: mpn, ...restLine});
+                    table.push({MPN: mpn, ...restLine, originalIndex: i});
                 })
                 return table;
             }, []);
@@ -286,6 +320,12 @@ function TableInterface(props){
         <Button onClick={handleOpenExport}>Export</Button>
         <TextInput onChange={handleSplitChange}/>
         <Button onClick={handleSplitMPN}>Split MPN Field</Button>
+        <Button onClick={handleCountTypes} disabled={finishedData !== 1}>Count Types</Button>
+        {
+            displayTableData.map(() => {
+
+            })
+        }
         {error !== null && <div style={{color: 'red'}}>{error}</div>}
         </div>
         <BOMApiProgressBarV2 show={showProgress} numParts={1} onHideBar={() => setShowProgress(false)} numFinished={finishedData}/>

@@ -181,17 +181,20 @@ function BOMCompMain(props){
         const newBomView = bomView === 1 ? 0 : bomView+1;
         setBomView(newBomView);
     }
+    function handleExcelExport(){
+
+    }
     return(
         <>
         <div className='FlexNormal Hori'>
         <div>
-            <h4>BOM 1</h4>
+            <h4>BOM Old</h4>
             {props.bom1.filename && <div>{props.bom1.filename}</div>}
             <Button onClick={props.uploadBOM1}>Upload</Button>
             <Button disabled={props.bom1.upload.length <= 0} onClick={viewBom1}>View</Button>
         </div>
         <div>
-            <h4>BOM 2</h4>
+            <h4>BOM New</h4>
             {props.bom2.filename && <div>{props.bom2.filename}</div>}
             <Button onClick={props.uploadBOM2}>Upload</Button>
             <Button disabled={props.bom2.upload.length <= 0} onClick={viewBom2}>View</Button>
@@ -264,11 +267,11 @@ function SideBySideComparisonTable(props){
                                     return <>
                                         <td key={'d1'+j} colSpan={1} style={style}>{bom1Line[h.accessor]}</td>
                                         <td key={'d2'+j} colSpan={1} style={style}>{body}</td>
-                                    </>
+                                    </>;
                                 }
-                                return <td key={j} colSpan={2} style={style}>{bom1Line[h.accessor]}</td>
+                                return <td key={j} colSpan={2} style={style}>{bom1Line[h.accessor]}</td>;
                             }
-                            return <td key={j} colSpan={1} style={style}>{bom1Line[h.accessor]}</td>
+                            return <td key={j} colSpan={1} style={style}>{bom1Line[h.accessor]}</td>;
                         })}
                         {props.headers.map((h, j) => {
                             let style = {};
