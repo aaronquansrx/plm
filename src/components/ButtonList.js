@@ -2,12 +2,17 @@ import React, {useEffect, useState} from 'react';
 
 import update from 'immutability-helper';
 import { ListGroup } from 'react-bootstrap';
-import Button from 'react-bootstrap/Button'
+import Button from 'react-bootstrap/Button';
 
 export function ChooseButtonList(props){
+    //console.log(props.items)
     //const [chosen, setChosen] = useState('');
     const [list, setList] = useState(props.items);
     const [isOpen, setIsOpen] = useState(false);
+    //console.log(props.items);
+    useEffect(() => {
+        setList(props.items);
+    }, [props.items])
     useEffect(() => {
         const i = list.findIndex((v) => v === props.chosen);
         if(i !== -1){

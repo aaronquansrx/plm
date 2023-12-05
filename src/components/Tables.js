@@ -137,6 +137,7 @@ export function HeaderArrayTable(props){
     }
     function handleEdit(i, j, val){
         return function(){
+            if(props.onClick) props.onClick(i);
             if(!props.headers[j].editing) return;
             if(val === null) val = '';
             if(editCell !== null){

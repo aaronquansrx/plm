@@ -73,11 +73,23 @@ function BOMComparison(props){
         uploadFor.current = 2;
         handleChangePageState(1);
     }
+    function handleChooseBOM1Interface(){
+        uploadFor.current = 1;
+        handleChangePageState(4);
+    }
+    function handleChooseBOM2Interface(){
+        uploadFor.current = 2;
+        handleChangePageState(4);
+    }
+    function handleChooseBOM(bomData){
+        console.log(bomData);
+    }
     function render(){
         switch(pageState){
             case 0:
                 return <BOMCompMain uploadBOM1={handleUploadBOM1Interface} 
                 uploadBOM2={handleUploadBOM2Interface} bom1={bom1} bom2={bom2} 
+                findBOM1={handleChooseBOM1Interface} findBOM2={handleChooseBOM2Interface}
                 onChangePageState={handleChangePageState} headers={tableHeaders}/>
             case 1:
                 return <>
@@ -88,6 +100,12 @@ function BOMComparison(props){
                 return <BOMCompViewer data={bom1} headers={tableHeaders} onChangePageState={handleChangePageState}/>
             case 3:
                 return <BOMCompViewer data={bom2} headers={tableHeaders} onChangePageState={handleChangePageState}/>
+
+            case 4:
+                return <>
+                    <Button onClick={() => handleChangePageState(0)}>Back</Button>
+                    <MoveXBOMFinder onChooseBom={handleChooseBOM}/>
+                </>
         }
     }
     return(
@@ -183,20 +201,24 @@ function BOMCompMain(props){
         const newBomView = bomView === 1 ? 0 : bomView+1;
         setBomView(newBomView);
     }
+    function handleGoToBomFinder(){
+        props.onChangePageState(4);
+    }
     return(
         <>
-        <MoveXBOMFinder/>
         <div className='FlexNormal Hori'>
         <div>
             <h4>BOM 1</h4>
             {props.bom1.filename && <div>{props.bom1.filename}</div>}
             <Button onClick={props.uploadBOM1}>Upload</Button>
+            <Button onClick={handleGoToBomFinder}>Find BOM</Button>
             <Button disabled={props.bom1.upload.length <= 0} onClick={viewBom1}>View</Button>
         </div>
         <div>
             <h4>BOM 2</h4>
             {props.bom2.filename && <div>{props.bom2.filename}</div>}
             <Button onClick={props.uploadBOM2}>Upload</Button>
+            <Button onClick={handleGoToBomFinder}>Find BOM</Button>
             <Button disabled={props.bom2.upload.length <= 0} onClick={viewBom2}>View</Button>
         </div>
         </div>

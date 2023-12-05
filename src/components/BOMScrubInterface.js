@@ -111,7 +111,7 @@ function Navigation(props){
 }
 
 const scrubHeaders = [
-    'Description', 'RoHS', 'REACH', 'MSL', 'Lead', 'Mounting Type'
+    'Description', 'RoHS', 'REACH', 'MSL', 'Lead', 'Mounting Type', 'Product Status', 'Packaging' 
 ];
 
 const hiddenHeaders = ['Long Description'];
@@ -205,7 +205,11 @@ function TableInterface(props){
                         if(mpn in details){
                             scrubHeaders.forEach(col => {
                                 if(col in details[mpn]){
-                                    line[col] = details[mpn][col];
+                                    if(col === 'Packaging'){
+                                        line[col] = details[mpn][col].join(', ');
+                                    }else{
+                                        line[col] = details[mpn][col];
+                                    }
                                 }
                             });
                         }

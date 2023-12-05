@@ -31,6 +31,8 @@ export function SuggestionSearcher(props){
     function handleClickSuggestion(reco, i){
         return function(){
             if(props.onClickSuggestion) props.onClickSuggestion(reco, i);
+            setShowSuggestions(false);
+            setSearchText('');
         }
     }
     function handleClickOutside(){
