@@ -128,6 +128,10 @@ td.MpnHeader{
     background-color: #94baf1;
 }
 
+td.QuantityHeader{
+    background-color: #f1cc94;
+}
+
 .MPNRequest{
     display: flex;
     justify-content: center;
