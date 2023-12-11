@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 
 import update from 'immutability-helper';
 import axios from 'axios';
@@ -119,6 +119,7 @@ const hiddenHeaders = ['Long Description'];
 function TableInterface(props){
     const serverUrl = useServerUrl();
     const [mpnHeader, setMpnHeader] = useState(null);
+    const [quantityHeader, setQuantityHeader] = useState(null);
     //const [newColumns, setNewColumns] = useState(new Set());
     const [columnOrder, setColumnOrder] = useState(props.headers.concat(scrubHeaders));
     const [tableData, setTableData] = useState(props.body);
@@ -131,6 +132,8 @@ function TableInterface(props){
     const [showExportModal, setShowExportModal] = useState(false);
     const [showProgress, setShowProgress] = useState(false);
     const [finishedData, setFinishedData] = useState(0);
+
+    const typeData = useRef({});
     // to make sure mpnHeader doesnt change during data processing
 
     const [pageSize, setPageSize] = useState(5);
@@ -144,7 +147,6 @@ function TableInterface(props){
     const allHeaders = scrubHeaders.concat(hiddenHeaders);
     useEffect(() => {
         console.log(props.body);
-
     }, [props.body]);
     useEffect(() => {
         const mpnHeaderStrings = ['mpn', 'manufacturing part number'];
@@ -157,13 +159,35 @@ function TableInterface(props){
         if(mpnHeader !== null){
             setMpnHeader(mpnHeader);
         }
+        const quantityHeaderStrings = ['quantity'];
+        const quantityHeader = props.headers.reduce((h, header) => {
+            if(quantityHeaderStrings.includes(header.toLowerCase())){
+                return header;
+            }
+            return h;
+        }, null);
+        if(quantityHeader !== null){
+            setQuantityHeader(quantityHeader);
+        }
     }, [props.headers]);
+    useEffect(() => {
+        typeData.current = handleCountTypes();
+    }, [tableData]);
+    useEffect(() => {
+        const newTableData = tableData.map(line => {
+            if(quantityHeader) line.Quantity = line[quantityHeader];
+            return line;
+        })
+        setTableData(newTableData);
+    }, [quantityHeader])
     function handleClickHeader(i){
         //for mpn header detect ', ' or ',' to seperate or use POST DONE!!
         return function(e){
             if(e.ctrlKey){
                 setMpnHeader(columnOrder[i]);
                 setError(null);
+            }else if(e.altKey){
+                setQuantityHeader(columnOrder[i]);
             }
         }
     }
@@ -251,40 +275,48 @@ function TableInterface(props){
             const sheet = XLSX.utils.json_to_sheet(tableData, {header: columnOrder});
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, sheet, 'BOMScrub');
+            if(options.countSheet){
+                const sheetArray = Object.entries(typeData.current);
+                const cSheet = XLSX.utils.json_to_sheet(sheetArray);
+                XLSX.utils.book_append_sheet(wb, cSheet, 'Mounting Type Counts');
+            }
             XLSX.writeFile(wb, fn+'.xlsx');
         }
     }
     function handleCountTypes(){
-        //if
-        //onst 
-        const counts = displayTableData.reduce((cs, data) => {
-            //if(data['Mounting Type'])
-            if(data['Mounting Type'] !== null){
-                if(data['Mounting Type'].startsWith('Surface Mount')){
-                    if('Surface Mount' in cs){
-                        cs['Surface Mount']++;
+        if(finishedData === 1){
+            const counts = tableData.reduce((cs, data) => {
+                const quantity = 'Quantity' in data ? data['Quantity'] : 1;
+                if('Mounting Type' in data){
+                    if(data['Mounting Type'] !== null){
+                        
+                        if(data['Mounting Type'].startsWith('Surface Mount')){
+
+                            if('Surface Mount' in cs){
+                                cs['Surface Mount'] += quantity;
+                            }else{
+                                cs['Surface Mount'] = quantity;
+                            }
+                        }else{
+                            if(data['Mounting Type'] in cs){
+                                cs[data['Mounting Type']] += quantity;
+                            }else{
+                                cs[data['Mounting Type']] = quantity;
+                            }
+                        }
                     }else{
-                        cs['Surface Mount'] = 1;
-                    }
-                }else{
-                    if(data['Mounting Type'] in cs){
-                        cs[data['Mounting Type']]++;
-                    }else{
-                        cs[data['Mounting Type']] = 1;
+                        if('None' in cs){
+                            cs.None += quantity;
+                        }else{
+                            cs.None = quantity;
+                        }
                     }
                 }
-            }else{
-                if('null' in cs){
-                    cs.null++;
-                }else{
-                    cs.null = 1;
-                }
-            }
-            console.log(data['Mounting Type']);
-            return cs;
-        }, {});
-        //console.log(counts);
-        return counts;
+                return cs;
+            }, {});
+            return counts;
+        }
+        return {};
     }
     function handleOpenExport(){
         setShowExportModal(true);
@@ -298,7 +330,6 @@ function TableInterface(props){
     function handleSplitMPN(){
         if(mpnHeader !== null && splitString !== ''){
             const parseSplitString = splitString.replace("\\n", '\n');
-            //console.log(parseSplitString);
             const newTableData = tableData.reduce((table, line, i) => {
                 const mpns = line.MPN.split(parseSplitString);
                 const restLine = {...line};
@@ -332,8 +363,9 @@ function TableInterface(props){
         }
         {error !== null && <div style={{color: 'red'}}>{error}</div>}
         </div>
+        {<CountDisplay data={typeData.current}/>}
         <BOMApiProgressBarV2 show={showProgress} numParts={1} onHideBar={() => setShowProgress(false)} numFinished={finishedData}/>
-        <div>
+        <div className={'MainTable'}>
         <Table>
             <thead className='TableHeading'>
             <tr>
@@ -341,7 +373,7 @@ function TableInterface(props){
 
                     let headerCell = (
                         <td key={i} onClick={handleClickHeader(i)}>
-                            <SimplePopover popoverBody='CTRL Click to select MPN column' trigger={['hover', 'focus']} placement='auto'>
+                            <SimplePopover popoverBody='CTRL Click to select MPN column | ALT Click to select ' trigger={['hover', 'focus']} placement='auto'>
                             <div>{header}</div>
                             </SimplePopover>
                         </td>
@@ -359,6 +391,14 @@ function TableInterface(props){
                             </SimplePopover>
                         </td>
                         );
+                    }else if(header === quantityHeader){
+                        headerCell = (
+                            <td className={'QuantityHeader'} key={i}>
+                            <SimplePopover popoverBody='Selected Quantity column' trigger={['hover', 'focus']} placement='auto'>
+                            <div>{header}</div>
+                            </SimplePopover>
+                        </td>
+                        )
                     }
                     return headerCell;
                 })}
@@ -387,9 +427,10 @@ function TableInterface(props){
 export function ExportComponentAttributeModal(props){
     const [fn, setFn] = useState('');
     const [csv, setCsv] = useState(false);
+    const [countSheet, setCountSheet] = useState(false);
     const handleClose = () => props.hideAction();
     const handleExport = () => {
-        props.exportAction(fn, {csv: csv});
+        props.exportAction(fn, {csv: csv, countSheet: countSheet});
         props.hideAction();
     };
     function handleChange(e){
@@ -397,6 +438,9 @@ export function ExportComponentAttributeModal(props){
     }
     function handleChangeCSV(){
         setCsv(!csv)
+    }
+    function handleCountSheet(){
+        setCountSheet(!countSheet);
     }
     return(
     <Modal show={props.show} onHide={handleClose}>
@@ -407,12 +451,25 @@ export function ExportComponentAttributeModal(props){
     <Modal.Body>
         File Name: <input type='text' value={fn} onChange={handleChange}/>
         <LabeledCheckbox label={'CSV'} checked={csv} onChange={handleChangeCSV}/>
+        <LabeledCheckbox label={'Add count sheet'} checked={countSheet} onChange={handleCountSheet}/>
     </Modal.Body>
     <Modal.Footer>
         <Button variant="secondary" onClick={handleClose}>Close</Button>
         <Button variant="primary" onClick={handleExport}>Export</Button>
     </Modal.Footer>
     </Modal>
+    );
+}
+
+function CountDisplay(props){
+    console.log(props.data);
+    return (
+        <div>
+            <h5>Mounting Type Counts</h5>
+            {Object.entries(props.data).map(([key, value], i) => {
+                return <div key={i}>{key}: {value}</div>
+            })}
+        </div>
     );
 }
 
