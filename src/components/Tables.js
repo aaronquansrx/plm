@@ -180,8 +180,9 @@ export function HeaderArrayTable(props){
                 {props.data.map((row, i) => 
                     <tr key={i}>
                         {props.headers.map((h, j) => {
+                            const style = props.highlightedRow!== null && props.highlightedRow === i ? {backgroundColor: '#e3ae32'} : {};
                             const isEditCell = editCell && props.editing && h.editing ? i === editCell.x && j === editCell.y : false;
-                            return <td key={j} onMouseDown={handleEdit(i, j, row[h.accessor])}>
+                            return <td key={j} style={style} onMouseDown={handleEdit(i, j, row[h.accessor])}>
                                 {isEditCell ? 
                                 <OutsideClickFunction func={submitCellValue}>
                                 <Form.Control style={{minWidth: '100px'}} autoFocus type='text' 
