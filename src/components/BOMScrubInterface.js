@@ -222,6 +222,7 @@ function TableInterface(props){
                     setError('Data Lookup Error (contact IT)');
                 }else{
                     //setError('Success');
+                    console.log(response.data);
                     const details = response.data.details;
                     //setData(details);
                     const newTableData = tableData.map((line,i) => {
@@ -356,11 +357,6 @@ function TableInterface(props){
         <TextInput onChange={handleSplitChange}/>
         <Button onClick={handleSplitMPN}>Split MPN Field</Button>
         <Button onClick={handleCountTypes} disabled={finishedData !== 1}>Count Types</Button>
-        {
-            displayTableData.map(() => {
-
-            })
-        }
         {error !== null && <div style={{color: 'red'}}>{error}</div>}
         </div>
         {<CountDisplay data={typeData.current}/>}
@@ -462,7 +458,7 @@ export function ExportComponentAttributeModal(props){
 }
 
 function CountDisplay(props){
-    console.log(props.data);
+    //console.log(props.data);
     return (
         <div>
             <h5>Mounting Type Counts</h5>

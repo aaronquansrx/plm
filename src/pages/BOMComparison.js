@@ -243,8 +243,8 @@ function SideBySideComparisonTable(props){
         <Table>
             <thead className='TableHeading'>
                 <tr>
-                    <th colSpan={props.headers.length+1}>BOM 1</th>
-                    <th colSpan={props.headers.length+1}>BOM 2</th>
+                    <th colSpan={props.headers.length+1}>BOM Old</th>
+                    <th colSpan={props.headers.length+1}>BOM New</th>
                 </tr>
                 <tr>
                     {props.headers.map((h, i) => {
