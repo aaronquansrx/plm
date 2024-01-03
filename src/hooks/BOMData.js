@@ -409,7 +409,7 @@ export function useApiDataProgress(mpnList, apisList, apiData, callApiRetry, cal
                 const data = ad.get(mpn).data;
                 const mpnApisData = ad.get(mpn).data.apis;
                 const retryApis = apisList.reduce((arrApi, api)=> {
-                    if(mpnApisData[api].retry) arrApi.push(api);
+                    if(api in mpnApisData && mpnApisData[api].retry) arrApi.push(api);
                     return arrApi;
                 }, []);
                 //const quantity = data.

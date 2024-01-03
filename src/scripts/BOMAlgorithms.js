@@ -9,17 +9,25 @@ export function offerEvaluation(offer, min_quantity){
     function both_stock(i, n){
         return {in_stock:i, no_stock:n};
     }
-    const out_obj = Object.entries(is).reduce((obj, [key, value]) => {
-        obj[key] = {in_stock: value, no_stock: ns[key]}
-        return obj;
-    }, {});
-    out_obj.prices = {
-        price: both_stock(is.price_per, ns.price_per),
-        pricing: offer.pricing,
-        index: both_stock(is.index, ns.index),
-        total_price: both_stock(is.total_price, ns.total_price)
+    if(is && ns){
+        const out_obj = Object.entries(is).reduce((obj, [key, value]) => {
+            obj[key] = {in_stock: value, no_stock: ns[key]}
+            return obj;
+        }, {});
+        out_obj.prices = {
+            price: both_stock(is.price_per, ns.price_per),
+            pricing: offer.pricing,
+            index: both_stock(is.index, ns.index),
+            total_price: both_stock(is.total_price, ns.total_price)
+        };
+        return out_obj;
+    }
+    return {
+        price: {},
+        pricing: [],
+        index: {},
+        total_price: {}
     };
-    return out_obj;
     /*{
         total_price: {in_stock: is.total_price, no_stock: ns.total_price},
         price_per: {in_stock: is.price_per, no_stock: ns.price_per},
@@ -66,20 +74,26 @@ function best_price_finder_full(pricing, moq, spq, min_quantity, available, fee_
         quantity = quantity - (quantity % spq);
     };
     const bracket_index = get_pricing_bracket_index(pricing, quantity);
-    let price_per = pricing[bracket_index].unit_price;
-    let ret = price_return(price_per, quantity, min_quantity, bracket_index, fee_total, api);
-    const quantity_post_rule = apply_excess_rule(quantity, excess_rule);
-    //console.log(quantity_post_rule);
-    if(quantity !== pricing[bracket_index].break_quantity && bracket_index+1 < pricing.length){
-        price_per = pricing[bracket_index+1].unit_price;
-        quantity = pricing[bracket_index+1].break_quantity;
-        const p2 = quantity*price_per;
-        if(p2 < ret.total_price){
+    //console.log(pricing);
+    let ret = null;
+    if(pricing.length > 0){
+        let price_per = pricing[bracket_index].unit_price;
+        ret = price_return(price_per, quantity, min_quantity, bracket_index, fee_total, api);
+        //const quantity_post_rule = apply_excess_rule(quantity, excess_rule);
+        //console.log(quantity_post_rule);
+        if(quantity !== pricing[bracket_index].break_quantity && bracket_index+1 < pricing.length){
             price_per = pricing[bracket_index+1].unit_price;
             quantity = pricing[bracket_index+1].break_quantity;
-            ret = price_return(price_per, quantity, min_quantity, bracket_index+1, fee_total, api);
-        } 
+            const p2 = quantity*price_per;
+            if(p2 < ret.total_price){
+                price_per = pricing[bracket_index+1].unit_price;
+                quantity = pricing[bracket_index+1].break_quantity;
+                ret = price_return(price_per, quantity, min_quantity, bracket_index+1, fee_total, api);
+            } 
+        }
+        return ret;
     }
+    ret = price_return(0, 1, 1, 0, 0, api);
     return ret;
 }
 
@@ -154,7 +168,7 @@ function best_price_algorithm(line, quantity, apis=all_apis, in_stock=false, lea
             line[api].offers.forEach((offer, i) => {
                 const fullOffer = {api: api, offer_num: i};
                 Object.assign(fullOffer, offer);
-                const adj_quantity = fullOffer.adjusted_quantity[stock_str];
+                const adj_quantity = fullOffer.adjusted_quantity ? fullOffer.adjusted_quantity[stock_str] : 1;
                 if(lead_time_cut_off === null || 
                 (lead_time_cut_off !== null && fullOffer.leadtime < lead_time_cut_off)){
                     if(!(in_stock && adj_quantity < quantity)){
@@ -219,7 +233,7 @@ function best_leadtime_algorithm(line, quantity, apis=all_apis, in_stock=false, 
         out.excess_quantity = min_offer.excess_quantity[stock_str];
         out.excess_price = min_offer.excess_price[stock_str];
     }
-    console.log(out);
+    //console.log(out);
     return out;
 }
 
@@ -273,6 +287,8 @@ export function allSortApiOffers(offers, quantity){
 
 function compare_offer_best_price(o1, o2, s, q, ltco=null){
     const stock_str = stockString(s);
+    if(!o1.adjusted_quantity) return false;
+    if(!o2.adjusted_quantity) return true;
     const o1_adj_quantity = o1.adjusted_quantity[stock_str];
     const o2_adj_quantity = o2.adjusted_quantity[stock_str];
     if(ltco !== null){

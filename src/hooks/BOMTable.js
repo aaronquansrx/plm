@@ -723,8 +723,8 @@ export function evalApisV2(multiApiData, apisList, quantity, manufacturerFilter=
         obj[api] = {
             offers: offers,
             offer_order: order,
-            message: data[api].message,
-            retry: data[api].retry
+            message: data[api] ? data[api].message : 'Not Requested API',
+            retry: data[api] ? data[api].retry : false
         }
         return obj;
     }, {});
@@ -735,6 +735,7 @@ export function evalApisV2(multiApiData, apisList, quantity, manufacturerFilter=
 
 function evalApiV2(singleApiData, quantity, manufacturerFilter=null){
     //console.log(singleApiData);
+    if(!singleApiData) return [];
     const newOffers = singleApiData.offers.reduce((arr, offer) => {
         //console.log(offer.api_manufacturer);
         if(manufacturerFilter === null || manufacturerFilter.has(offer.api_manufacturer)){
