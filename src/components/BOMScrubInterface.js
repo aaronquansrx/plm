@@ -27,6 +27,8 @@ import Modal from 'react-bootstrap/Modal';
 import {useExcelUpload} from './../hooks/FileUpload';
 import {useServerUrl} from './../hooks/Urls';
 
+import { getPLMRequest, postPLMRequest } from '../scripts/APICall';
+
 import './../css/main.css';
 
 function BOMScrubInterface(props){
@@ -205,47 +207,80 @@ function TableInterface(props){
         setFinishedData(0);
         setShowProgress(true);
         //console.log('Do batch details data lookup');
+
+
         if(mpnHeader !== null){
             const mpns = tableData.map((line) => line[mpnHeader]);
-            axios({
-                method: 'POST',
-                url: serverUrl+'api/partdetails',
-                //params: {parts:mpnSplit, digikey:true},
-                data: {
-                    mpns: mpns,
-                    digikey: true
+            //requestOldDetails(mpns);
+            requestDetails(mpns);
+        }else{
+            setError('MPN header not selected');
+        }
+    }
+    function genNewTableData(details, mpns){
+
+        const newTableData = tableData.map((line,i) => {
+            const mpn = line.MPN;
+            if(mpn in details){
+                scrubHeaders.forEach(col => {
+                    if(col in details[mpn]){
+                        if(col === 'Packaging'){
+                            line[col] = details[mpn][col].join(', ');
+                        }else{
+                            line[col] = details[mpn][col];
+                        }
+                    }
+                });
+            }
+            return line;
+        });
+        return newTableData;
+    }
+    function requestDetails(mpns){
+        postPLMRequest('newpartdetails', {
+            mpns: mpns,
+            digikey: true
+        }, (response) => {
+            console.log(response.data);
+            if(typeof response.data !== 'object'){
+                setError('Data Lookup Error (contact IT)');
+            }else{
+                const details = response.data.details;
+                const newTableData = genNewTableData(details, mpns);
+                const notFound = []; // find not found
+                Object.entries(response.data.details).forEach(([k,v]) => {
+                    if(!v.found) notFound.push(k);
+                });
+                if(notFound.length){
+                    requestOldDetails(notFound);
+                }else{
+                    setFinishedData(1);
+                    setTableData(newTableData);
                 }
-                //signal: controller.signal
-            }).then(response => {
-                console.log(response.data);
+            }
+        },
+        (res) => {
+            console.log(res.data);
+        });
+    }
+    function requestOldDetails(mpns){
+        //console.log(mpns);
+        if(mpns.length > 0){
+            postPLMRequest('partdetails', {mpns: mpns,},  (response) => {
+                //console.log(response.data);
                 if(typeof response.data !== 'object'){
                     setError('Data Lookup Error (contact IT)');
                 }else{
-                    //setError('Success');
-                    console.log(response.data);
                     const details = response.data.details;
-                    //setData(details);
-                    const newTableData = tableData.map((line,i) => {
-                        const mpn = mpns[i];
-                        if(mpn in details){
-                            scrubHeaders.forEach(col => {
-                                if(col in details[mpn]){
-                                    if(col === 'Packaging'){
-                                        line[col] = details[mpn][col].join(', ');
-                                    }else{
-                                        line[col] = details[mpn][col];
-                                    }
-                                }
-                            });
-                        }
-                        return line;
-                    })
+                    const newTableData = genNewTableData(details, mpns);
+                    const notFound = []; // find not found
+                    Object.entries(details).forEach(([k,v]) => {
+                        if(!v.found) notFound.push(k);
+                    });
                     setFinishedData(1);
                     setTableData(newTableData);
                 }
             });
-        }else{
-            setError('MPN header not selected');
         }
     }
     function handleReset(){
