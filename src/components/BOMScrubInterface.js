@@ -122,7 +122,6 @@ function TableInterface(props){
     const serverUrl = useServerUrl();
     const [mpnHeader, setMpnHeader] = useState(null);
     const [quantityHeader, setQuantityHeader] = useState(null);
-    //const [newColumns, setNewColumns] = useState(new Set());
     const [columnOrder, setColumnOrder] = useState(props.headers.concat(scrubHeaders));
     const [tableData, setTableData] = useState(props.body);
     const [splitString, setSplitString] = useState('');
@@ -207,18 +206,20 @@ function TableInterface(props){
         setFinishedData(0);
         setShowProgress(true);
         //console.log('Do batch details data lookup');
-
-
         if(mpnHeader !== null){
             const mpns = tableData.map((line) => line[mpnHeader]);
             //requestOldDetails(mpns);
+            const newTableDetails = tableData.map((line,i) => {
+                line.MPN = line[mpnHeader];
+                return line;
+            });
+            setTableData(newTableDetails);
             requestDetails(mpns);
         }else{
             setError('MPN header not selected');
         }
     }
     function genNewTableData(details, mpns){
-
         const newTableData = tableData.map((line,i) => {
             const mpn = line.MPN;
             if(mpn in details){
@@ -273,12 +274,13 @@ function TableInterface(props){
                 }else{
                     const details = response.data.details;
                     const newTableData = genNewTableData(details, mpns);
-                    const notFound = []; // find not found
-                    Object.entries(details).forEach(([k,v]) => {
-                        if(!v.found) notFound.push(k);
-                    });
+                    //const notFound = []; // find not found
+                    //Object.entries(details).forEach(([k,v]) => {
+                    //    if(!v.found) notFound.push(k);
+                    //});
                     setFinishedData(1);
                     setTableData(newTableData);
+                    console.log(newTableData);
                 }
             });
         }
@@ -325,9 +327,7 @@ function TableInterface(props){
                 const quantity = 'Quantity' in data ? data['Quantity'] : 1;
                 if('Mounting Type' in data){
                     if(data['Mounting Type'] !== null){
-                        
                         if(data['Mounting Type'].startsWith('Surface Mount')){
-
                             if('Surface Mount' in cs){
                                 cs['Surface Mount'] += quantity;
                             }else{
