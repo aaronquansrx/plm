@@ -36,7 +36,7 @@ function SingleComponentAttribute(){
     }, []);
 
     function handleChangeTerm(e){
-        console.log(e.target.value);
+        //console.log(e.target.value);
         setSearchTerm(e.target.value);
     }
     function handleClickSearch(){
@@ -48,16 +48,17 @@ function SingleComponentAttribute(){
         setDetails(null);
         setMpn(st);
         const getData = {part: st};
-        getPLMRequest('partdetails', getData,
+        getPLMRequest('newpartdetails', getData,
         (res) => {
             console.log(res.data);
-            if(res.data.success){
+            if(res.data.success && res.data.found){
                 setDetails(res.data.details);
                 //setParameters(res.data.details.Parameters);
                 //setPhoto(res.data.details.Photo);
                 setStatusMessage('');
             }else{
-                setStatusMessage('Search Failed');
+                setStatusMessage('Searching Backup...');
+                searchOldPartDetails(st);
             }
         }, (res) => {
             console.log(res.data);
@@ -73,6 +74,24 @@ function SingleComponentAttribute(){
                 setOctopartDetails(res.data.data);
             });
         }
+    }
+    function searchOldPartDetails(part){
+        const getData = {part: part};
+        getPLMRequest('partdetails', getData,
+        (res) => {
+            console.log(res.data);
+            if(res.data.success){
+                setDetails(res.data.details);
+                //setParameters(res.data.details.Parameters);
+                //setPhoto(res.data.details.Photo);
+                setStatusMessage('');
+            }else{
+                setStatusMessage('Search Failed');
+            }
+        }, (res) => {
+            console.log(res.data);
+            setStatusMessage('Server Error');
+        });
     }
     function handleKeyDown(e){
         if(e.key == 'Enter'){
