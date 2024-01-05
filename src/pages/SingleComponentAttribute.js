@@ -57,7 +57,11 @@ function SingleComponentAttribute(){
                 //setPhoto(res.data.details.Photo);
                 setStatusMessage('');
             }else{
-                setStatusMessage('Searching Backup...');
+                if(res.data.status){
+                    setStatusMessage(res.data.status + '... now searching backup');
+                }else{
+                    setStatusMessage('Searching Backup...');
+                }
                 searchOldPartDetails(st);
             }
         }, (res) => {
@@ -86,7 +90,7 @@ function SingleComponentAttribute(){
                 //setPhoto(res.data.details.Photo);
                 setStatusMessage('');
             }else{
-                setStatusMessage('Search Failed');
+                setStatusMessage('Not Found');
             }
         }, (res) => {
             console.log(res.data);
