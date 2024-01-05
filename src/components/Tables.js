@@ -1,4 +1,4 @@
-import {useState, useEffect, useMemo} from 'react';
+import {useState, useEffect, useMemo, useRef} from 'react';
 import styled from 'styled-components';
 import update from 'immutability-helper';
 
@@ -109,6 +109,26 @@ export function EditTable(props){
         </Table>
         
     );
+}
+
+export function DragAdjustColumnTable(props){
+    const headerRefs = useRef([]);
+    const headers = ['hello', 'b', ' a very long colll ll'];
+    function handleClickHeader(i){
+        return function(){
+            console.log(headerRefs.current[i]);
+        }
+    }
+    return <Table>
+        <thead>
+            <tr>
+                {props.headers.map((h, i) => <th key={i} ref={r => headerRefs.current[i] = r} onClick={i}>{h}</th>)}
+            </tr>
+        </thead>
+        <tbody>
+            
+        </tbody>
+    </Table>
 }
 
 export function SimpleArrayTable(props){
