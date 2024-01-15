@@ -36,8 +36,6 @@ function BOMComparison(props){
             return line;
         });
 
-
-        //console.log(fileName);
         handleChangePageState(0);
         const normalBom = lineSeperateBom(uploadBom);
         if(uploadFor.current === 1){
