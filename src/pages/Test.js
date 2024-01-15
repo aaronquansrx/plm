@@ -1,6 +1,7 @@
 import {useState, useEffect} from 'react';
 
 import BOMToolSettings from './../components/BOMToolSettings';
+import { DragAdjustColumnTable } from '../components/Tables';
 
 export default function Test(props){
 
@@ -11,6 +12,7 @@ export default function Test(props){
         <div>
             Testing
             <BOMToolSettings apiAttributes={[]}/>
+            <DragAdjustColumnTable/>
         </div>
     );
 }

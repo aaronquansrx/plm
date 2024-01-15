@@ -22,6 +22,8 @@ import { filter, slice } from 'lodash';
 import { Form } from 'react-bootstrap';
 import { TextControl } from './Forms';
 
+import { useMouseMove, useMouseRefPosition, useMousePosition, useMouseUp } from '../hooks/Mouse';
+
 
 export function TabbedSheetTable(props){
     const activeSheet = useMemo(() => {
@@ -111,24 +113,282 @@ export function EditTable(props){
     );
 }
 
+
+const testHeaders = [
+    {label: 'hi', accessor: 'hello',},
+    {label: 'b', accessor: 'b',},
+    {label: 'a very long colll ll   f', accessor: 'a very long colll ll'}
+];
+const testData = [
+    {
+        'a very long colll ll': '123213',
+        b: 'hi',
+        hello: '1239',
+    },
+    {
+        'a very long colll ll': 'not a long col',
+        b: '',
+        hello: '1239',
+    },
+    {
+        'a very long colll ll': '123213',
+        b: 'hi',
+        hello: 'question',
+    }
+]
 export function DragAdjustColumnTable(props){
+    const [headers, setHeaders] = useState(testHeaders.map((header) => {
+        header.width = null;
+        return header;
+    }));
+    const headersCopy = useRef(testHeaders.map((header) => {
+        header.width = null;
+        return header;
+    }));
+    const [selectedDrawHeader, setSelectedDrawHeader] = useState(null);
+    //const [overwriteColumnWidths, setOverwriteColumnWidths] = useState([]);
+    const [headerCursor, setHeaderCursor] = useState('move');
+    //const isResizing = useRef(false);
+    const startResizeWidths = useRef(null);
+    const adjustLocationLeft = useRef(true); // true if mouse hovers adjust column on left side
+    const startDrag = useRef(null);
+    //const [selectCursor, setSel]
+    const mouse = useMousePosition();
+    useMouseUp(() => {
+        startResizeWidths.current = null;
+        setSelectedDrawHeader(null);
+        if(startDrag.current){
+            if(startDrag.current.dragHeader){
+                dropHeaderOriginal();
+            }
+            startDrag.current = null;
+
+        }
+    });
+    useMouseMove((ev) => {
+        const mouse = { x: ev.clientX, y: ev.clientY }
+        //console.log(mouse);
+        //ckeck if mouse was down
+        //console.log(headersCopy.current);
+        if(startResizeWidths.current /*&&& isResizing.current*/){
+            //resize columns using x
+            const mx = mouse.x - mouseDownPosition.current.x;
+            const index = startResizeWidths.current.index;
+            const w1 = startResizeWidths.current.widths[0];
+            const w2 = startResizeWidths.current.widths[1];
+            setHeaders(update(headers, {
+                [index]: {width: {$set: w1+mx}},
+                [index+1]: {width: {$set: w2-mx}}
+            }));
+        }else if(startDrag.current){
+            //console.log('dragging');
+            if(startDrag.current.dragHeader){
+                //console.log('selected');
+                const tableRect = tableRef.current.getBoundingClientRect();
+                if(mouse.x < tableRect.left || mouse.x > tableRect.right || mouse.y < tableRect.top || mouse.y > tableRect.bottom){
+                    dropHeaderOriginal();
+                }else{
+                    //console.log(headerRefs.current);
+                    if(startDrag.current.dragHeader){
+                        const position = headerRefs.current.reduce((pos, header, i) => {
+                            if(pos !== null) return pos;
+                            if(!header) return null;
+                            const rect = header.getBoundingClientRect();
+                            const mouseInCell = {x: mouse.x - rect.x, y: mouse.y - rect.y};
+                            if(mouseInCell.x > 0 && mouseInCell.x < rect.width){
+                                //console.log(mouseInCell);
+                                const moveInPadding = (rect.width*0.05);
+                                if(mouseInCell.x > rect.width-moveInPadding){
+                                    return i+1;
+                                }else if(mouseInCell.x < moveInPadding){
+                                    return i;
+                                }
+                            }
+                            return null;
+                        }, null);
+                        if(position !== null){
+                            const nh = [...headersCopy.current];
+                            nh.splice(position, 0, startDrag.current.dragHeader);
+                            headersCopy.current = nh;
+                            setHeaders(nh);
+                            setSelectedDrawHeader(null);
+                            startDrag.current.currentIndex = position;
+                            startDrag.current.dragHeader = null;
+                        }
+                    }
+                }
+            }else{
+                const cellIndex = startDrag.current.currentIndex;
+                const originalHeaders = startDrag.current.original;
+                if(cellIndex != null){
+                    const cellRect = headerRefs.current[cellIndex].getBoundingClientRect();
+                    const mouseInCell = {x: mouse.x - cellRect.x, y: mouse.y - cellRect.y};
+                    //console.log(cellRect);
+                    const cellWidth = startDrag.current.width;
+                    const moveOutPadding = (cellWidth*0.01);
+                    //console.log(mouseInCell);
+                    if(mouseInCell.x > cellWidth-moveOutPadding || mouseInCell.x < moveOutPadding){
+                        setSelectedDrawHeader(originalHeaders[startDrag.current.index]);
+                        //console.log(startDrag.current.currentIndex);
+                        startDrag.current.dragHeader = originalHeaders[startDrag.current.index];
+                        const newHeaders = headersCopy.current.reduce((arr, header, i) => {
+                            if(i !== startDrag.current.currentIndex){
+                                arr.push(header);
+                            }
+                            return arr;
+                        }, []);
+                        setHeaders(newHeaders);
+                        headersCopy.current = newHeaders;
+                        startDrag.current.currentIndex = null;
+                    }
+                }
+            }
+        }
+    });
+    const mouseDownPosition = useRef();
+    useEffect(() => {
+        //const newWidths = headers.map(() => null);
+        //setOverwriteColumnWidths(newWidths);
+    }, [headers]);
+
     const headerRefs = useRef([]);
-    const headers = ['hello', 'b', ' a very long colll ll'];
+    const headerRow = useRef(null);
+    const tableRef = useRef(null);
+    function dropHeaderOriginal(){
+        const nh = [...headersCopy.current];
+        nh.splice(startDrag.current.index, 0, startDrag.current.dragHeader);
+        headersCopy.current = nh;
+        setHeaders(nh);
+        setSelectedDrawHeader(null);
+        startDrag.current = null;
+    }
     function handleClickHeader(i){
-        return function(){
-            console.log(headerRefs.current[i]);
+        return function(e){
+            mouseDownPosition.current = mouse;
+            const index = e.target.cellIndex;
+            const cellBound = headerRefs.current[index].getBoundingClientRect();
+            if(headerCursor === 'col-resize'){
+                if(adjustLocationLeft.current){
+                    const cellBoundM1 = headerRefs.current[index-1].getBoundingClientRect();
+                    startResizeWidths.current = {
+                        index: index-1, 
+                        widths: [cellBoundM1.width, cellBound.width]
+                    }
+                }else{
+                    const cellBoundP1 = headerRefs.current[index+1].getBoundingClientRect();
+                    startResizeWidths.current = {
+                        index: index, 
+                        widths: [cellBound.width, cellBoundP1.width]
+                    }
+                }
+            }
+            else if(headerCursor === 'move'){
+                const mouseInCell = {x: mouse.x - cellBound.x, y: mouse.y - cellBound.y};
+                //setSelectedDrawHeader(headers[i]);
+
+                startDrag.current = {index: i, currentIndex: i, cellPos: mouseInCell, 
+                    width: cellBound.width, 
+                    original: [...headersCopy.current]
+                };
+            }
         }
     }
-    return <Table>
-        <thead>
-            <tr>
-                {props.headers.map((h, i) => <th key={i} ref={r => headerRefs.current[i] = r} onClick={i}>{h}</th>)}
-            </tr>
-        </thead>
-        <tbody>
-            
-        </tbody>
-    </Table>
+    const holdPadding = 5;
+    function handleHeaderMouseMove(e){
+        //console.log(e.target);
+        //console.log(headerRow.current.getBoundingClientRect());
+        //const headerRect = headerRow.current.getBoundingClientRect();
+        //const xInCell = headerRect.x;
+        //console.log(mouseDownPosition);
+        const index = e.target.cellIndex;
+        const cellRect = headerRefs.current[index].getBoundingClientRect();
+        const mouseInCell = {x: mouse.x - cellRect.x, y: mouse.y - cellRect.y};
+        const cellWidth = cellRect.width;
+        if(index !== 0 && mouseInCell.x < holdPadding){
+            setHeaderCursor('col-resize');
+            adjustLocationLeft.current = true;
+        }else if(index !== headers.length - 1 && mouseInCell.x > cellWidth - holdPadding){
+            setHeaderCursor('col-resize');
+            adjustLocationLeft.current = false;
+        }else{
+            setHeaderCursor('move');
+        }
+    }
+    function handleHeaderMouseDown(e){
+        console.log(headerRow.current);
+        /*
+        mouseDownPosition.current = mouse;
+        //console.log(e);
+        if(headerCursor === 'col-resize'){
+            const index = e.target.cellIndex;
+            //isResizing.current = true;
+            const cellBound = headerRefs.current[index].getBoundingClientRect();
+            if(adjustLocationLeft.current){
+                const cellBoundM1 = headerRefs.current[index-1].getBoundingClientRect();
+                startResizeWidths.current = {
+                    index: index-1, 
+                    widths: [cellBoundM1.width, cellBound.width]
+                }
+            }else{
+                const cellBoundP1 = headerRefs.current[index+1].getBoundingClientRect();
+                startResizeWidths.current = {
+                    index: index, 
+                    widths: [cellBound.width, cellBoundP1.width]
+                }
+            }
+        }
+        */
+    }
+    //console.log(headers);
+    return (
+        <>
+        {selectedDrawHeader &&
+        <div style={{position: 'absolute', 
+        left: mouse.x-startDrag.current.cellPos.x, 
+        top: mouse.y-startDrag.current.cellPos.y, cursor: 'move', width: startDrag.current.width}}>
+            <Table>
+                <thead>
+                <tr>
+                <th>{selectedDrawHeader.label}</th>
+                </tr>
+                </thead>
+                <tbody>
+                {testData.map((data, i) => {
+                    return <tr key={i}>
+                        <td>{data[selectedDrawHeader.accessor]}</td>
+                    </tr>
+                })}
+            </tbody>
+            </Table>
+        </div>
+        }
+        <Table className='noselect' ref={tableRef}>
+            <thead>
+                <tr ref={headerRow} onMouseMove={handleHeaderMouseMove} onMouseDown={handleHeaderMouseDown}>
+                    {headers.map((h, i) =>  {
+                        const style = {cursor: headerCursor, borderLeftWidth: '1px', borderRightWidth: '1px'};
+                        if(headers[i].width){
+                            style.width = headers[i].width+'px';
+                        }
+                        return <th key={i} style={style}
+                        ref={r => headerRefs.current[i] = r} onMouseDown={handleClickHeader(i)}>
+                            {h.label}
+                        </th>
+                    })}
+                </tr>
+            </thead>
+            <tbody>
+                {testData.map((data, i) => {
+                    return <tr key={i}>
+                        {headers.map((h, j) => {
+                            return <td key={j}>{data[h.accessor]}</td>
+                        })}
+                    </tr>
+                })}
+            </tbody>
+        </Table>
+        </>
+    );
 }
 
 export function SimpleArrayTable(props){
