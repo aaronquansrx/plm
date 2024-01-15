@@ -7,7 +7,18 @@ import {HeaderArrayTable} from './Tables';
 import { TextControl } from './Forms';
 import {PageInterface} from './Pagination';
 import { usePaging } from '../hooks/Paging';
-export function MoveXBOMFinder(){
+
+import { normalHeaders } from '../BOMComparison/components/UploadTable';
+
+const tableHeaders = [
+    {label: 'MPN', accessor: 'mpn'},
+    {label: 'MFR', accessor: 'mfr'},
+    ...normalHeaders
+];
+
+export function MoveXBOMFinder(props){
+    const [displayText, setDisplayText] = useState('');
+
     const [searchBomName, setSearchBomName] = useState(null);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [searchCustomer, setSearchCustomer] = useState('');
@@ -15,6 +26,7 @@ export function MoveXBOMFinder(){
     const [customerRecommends, setCustomerRecommends] = useState([]);
     const [bomList, setBomList] = useState([]); 
     const [chosenBomData, setChosenBomData] = useState([]);
+    const chosenBomNumber = useRef(null);
 
     const [selectedBomIndex, setSelectedBomIndex] = useState();
     useEffect(() => {
@@ -23,21 +35,25 @@ export function MoveXBOMFinder(){
     function collectMoveXBomData(){
         setBomList([]);
         setSelectedBomIndex(0);
+        setDisplayText('Searching for BOMs');
         console.log('collecting data');
         //if(selectedCustomer){
             const customerName = selectedCustomer ? selectedCustomer['Customer name'] : null;
             getPLMRequest('movex', {boms:'', customer: customerName, name:searchBomName, limit:20}, (res) => {
+                setDisplayText('BOMs found');
                 console.log(res);
                 if('data' in res){
                     if('boms' in res.data){
                         console.log(res.data)
                         setBomList(res.data.boms);
                         if(res.data.boms.length > 0){
-                            //setChosen(res.data.boms[0]['Customer name'])
+                            //setChosen(res.data.boms[0]['Customer name']);
+                            handleClickBom(0, res.data.boms);
                         }
                     }
                 }
             }, (res) => {
+                setDisplayText('Search error');
                 console.log(res);
             });
         /*}else{
@@ -58,10 +74,12 @@ export function MoveXBOMFinder(){
         }*/
     }
     function handleSearch(st){
+        setDisplayText('Searching customer: '+st);
         if(st !== searchCustomer){
             setRequestingCustomer(st);
             getPLMRequest('movex', {customers: st},
             (res)=> {
+                setDisplayText('Complete search for '+st);
                 setSearchCustomer(st);
                 if('data' in res){
                     if(res.data.searchTerm === st){
@@ -72,6 +90,7 @@ export function MoveXBOMFinder(){
             }, 
             (res) => {
                 console.log(res.data);
+                setDisplayText('Search error for '+st);
             });
         }
     }
@@ -90,9 +109,13 @@ export function MoveXBOMFinder(){
         {label: 'Product Number', accessor: 'Product number'},
         {label: 'Customer Name', accessor: 'Customer name'}
     ];
-    function handleClickBom(i){
-        const bomNumber = pageRows[i]['Product number'];
+    
+    function handleClickBom(i, rows=null){
+        const bomNumber = rows ? rows[i]['Product number'] : pageRows[i]['Product number'];
+        chosenBomNumber.current = bomNumber;
+        setDisplayText('Loading BOM: '+bomNumber);
         getPLMRequest('movex', {bom_materials: bomNumber}, (res) => {
+            setDisplayText('Loaded BOM: '+bomNumber);
             console.log(res);
             if('data' in res){
                 if('bom' in res.data){
@@ -103,6 +126,7 @@ export function MoveXBOMFinder(){
                 }
             }
         }, (res) => {
+            setDisplayText('Error loading BOM: '+bomNumber);
             console.log(res);
         });
         setSelectedBomIndex(i);
@@ -124,6 +148,49 @@ export function MoveXBOMFinder(){
         handlePageChange(pn);
         setSelectedBomIndex(null);
     }
+    function handleSelectBOM(){
+
+        //BOM formatted for comparison
+        if(chosenBomData){
+            const cleanData = cleanMoveXBOM(chosenBomData);
+            props.onChooseBOM(cleanData, chosenBomNumber.current);
+        }else{
+            //no data chosen
+            setDisplayText('No BOM Chosen');
+        }
+
+    }
+    function cleanMoveXBOM(data){
+        /*
+        {label: 'IPN', accessor: 'Component number', },
+    {label: 'Manufacturer Part Number', accessor: 'Manufacturer Part Number'},
+    {label: 'Manufacturer', accessor: 'TEXT'},
+    {label: 'Quantity', accessor: 'Quantity'},
+    {label: 'Designator', accessor: 'Circuit Reference'}*/
+        function getTranslate(target, from){
+            return {
+                target: target,
+                from: from
+            }
+        }
+        //missing alias, description and footprint
+        const translateData = [
+            getTranslate('Manufacturer Part Number', 'mpn'),
+            getTranslate('TEXT', 'mfr'),
+            getTranslate('Component number', 'ipn'),
+            getTranslate('Circuit Reference', 'designator'),
+            getTranslate('Quantity', 'quantity'),
+        ];
+        //console.log(data);
+        const newData = data.map((dt) => {
+            const obj = {};
+            for(const translate of translateData){
+                obj[translate.from] = dt[translate.target]
+            }
+            return obj;
+        });
+        return newData;
+    }
     return (
         <>
         <div className='Hori' style={{justifyContent:'center'}}>
@@ -142,6 +209,10 @@ export function MoveXBOMFinder(){
         </div>
         <div>
         <Button onClick={collectMoveXBomData}>Search BOMs</Button>
+        <Button onClick={handleSelectBOM}>Select BOM</Button>
+        {displayText}
+        </div>
+        <div>
         {/*<Button onClick={collectMoveXBomData}>Find MoveXBoms</Button>*/}
         {/*<ChooseButtonList items={bomList.map((bom) => bom['Customer name'])} chosen={chosen} 
         changeChosen={handleChangeChosen}/>*/}
@@ -158,15 +229,16 @@ export function MoveXBOMFinder(){
     )
 }
 
+const MXBOMViewerHeaders = [
+    {label: 'IPN', accessor: 'Component number', },
+    {label: 'Manufacturer Part Number', accessor: 'Manufacturer Part Number'},
+    {label: 'Manufacturer', accessor: 'TEXT'},
+    {label: 'Quantity', accessor: 'Quantity'},
+    {label: 'Designator', accessor: 'Circuit Reference'}
+];
+
 function MXBomViewer(props){
-    const headers = [
-        {label: 'IPN', accessor: 'Component number'},
-        {label: 'Manufacturer Part Number', accessor: 'Manufacturer Part Number'},
-        {label: 'Manufacturer', accessor: 'TEXT'},
-        {label: 'Quantity', accessor: 'Quantity'},
-        {label: 'Designator', accessor: 'Circuit Reference'}
-    ];
     return (
-        <HeaderArrayTable headers={headers} data={props.data}/>
+        <HeaderArrayTable headers={MXBOMViewerHeaders} data={props.data}/>
     )
 }

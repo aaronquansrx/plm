@@ -16,6 +16,8 @@ const tableHeaders = [
     ...normalHeaders
 ];
 
+//console.log(tableHeaders);
+
 function BOMComparison(props){
     const [bom1, setBom1] = useState({upload: [], normal: [], filename: null});
     const [bom2, setBom2] = useState({upload: [], normal: [], filename: null});
@@ -36,8 +38,6 @@ function BOMComparison(props){
             return line;
         });
 
-
-        //console.log(fileName);
         handleChangePageState(0);
         const normalBom = lineSeperateBom(uploadBom);
         if(uploadFor.current === 1){
@@ -47,6 +47,7 @@ function BOMComparison(props){
         }
     }
     function lineSeperateBom(bom){
+        //use IPN as a key
         const newBOM = [];
 
         bom.forEach((line) => {
@@ -81,8 +82,19 @@ function BOMComparison(props){
         uploadFor.current = 2;
         handleChangePageState(4);
     }
-    function handleChooseBOM(bomData){
+    function setUploadFor(bomNum){
+        uploadFor.current = bomNum;
+    }
+    function handleChooseBOM(bomData, bomName){
         console.log(bomData);
+        //todo for upload view 
+        //group mpn and mfr into array for matching 
+        if(uploadFor.current === 1){
+            setBom1({upload: [], normal: bomData, filename: bomName});
+        }else if(uploadFor.current === 2){
+            setBom2({upload: [], normal: bomData, filename: bomName});
+        }
+        handleChangePageState(0);
     }
     function render(){
         switch(pageState){
@@ -90,7 +102,7 @@ function BOMComparison(props){
                 return <BOMCompMain uploadBOM1={handleUploadBOM1Interface} 
                 uploadBOM2={handleUploadBOM2Interface} bom1={bom1} bom2={bom2} 
                 findBOM1={handleChooseBOM1Interface} findBOM2={handleChooseBOM2Interface}
-                onChangePageState={handleChangePageState} headers={tableHeaders}/>
+                onChangePageState={handleChangePageState} headers={tableHeaders} setUploadFor={setUploadFor}/>
             case 1:
                 return <>
                     <Button onClick={() => handleChangePageState(0)}>Back</Button>
@@ -104,10 +116,11 @@ function BOMComparison(props){
             case 4:
                 return <>
                     <Button onClick={() => handleChangePageState(0)}>Back</Button>
-                    <MoveXBOMFinder onChooseBom={handleChooseBOM}/>
+                    <MoveXBOMFinder onChooseBOM={handleChooseBOM} />
                 </>
         }
     }
+
     return(
         <>
         {render()}
@@ -201,11 +214,15 @@ function BOMCompMain(props){
         const newBomView = bomView === 1 ? 0 : bomView+1;
         setBomView(newBomView);
     }
-    function handleGoToBomFinder(){
-        props.onChangePageState(4);
+    function handleGoToBomFinder(bomNum){
+        return function(){
+            props.setUploadFor(bomNum);
+            props.onChangePageState(4);
+        }
+        //props.
     }
     function handleExcelExport(){
-
+        //todo
     }
     return(
         <>
@@ -214,21 +231,22 @@ function BOMCompMain(props){
             <h4>BOM Old</h4>
             {props.bom1.filename && <div>{props.bom1.filename}</div>}
             <Button onClick={props.uploadBOM1}>Upload</Button>
-            <Button onClick={handleGoToBomFinder}>Find BOM</Button>
+            <Button onClick={handleGoToBomFinder(1)}>Find BOM</Button>
             <Button disabled={props.bom1.upload.length <= 0} onClick={viewBom1}>View</Button>
         </div>
         <div>
             <h4>BOM New</h4>
             {props.bom2.filename && <div>{props.bom2.filename}</div>}
             <Button onClick={props.uploadBOM2}>Upload</Button>
-            <Button onClick={handleGoToBomFinder}>Find BOM</Button>
-            <Button disabled={props.bom2.upload.length <= 0} onClick={viewBom2}>View</Button>
+            <Button onClick={handleGoToBomFinder(2)}>Find BOM</Button>
+            <Button disabled={props.bom2.normal.length <= 0} onClick={viewBom2}>View</Button>
         </div>
         </div>
         <div className='FlexNormal'>
             <Button disabled={props.bom1.upload.length <= 0 && props.bom2.upload.length <= 0}
              onClick={compBom}>Compare</Button>
             <Button onClick={handleChangeView}>{bomView === 0 && 'Side by Side View'}{bomView === 1 && 'Comparisons View'}</Button>
+            <Button onClick={handleExcelExport}>Export Comparison</Button>
         </div>
         <div className='FlexNormal Overflow'>
             {bomView === 0 && <SideBySideComparisonTable headers={tableHeaders} comparison={compOutput}/>}
