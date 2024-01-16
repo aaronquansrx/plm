@@ -66,6 +66,24 @@ function BOMComparison(props){
         });
         return newBOM;
     }
+    function ipnKeyFormat(bom){
+        const ipnMap = {};
+        for(const line of bom){
+            const ipn = line.ipn;
+            const mpn = line.mpn;
+            const mfr = line.mfr;
+            const des = line.designator;
+            const quantity = line.quantity;
+            const newObj = {
+                ipn: ipn,
+                mpn: new Set(mpn),
+                mfr: new Set(mfr),
+                designator: new Set(des),
+                quantity: new Set(parseInt(quantity))
+            }
+        }
+        
+    }
     function handleUploadBOM1Interface(){
         uploadFor.current = 1;
         handleChangePageState(1);
@@ -84,6 +102,31 @@ function BOMComparison(props){
     }
     function setUploadFor(bomNum){
         uploadFor.current = bomNum;
+    }
+    function formatNormalToUploadBOM(bom){
+        const ipnMap = {};
+        /* const translateData = [
+            getTranslate('Manufacturer Part Number', 'mpn'),
+            getTranslate('TEXT', 'mfr'),
+            getTranslate('Component number', 'ipn'),
+            getTranslate('Circuit Reference', 'designator'),
+            getTranslate('Quantity', 'quantity'),
+        ];*/
+
+        for(const line of bom){
+            const ipn = line.ipn;
+            const mpn = line.mpn;
+            const mfr = line.mfr;
+            const des = line.designator;
+            const quantity = line.quantity;
+            const newObj = {
+                ipn: ipn,
+                mpn: new Set(mpn),
+                mfr: new Set(mfr),
+                designator: new Set(des),
+                quantity: new Set(parseInt(quantity))
+            }
+        }
     }
     function handleChooseBOM(bomData, bomName){
         console.log(bomData);
@@ -224,6 +267,9 @@ function BOMCompMain(props){
     function handleExcelExport(){
         //todo
     }
+    function hasBOM(bom){
+        return bom.normal.length > 0 || bom.upload.length > 0;
+    }
     return(
         <>
         <div className='FlexNormal Hori'>
@@ -232,18 +278,18 @@ function BOMCompMain(props){
             {props.bom1.filename && <div>{props.bom1.filename}</div>}
             <Button onClick={props.uploadBOM1}>Upload</Button>
             <Button onClick={handleGoToBomFinder(1)}>Find BOM</Button>
-            <Button disabled={props.bom1.upload.length <= 0} onClick={viewBom1}>View</Button>
+            <Button disabled={!hasBOM(props.bom1)} onClick={viewBom1}>View</Button>
         </div>
         <div>
             <h4>BOM New</h4>
             {props.bom2.filename && <div>{props.bom2.filename}</div>}
             <Button onClick={props.uploadBOM2}>Upload</Button>
             <Button onClick={handleGoToBomFinder(2)}>Find BOM</Button>
-            <Button disabled={props.bom2.normal.length <= 0} onClick={viewBom2}>View</Button>
+            <Button disabled={!hasBOM(props.bom2)} onClick={viewBom2}>View</Button>
         </div>
         </div>
         <div className='FlexNormal'>
-            <Button disabled={props.bom1.upload.length <= 0 && props.bom2.upload.length <= 0}
+            <Button disabled={!hasBOM(props.bom1) && !hasBOM(props.bom2)}
              onClick={compBom}>Compare</Button>
             <Button onClick={handleChangeView}>{bomView === 0 && 'Side by Side View'}{bomView === 1 && 'Comparisons View'}</Button>
             <Button onClick={handleExcelExport}>Export Comparison</Button>

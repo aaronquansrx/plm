@@ -48,7 +48,7 @@ export function BOMCompViewer(props){
                             }
                             if(!singleLineView){
                                 if(header.accessor === 'mpn'){
-                                    console.log(row);
+                                    //console.log(row);
                                     content = row[header.accessor].join(',');
                                 }else if(header.accessor === 'mfr'){
                                     content = row[header.accessor].join(',');
