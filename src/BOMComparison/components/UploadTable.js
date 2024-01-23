@@ -10,7 +10,7 @@ import { DropdownHeaderTable } from '../../Quoting/components/UploadTable';
 
 
 export const normalHeaders = [
-    {label: 'Alias', accessor: 'alias'},
+    {label: 'Alias/CPN', accessor: 'alias/cpn'},
     {label: 'IPN', accessor: 'ipn'},
     {label: 'Designator', accessor: 'designator'},
     {label: 'Description', accessor: 'description'},

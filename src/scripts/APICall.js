@@ -35,6 +35,15 @@ export function getPLMRequest(url, params, callback=null, errorCallback=null, co
     });
 }
 
+export async function getPLMRequestAsync(url, params, controller=null){
+    const res = await axios({
+        method: 'GET',
+        url: serverUrl+'api/'+url,
+        params: params,
+        signal: controller ? controller.signal : null
+    });
+    return res;
+}
 export function postPLMRequest(url, data, callback=null, errorCallback=null, controller=null){
     axios({
         method: 'POST',
@@ -49,4 +58,14 @@ export function postPLMRequest(url, data, callback=null, errorCallback=null, con
         }
 
     });
+}
+
+export async function postPLMRequestAsync(url, data, controller=null){
+    const res = await axios({
+        method: 'POST',
+        url: serverUrl+'api/'+url,
+        data: data,
+        signal: controller ? controller.signal : null
+    });
+    return res;
 }

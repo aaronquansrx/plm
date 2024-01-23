@@ -1,5 +1,5 @@
 import {useState, useEffect, useRef} from 'react';
-import { getPLMRequest, postPLMRequest } from '../scripts/APICall';
+import { getPLMRequest, getPLMRequestAsync, postPLMRequest } from '../scripts/APICall';
 import Button from 'react-bootstrap/Button';
 import { ChooseButtonList } from './ButtonList';
 import {SuggestionSearcher} from './Searcher';
@@ -110,11 +110,32 @@ export function MoveXBOMFinder(props){
         {label: 'Customer Name', accessor: 'Customer name'}
     ];
     
-    function handleClickBom(i, rows=null){
+    async function handleClickBom(i, rows=null){
         const bomNumber = rows ? rows[i]['Product number'] : pageRows[i]['Product number'];
         chosenBomNumber.current = bomNumber;
         setDisplayText('Loading BOM: '+bomNumber);
-        getPLMRequest('movex', {bom_materials: bomNumber}, (res) => {
+        const bom = []; // loopy boy TO DO
+        const lim = 50; let offset = 0;
+        //const res = await getPLMRequestAsync('movex', {bom_materials: bomNumber, limit: lim, offset:offset})
+        //console.log(res);
+        let returnEmpty = false;
+        while(!returnEmpty){
+            const res = await getPLMRequestAsync('movex', {bom_materials: bomNumber, limit: lim, offset:offset});
+            if(res.data){
+                if(res.data.bom.length == 0){
+                    returnEmpty = true;
+                }
+                bom.push(...res.data.bom);
+                offset += lim;
+            }else{
+                returnEmpty = true;
+            }
+        }
+        //console.log(bom);
+        setDisplayText('Finished Loading BOM: '+bomNumber)
+        setChosenBomData(bom);
+        /* //non async PLM request
+        getPLMRequest('movex', {bom_materials: bomNumber, }, (res) => {
             setDisplayText('Loaded BOM: '+bomNumber);
             console.log(res);
             if('data' in res){
@@ -129,8 +150,12 @@ export function MoveXBOMFinder(props){
             setDisplayText('Error loading BOM: '+bomNumber);
             console.log(res);
         });
+        */
         setSelectedBomIndex(i);
     }
+
+    
+
     function handleChangeSearchBom(st){
         console.log(st);
         setSearchBomName(st);
@@ -180,6 +205,7 @@ export function MoveXBOMFinder(props){
             getTranslate('Component number', 'ipn'),
             getTranslate('Circuit Reference', 'designator'),
             getTranslate('Quantity', 'quantity'),
+            getTranslate('Alias number', 'alias/cpn')
         ];
         //console.log(data);
         const newData = data.map((dt) => {
@@ -234,7 +260,8 @@ const MXBOMViewerHeaders = [
     {label: 'Manufacturer Part Number', accessor: 'Manufacturer Part Number'},
     {label: 'Manufacturer', accessor: 'TEXT'},
     {label: 'Quantity', accessor: 'Quantity'},
-    {label: 'Designator', accessor: 'Circuit Reference'}
+    {label: 'Designator', accessor: 'Circuit Reference'},
+    {label: 'Alias/CPN', accessor: 'Alias number'}
 ];
 
 function MXBomViewer(props){

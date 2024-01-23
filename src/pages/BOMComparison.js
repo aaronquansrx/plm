@@ -73,6 +73,7 @@ function BOMComparison(props){
             const mpn = line.mpn;
             const mfr = line.mfr;
             const des = line.designator;
+            //const 
             const quantity = line.quantity;
             const newObj = {
                 ipn: ipn,
@@ -82,7 +83,7 @@ function BOMComparison(props){
                 quantity: new Set(parseInt(quantity))
             }
         }
-        
+
     }
     function handleUploadBOM1Interface(){
         uploadFor.current = 1;
