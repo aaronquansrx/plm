@@ -54,8 +54,8 @@ export function UploadBOMInterface(props){
         setSheets(sheets);
         changeSheets.current = true;
     }
-    function handleSubmit(o){
-        props.onSubmit(o, fileName.name);
+    function handleSubmit(o, activeHeaders){
+        props.onSubmit(o, fileName.name, activeHeaders);
         setObj(o);
     }
     return(
@@ -220,12 +220,15 @@ function UploadTable(props){
         }, {});
         const activeSheet = props.sheets[selectedRow ? selectedRow.sheetId : sheetId].array;
         const startRow = selectedRow ? selectedRow.row+1 : 0;
+        const activeHeaders = [];
         const headerIndexes = dropdownHeaders.reduce((arr, h, i) => {
             if(h !== '_remove'){
                 arr.push({...headerMap[h], index: i});
+                activeHeaders.push(h);
             }
             return arr;
         }, []);
+
         const objs = [];
         for(let r=startRow; r < activeSheet.length; r++){
             const obj = headerIndexes.reduce((o, h) => {
@@ -248,7 +251,7 @@ function UploadTable(props){
             }, {mpn: [], mfr: []});
             objs.push(obj);
         }
-        props.onSubmit(objs);
+        props.onSubmit(objs, activeHeaders);
     }
 
     return(

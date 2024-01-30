@@ -16,11 +16,18 @@ const tableHeaders = [
     ...normalHeaders
 ];
 
+
+function getKey(line, hasIPN){
+    if(!hasIPN){
+        return line.mpn+'||'+line.mfr;
+    }
+    return line.mpn+'||'+line.ipn;
+}
 //console.log(tableHeaders);
 
 function BOMComparison(props){
-    const [bom1, setBom1] = useState({upload: [], normal: [], filename: null});
-    const [bom2, setBom2] = useState({upload: [], normal: [], filename: null});
+    const [bom1, setBom1] = useState({upload: [], normal: [], filename: null, headers: []});
+    const [bom2, setBom2] = useState({upload: [], normal: [], filename: null, headers: []});
     const uploadFor = useRef(1); //
     const [pageState, setPageState] = useState(0);
     useEffect(() => {
@@ -28,7 +35,7 @@ function BOMComparison(props){
     function handleChangePageState(i){
         setPageState(i);
     }
-    function handleUpload(obj, fileName){
+    function handleUpload(obj, fileName, activeHeaders){
 
         const uploadBom = obj.map((line) => {
             //check quantity and designator match
@@ -41,9 +48,9 @@ function BOMComparison(props){
         handleChangePageState(0);
         const normalBom = lineSeperateBom(uploadBom);
         if(uploadFor.current === 1){
-            setBom1({upload: uploadBom, normal: normalBom, filename: fileName});
+            setBom1({upload: uploadBom, normal: normalBom, filename: fileName, headers: activeHeaders});
         }else if(uploadFor.current === 2){
-            setBom2({upload: uploadBom, normal: normalBom, filename: fileName});
+            setBom2({upload: uploadBom, normal: normalBom, filename: fileName, headers: activeHeaders});
         }
     }
     function lineSeperateBom(bom){
@@ -67,7 +74,7 @@ function BOMComparison(props){
         return newBOM;
     }
     function ipnKeyFormat(bom){
-        const ipnMap = {};
+        const ipnMap = {}; // has mpn map inside
         for(const line of bom){
             const ipn = line.ipn;
             const mpn = line.mpn;
@@ -81,6 +88,16 @@ function BOMComparison(props){
                 mfr: new Set(mfr),
                 designator: new Set(des),
                 quantity: new Set(parseInt(quantity))
+            }
+            if(ipn in ipnMap){
+                if(mpn in ipnMap[ipn]){
+
+                }else{
+                    //new mpn
+                }
+            }else{
+                ipnMap[ipn] = {mpn: [newObj]};
+                //new mpn
             }
         }
 
@@ -113,7 +130,7 @@ function BOMComparison(props){
             getTranslate('Circuit Reference', 'designator'),
             getTranslate('Quantity', 'quantity'),
         ];*/
-
+        const normalBom = [];
         for(const line of bom){
             const ipn = line.ipn;
             const mpn = line.mpn;
@@ -127,16 +144,19 @@ function BOMComparison(props){
                 designator: new Set(des),
                 quantity: new Set(parseInt(quantity))
             }
+            normalBom.push(newObj);
         }
+        return normalBom;
     }
     function handleChooseBOM(bomData, bomName){
         console.log(bomData);
-        //todo for upload view 
+        //todo for upload view and headers
         //group mpn and mfr into array for matching 
+        
         if(uploadFor.current === 1){
-            setBom1({upload: [], normal: bomData, filename: bomName});
+            setBom1({upload: [], normal: bomData, filename: bomName, headers: []});
         }else if(uploadFor.current === 2){
-            setBom2({upload: [], normal: bomData, filename: bomName});
+            setBom2({upload: [], normal: bomData, filename: bomName,  headers: [/*todo*/]});
         }
         handleChangePageState(0);
     }
@@ -185,27 +205,30 @@ function BOMCompMain(props){
         //console.log(tableHeaders);
         const bom1 = props.bom1;
         const bom2 = props.bom2;
-        const bom1Map = {}; // maps line with mpn key
-        const bom1Mpns = new Set();
+        const bom1Map = {}; // maps line with mpn||ipn key
+        const bom1Keys = new Set();
+        const hasIPN = props.bom1.headers.includes('ipn') && props.bom2.headers.includes('ipn');
         bom1.normal.forEach(line => {
-            bom1Map[line.mpn] = line;
-            bom1Mpns.add(line.mpn);
+            const key = getKey(line, hasIPN);
+            bom1Map[key] = line;
+            bom1Keys.add(key);
         });
         const bom2Map = {};
-        const bom2Mpns = new Set();
-        const foundMpns = new Set(); // mpns from bom1 found in bom2
+        const bom2Keys = new Set();
+        const foundKeys = new Set(); // mpns from bom1 found in bom2
         const missingBom2 = []; // lines missing from bom2
         const bomDifferences = {};
         bom2.normal.forEach((line, i) => {
-            bom2Map[line.mpn] = line;
-            bom2Mpns.add(line.mpn);
+            const key = getKey(line, hasIPN);
+            bom2Map[key] = line;
+            bom2Keys.add(key);
             
-            if(!(line.mpn in bom1Map)){
+            if(!(key in bom1Map)){
                 missingBom2.push(line);
             }else{
                 //compare lines
-                foundMpns.add(line.mpn);
-                const l = bom1Map[line.mpn];
+                foundKeys.add(key);
+                const l = bom1Map[key];
                 const differences = {};
                 tableHeaders.forEach(header => {
                     if(header.accessor === 'designator'){
@@ -219,15 +242,24 @@ function BOMCompMain(props){
                         if(additions.size > 0 || subtractions.size > 0){
                             differences[header.accessor] = {
                                 bom1: l[header.accessor], bom2: line[header.accessor], 
-                                additions: additions, subtractions: subtractions};
-                            }
+                                additions: additions, subtractions: subtractions
+                            };
+                        }
                     }
-                    else if(l[header.accessor] !== line[header.accessor]){
-                        differences[header.accessor] = {bom1: l[header.accessor], bom2: line[header.accessor]};
+                    else{
+                        if(l[header.accessor] && line[header.accessor]){
+                            const lowerBOM1Field = l[header.accessor].toLowerCase();
+                            const lowerBOM2Field = line[header.accessor].toLowerCase();
+                            if(lowerBOM1Field !== lowerBOM2Field){
+                                differences[header.accessor] = {bom1: l[header.accessor], bom2: line[header.accessor]};
+                            }
+                        }else if(l[header.accessor] !== line[header.accessor]){
+                            differences[header.accessor] = {bom1: l[header.accessor], bom2: line[header.accessor]};
+                        }
                     }
                 });
                 if(Object.keys(differences).length !== 0){
-                    bomDifferences[line.mpn] = {
+                    bomDifferences[key] = {
                         id: i,
                         differences: differences,
                         line1: l,
@@ -236,19 +268,24 @@ function BOMCompMain(props){
                 }
             }
         });
-        const missingBom1Mpns = new Set([...bom1Mpns].filter(x => !foundMpns.has(x)));
+        const missingBom1Mpns = new Set([...bom1Keys].filter(x => !foundKeys.has(x)));
         const missingBom1 = [...missingBom1Mpns].map((mpn) => bom1Map[mpn]);
-        const intersectingMpns = setIntersection(bom1Mpns, bom2Mpns);
+        const intersectingMpns = setIntersection(bom1Keys, bom2Keys);
         const combinedBoms = [...intersectingMpns].reduce((arr, mpn) => {
             arr.push({bom1: bom1Map[mpn], bom2: bom2Map[mpn]})
             return arr;
         }, []);
+        const hasDifferences = Object.keys(bomDifferences).length + missingBom1.length + missingBom2.length > 0;
         const out = {
             diffLines: bomDifferences,
             missingFromBom1: missingBom1,
             missingFromBom2: missingBom2,
-            combinedBom: combinedBoms
+            combinedBom: combinedBoms,
+            hasIPNKey: hasIPN,
+            hasDifferences: hasDifferences,
+            nDifferences: Object.keys(bomDifferences).length + missingBom1.length + missingBom2.length
         };
+        
         setCompOutput(out);
         //create comp output
 
@@ -294,16 +331,33 @@ function BOMCompMain(props){
              onClick={compBom}>Compare</Button>
             <Button onClick={handleChangeView}>{bomView === 0 && 'Side by Side View'}{bomView === 1 && 'Comparisons View'}</Button>
             <Button onClick={handleExcelExport}>Export Comparison</Button>
+            <CompAnalysis comparison={compOutput}/>
         </div>
         <div className='FlexNormal Overflow'>
-            {bomView === 0 && <SideBySideComparisonTable headers={tableHeaders} comparison={compOutput}/>}
+            {bomView === 0 && <SideBySideComparison2Table headers={tableHeaders} comparison={compOutput}/>}
             {bomView === 1 && <ComparisonTable headers={tableHeaders} comparison={compOutput}/>}
         </div>
         </>
     );
 }
+
+function CompAnalysis(props){
+    return (
+        <>
+        {props.comparison &&
+
+            props.comparison.hasDifferences ? 
+            props.comparison.nDifferences + ' Unmatched lines' : '100% Matched'
+            
+        }
+        </>
+    );
+}
+
+const diffColour = '#d5eef2';
+const addColour = '#1d4a1a';
+const subColour = '#4a1b1a';
 function SideBySideComparisonTable(props){
-    console.log(props.comparison);
     return(
         <Table>
             <thead className='TableHeading'>
@@ -334,25 +388,26 @@ function SideBySideComparisonTable(props){
                 {props.comparison && props.comparison.combinedBom.map((line, i) => {
                     const bom1Line = line.bom1;
                     const bom2Line = line.bom2;
-                    const hasDiff = bom1Line.mpn in props.comparison.diffLines;
+                    const key = getKey(bom1Line, props.comparison.hasIPNKey);
+                    const hasDiff = key in props.comparison.diffLines;
                     return <tr key={i}>
                         {props.headers.map((h, j) => {
                             let style = {};
                             if(hasDiff){
-                                const diffs = props.comparison.diffLines[bom1Line.mpn].differences;
+                                const diffs = props.comparison.diffLines[key].differences;
                                 if(h.accessor in diffs){
-                                    style = {backgroundColor: '#9FBAF3'};
+                                    style = {backgroundColor: diffColour};
                                 }
                             }
                             if(h.label === 'Designator'){
-                                if(hasDiff && h.accessor in props.comparison.diffLines[bom2Line.mpn].differences){
-                                    const diffs = props.comparison.diffLines[bom2Line.mpn].differences;
+                                if(hasDiff && h.accessor in props.comparison.diffLines[key].differences){
+                                    const diffs = props.comparison.diffLines[key].differences;
                                     
                                     const addString = [...diffs[h.accessor].additions].join(', ');
                                     const subString = [...diffs[h.accessor].subtractions].join(', ');
                                     const body = <div>
-                                            {diffs[h.accessor].additions.size > 0 && <span style={{color: '#9FF3BA'}}>Additions: {addString}</span>}
-                                            {diffs[h.accessor].subtractions.size > 0 && <span style={{color: '#F3AFAA'}}>Subtractions: {subString}</span>}
+                                            {diffs[h.accessor].additions.size > 0 && <span style={{color: addColour}}>Additions: {addString}</span>}
+                                            {diffs[h.accessor].subtractions.size > 0 && <span style={{color: subColour}}>Subtractions: {subString}</span>}
                                     </div>
                                     return <>
                                         <td key={'d1'+j} colSpan={1} style={style}>{bom1Line[h.accessor]}</td>
@@ -366,19 +421,19 @@ function SideBySideComparisonTable(props){
                         {props.headers.map((h, j) => {
                             let style = {};
                             if(hasDiff){
-                                const diffs = props.comparison.diffLines[bom2Line.mpn].differences;
+                                const diffs = props.comparison.diffLines[key].differences;
                                 if(h.accessor in diffs){
-                                    style = {backgroundColor: '#9FBAF3'};
+                                    style = {backgroundColor: diffColour};
                                 }
                             }
                             if(h.label === 'Designator'){
-                                if(hasDiff  && h.accessor in props.comparison.diffLines[bom2Line.mpn].differences){
-                                    const diffs = props.comparison.diffLines[bom2Line.mpn].differences;
+                                if(hasDiff  && h.accessor in props.comparison.diffLines[key].differences){
+                                    const diffs = props.comparison.diffLines[key].differences;
                                     const addString = [...diffs[h.accessor].additions].join(', ');
                                     const subString = [...diffs[h.accessor].subtractions].join(', ');
                                     const body = <div>
-                                            {diffs[h.accessor].additions.size > 0 && <span style={{color: '#9FF3BA'}}>Additions: {addString}</span>}
-                                            {diffs[h.accessor].subtractions.size > 0 && <span style={{color: '#F3AFAA'}}>Subtractions: {subString}</span>}
+                                            {diffs[h.accessor].additions.size > 0 && <span style={{...style, color: addColour}}>Additions: {addString}</span>}
+                                            {diffs[h.accessor].subtractions.size > 0 && <span style={{...style, color: subColour}}>Subtractions: {subString}</span>}
                                     </div>
                                     return <>
                                     <td key={'d1'+j+props.headers.length} colSpan={1} style={style}>{bom2Line[h.accessor]}</td>
@@ -397,8 +452,130 @@ function SideBySideComparisonTable(props){
     )
 }
 
+function SideBySideComparison2Table(props){
+    const style = {width: '50%', overflow: 'auto'};
+    const border = {borderRight: 'black 2px solid'}
+    return(
+        <>
+        <div style={{display: 'flex', flexDirection: 'row'}}>
+        <div style={{...style, ...border}}>
+        <Table>
+            <thead className='TableHeading'>
+                <tr>
+                    <th colSpan={props.headers.length+1}>BOM Old</th>
+                </tr>
+                <tr>
+                    {props.headers.map((h, i) => {
+                        if(h.label === 'Designator'){
+                            return <th key={i} colSpan={2}>{h.label}</th>
+                            //return <th key={i}>{h.label}</th>
+                        }
+                        return <th key={i}>{h.label}</th>
+                    }
+                    )}
+                </tr>
+            </thead>
+            <tbody>
+                {props.comparison && props.comparison.combinedBom.map((line, i) => {
+                    const bom1Line = line.bom1;
+                    //const bom2Line = line.bom2;
+                    const key = getKey(bom1Line, props.comparison.hasIPNKey);
+                    const hasDiff = key in props.comparison.diffLines;
+                    return <tr key={i}>
+                        {props.headers.map((h, j) => {
+                            let style = {overflow: 'hidden'};
+                            if(hasDiff){
+                                const diffs = props.comparison.diffLines[key].differences;
+                                if(h.accessor in diffs){
+                                    style = {backgroundColor: diffColour};
+                                }
+                            }
+                            if(h.label === 'Designator'){
+                                if(hasDiff && h.accessor in props.comparison.diffLines[key].differences){
+                                    const diffs = props.comparison.diffLines[key].differences;
+                                    
+                                    const addString = [...diffs[h.accessor].additions].join(', ');
+                                    const subString = [...diffs[h.accessor].subtractions].join(', ');
+                                    const body = <div style={{...style}}>
+                                            {diffs[h.accessor].additions.size > 0 && <span style={{color: addColour}}>Additions: {addString}</span>}
+                                            {diffs[h.accessor].subtractions.size > 0 && <span style={{color: subColour}}>Subtractions: {subString}</span>}
+                                    </div>
+                                    return <>
+                                        <td key={'d1'+j} colSpan={1} style={style}>{bom1Line[h.accessor]}</td>
+                                        <td key={'d2'+j} colSpan={1} style={style}>{body}</td>
+                                    </>;
+                                }
+                                return <td key={j} colSpan={2} style={style}>{bom1Line[h.accessor]}</td>;
+                            }
+                            return <td key={j} colSpan={1} style={style}>{bom1Line[h.accessor]}</td>;
+                        })}
+                    </tr>
+                })}
+            </tbody>
+        </Table>
+        </div>
+        <div style={style}>
+        <Table>
+        <thead className='TableHeading'>
+            <tr>
+                <th colSpan={props.headers.length+1}>BOM New</th>
+            </tr>
+            <tr>
+                {props.headers.map((h, i) => {
+                    if(h.label === 'Designator'){
+                        return <th key={i} colSpan={2}>{h.label}</th>
+                        //return <th key={i}>{h.label}</th>
+                    }
+                    return <th key={i}>{h.label}</th>
+                }
+                )}
+            </tr>
+        </thead>
+        <tbody>
+            {props.comparison && props.comparison.combinedBom.map((line, i) => {
+                //const bom1Line = line.bom1;
+                const bom2Line = line.bom2;
+                const key = getKey(bom2Line, props.comparison.hasIPNKey);
+                const hasDiff = key in props.comparison.diffLines;
+                return <tr key={i}>
+                    {props.headers.map((h, j) => {
+                        let style = {overflow: 'hidden'};
+                        if(hasDiff){
+                            const diffs = props.comparison.diffLines[key].differences;
+                            if(h.accessor in diffs){
+                                style = {backgroundColor: diffColour};
+                            }
+                        }
+                        if(h.label === 'Designator'){
+                            if(hasDiff  && h.accessor in props.comparison.diffLines[key].differences){
+                                const diffs = props.comparison.diffLines[key].differences;
+                                const addString = [...diffs[h.accessor].additions].join(', ');
+                                const subString = [...diffs[h.accessor].subtractions].join(', ');
+                                const body = <div style={{...style}}>
+                                        {diffs[h.accessor].additions.size > 0 && <span style={{color: addColour}}>Additions: {addString}</span>}
+                                        {diffs[h.accessor].subtractions.size > 0 && <span style={{color: subColour}}>Subtractions: {subString}</span>}
+                                </div>
+                                return <>
+                                <td key={'d1'+j+props.headers.length} colSpan={1} style={style}>{bom2Line[h.accessor]}</td>
+                                <td key={'d2'+j+props.headers.length} colSpan={1} style={style}>{body}</td>
+                                </>
+                            }
+
+                            return <td key={j} colSpan={2} style={style}>{bom2Line[h.accessor]}</td>
+                        }
+                        return <td key={j+props.headers.length} colSpan={1} style={style}>{bom2Line[h.accessor]}</td>
+                    })}
+                </tr>
+            })}
+        </tbody>
+    </Table>
+    </div>
+    </div>
+    </>
+    )
+}
+
 function ComparisonTable(props){
-    //console.log(props.comparison);
     return(
         <Table>
             <thead className='TableHeading'>
@@ -426,18 +603,18 @@ function ComparisonTable(props){
                                     const addString = [...out.differences[header.accessor].additions].join(', ');
                                     const subString = [...out.differences[header.accessor].subtractions].join(', ');
                                     const body = <div>
-                                        {out.differences[header.accessor].additions.size > 0 && <span style={{color: '#9FF3BA'}}>Additions: {addString}</span>}
-                                        {out.differences[header.accessor].subtractions.size > 0 && <span style={{color: '#F3AFAA'}}>Subtractions: {subString}</span>}
+                                        {out.differences[header.accessor].additions.size > 0 && <span style={{color: addColour}}>Additions: {addString}</span>}
+                                        {out.differences[header.accessor].subtractions.size > 0 && <span style={{color: subColour}}>Subtractions: {subString}</span>}
                                     </div>
 
                                     return (
                                         <>
-                                        <td style={{backgroundColor: '#9FBAF3'}}>
+                                        <td key={j+'add'} style={{backgroundColor: diffColour}}>
                                             <SimplePopover trigger={['hover', 'focus']} popoverBody={body} placement='auto'>
                                                 <div>{out.line1[header.accessor]}</div>
                                             </SimplePopover>
                                         </td>
-                                        <td style={{backgroundColor: '#9FBAF3'}}>
+                                        <td key={j+'sub'} style={{backgroundColor: diffColour}}>
                                             <SimplePopover trigger={['hover', 'focus']} popoverBody={body} placement='auto'>
                                                 <div>{out.line2[header.accessor]}</div>
                                             </SimplePopover>
@@ -446,7 +623,7 @@ function ComparisonTable(props){
                                     );
                                 }
                                 return (
-                                    <td key={j} style={{backgroundColor: '#9FBAF3'}}>
+                                    <td key={j} style={{backgroundColor: diffColour}}>
                                         <SimplePopover trigger={['hover', 'focus']} placement='auto' 
                                         popoverBody={out.line1[header.accessor]}>
                                             <div>{out.line2[header.accessor]}</div>
@@ -471,8 +648,11 @@ function ComparisonTable(props){
                 })}
                 {props.comparison.missingFromBom2.map((line, i) => {
                     return(
-                    <tr key={i} style={{backgroundColor: '#9FF3BA'}}>
+                    <tr key={i} style={{backgroundColor: '#cae6cc'}}>
                         {props.headers.map((header, j) => {
+                            if(header.accessor === 'designator'){
+                                return <td key={j} colSpan={2}>{line[header.accessor]}</td>
+                            }
                             return (
                                 <td key={j}>{line[header.accessor]}</td>
                             )
@@ -482,8 +662,11 @@ function ComparisonTable(props){
                 })}
                 {props.comparison.missingFromBom1.map((line, i) => {
                     return(
-                    <tr key={i} style={{backgroundColor: '#F3AFAA'}}>
+                    <tr key={i} style={{backgroundColor: '#e6caca'}}>
                         {props.headers.map((header, j) => {
+                            if(header.accessor === 'designator'){
+                                return <td key={j} colSpan={2}>{line[header.accessor]}</td>
+                            }
                             return (
                                 <td key={j}>{line[header.accessor]}</td>
                             )
