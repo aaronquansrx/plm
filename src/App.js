@@ -30,6 +30,8 @@ import './css/App.css';
 import CircularBufferTest from './pages/CircularBufferTest';
 import BOMComparison from './pages/BOMComparison';
 
+import TestBOMComparisonPage from './BOMComparison/components/TestPage';
+
 const stores = [
   {id: 'AU', label: 'AU'},
   {id: 'MY', label: 'MY'}
@@ -155,6 +157,7 @@ function App() {
         <Route path={path('tables')} element={<QuotingTables user={user}/>}/>
         <Route path={path('quoteusers')} element={<QuotingUsers username={username} user={user}/>}/>
         <Route path={path('feedback')} element={<Feedback/>}/>
+        <Route path={path('bomcomparisontest')} element={<TestBOMComparisonPage/>}/>
         {/*<Route path={path('bomtable')} element={<BOMUploadTable/>}/>*/} 
         <Route path={path('singlecomponent/:partId')} element={<SingleComponentAttribute/>}/>
       </Routes>
