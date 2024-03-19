@@ -8,7 +8,10 @@ import { setIntersection, setSubtraction } from '../scripts/Set';
 
 import {getPLMRequest, postPLMRequest} from '../scripts/APICall';
 import {MoveXBOMFinder} from '../components/MoveXBoms';
-
+import { add } from '../BOMComparison/scripts/differencesTs';
+import { BOMComparisonFunctions } from '../BOMComparison/scripts/differencesTs';
+import { SelectPrimaryField } from '../BOMComparison/components/Selectors';
+import { CompareKeyTable } from '../BOMComparison/components/ComparisonTableViews';
 
 const tableHeaders = [
     {label: 'MPN', accessor: 'mpn'},
@@ -30,13 +33,13 @@ function BOMComparison(props){
     const [bom2, setBom2] = useState({upload: [], normal: [], filename: null, headers: []});
     const uploadFor = useRef(1); //
     const [pageState, setPageState] = useState(0);
+    const [matchingFields, setMatchingFields] = useState([]); // todo choose key
     useEffect(() => {
     }, []);
     function handleChangePageState(i){
         setPageState(i);
     }
     function handleUpload(obj, fileName, activeHeaders){
-
         const uploadBom = obj.map((line) => {
             //check quantity and designator match
             if('designator' in line && 'quantity' in line){
@@ -44,19 +47,72 @@ function BOMComparison(props){
             }
             return line;
         });
-
         handleChangePageState(0);
-        const normalBom = lineSeperateBom(uploadBom);
+        //const normalBom = lineSeperateBom(uploadBom);
+        //check format of active headers this 
+        const ipnBom = activeHeaders.includes('ipn') ? uploadBom : add_ipn_to_upload_bom(uploadBom);
+        const normalBom = lineSeperateBom(ipnBom);
+        const matchingHeaders = [];
+        console.log(activeHeaders);
         if(uploadFor.current === 1){
-            setBom1({upload: uploadBom, normal: normalBom, filename: fileName, headers: activeHeaders});
+            setBom1({upload: uploadBom, normal: normalBom, filename: fileName, headers: activeHeaders, ipnBom: ipnBom});
+            if(bom2.headers.length > 0){
+                if(activeHeaders.includes('IPN') && bom2.headers.includes('IPN')){
+                    matchingHeaders.push('IPN');
+                }
+                if(activeHeaders.includes('Alias/CPN') && bom2.headers.includes('Alias/CPN')){
+                    matchingHeaders.push('Alias/CPN');
+                }
+                /*
+                activeHeaders.forEach((header) => {
+                    const hasHeader = bom2.headers.reduce((b, h) => {
+                        if(h.accessor == header.accessor){
+                            return true;
+                        }
+                        return b;
+                    }, false);
+                    if(hasHeader){
+                        matchingHeaders.push(header);
+                    }
+                });*/
+            }
         }else if(uploadFor.current === 2){
-            setBom2({upload: uploadBom, normal: normalBom, filename: fileName, headers: activeHeaders});
+            setBom2({upload: uploadBom, normal: normalBom, filename: fileName, headers: activeHeaders, ipnBom: ipnBom});
+            if(bom1.headers.length > 0){
+                if(activeHeaders.includes('IPN') && bom1.headers.includes('IPN')){
+                    matchingHeaders.push('IPN');
+                }
+                if(activeHeaders.includes('Alias/CPN') && bom1.headers.includes('Alias/CPN')){
+                    matchingHeaders.push('Alias/CPN');
+                }
+                /*
+                activeHeaders.forEach((header) => {
+                    const hasHeader = bom1.headers.reduce((b, h) => {
+                        if(h.accessor == header.accessor){
+                            return true;
+                        }
+                        return b;
+                    }, false);
+                    if(hasHeader){
+                        matchingHeaders.push(header);
+                    }
+                });*/
+            }
         }
+
+        setMatchingFields(matchingHeaders);
+        console.log(matchingHeaders);//check this
+    }   
+    function add_ipn_to_upload_bom(bom){
+        return bom.map((line, i) => {
+            //might need to do some mpn/mfr processing
+            line.ipn = i;
+            return line;
+        });
     }
     function lineSeperateBom(bom){
         //use IPN as a key
         const newBOM = [];
-
         bom.forEach((line) => {
             line.mpn.forEach((mpn, i) => {
                 let obj = {...line};
@@ -68,7 +124,9 @@ function BOMComparison(props){
                 }else{
                     obj.mfr = undefined;
                 }
-                newBOM.push(obj);
+                newBOM.push({
+                    ...obj, quantity: parseInt(obj.quantity),
+                });
             });
         });
         return newBOM;
@@ -100,7 +158,6 @@ function BOMComparison(props){
                 //new mpn
             }
         }
-
     }
     function handleUploadBOM1Interface(){
         uploadFor.current = 1;
@@ -152,7 +209,6 @@ function BOMComparison(props){
         console.log(bomData);
         //todo for upload view and headers
         //group mpn and mfr into array for matching 
-        
         if(uploadFor.current === 1){
             setBom1({upload: [], normal: bomData, filename: bomName, headers: []});
         }else if(uploadFor.current === 2){
@@ -166,7 +222,8 @@ function BOMComparison(props){
                 return <BOMCompMain uploadBOM1={handleUploadBOM1Interface} 
                 uploadBOM2={handleUploadBOM2Interface} bom1={bom1} bom2={bom2} 
                 findBOM1={handleChooseBOM1Interface} findBOM2={handleChooseBOM2Interface}
-                onChangePageState={handleChangePageState} headers={tableHeaders} setUploadFor={setUploadFor}/>
+                onChangePageState={handleChangePageState} headers={tableHeaders} setUploadFor={setUploadFor}
+                matchingFields={matchingFields}/>
             case 1:
                 return <>
                     <Button onClick={() => handleChangePageState(0)}>Back</Button>
@@ -176,7 +233,6 @@ function BOMComparison(props){
                 return <BOMCompViewer data={bom1} headers={tableHeaders} onChangePageState={handleChangePageState}/>
             case 3:
                 return <BOMCompViewer data={bom2} headers={tableHeaders} onChangePageState={handleChangePageState}/>
-
             case 4:
                 return <>
                     <Button onClick={() => handleChangePageState(0)}>Back</Button>
@@ -184,7 +240,6 @@ function BOMComparison(props){
                 </>
         }
     }
-
     return(
         <>
         {render()}
@@ -195,6 +250,16 @@ function BOMComparison(props){
 function BOMCompMain(props){
     const [compOutput, setCompOutput] = useState(null);
     const [bomView, setBomView] = useState(0); // 0 side-side comp, 1 compview
+    const [selectedMatchingField, setSelectedMatchingField] = useState(undefined);
+    useEffect(() => {
+        if(props.matchingFields.includes('IPN')){
+            setSelectedMatchingField('ipn');
+        }else if(props.matchingFields.includes('Alias/CPN')){
+            setSelectedMatchingField('alias/cpn');
+        }else{
+            setSelectedMatchingField(undefined);
+        }
+    }, [props.matchingFields]);
     function viewBom1(){
         if(props.onChangePageState) props.onChangePageState(2);
     }
@@ -202,6 +267,8 @@ function BOMCompMain(props){
         if(props.onChangePageState) props.onChangePageState(3);
     }
     function compBom(){
+
+
         //console.log(tableHeaders);
         const bom1 = props.bom1;
         const bom2 = props.bom2;
@@ -222,7 +289,6 @@ function BOMCompMain(props){
             const key = getKey(line, hasIPN);
             bom2Map[key] = line;
             bom2Keys.add(key);
-            
             if(!(key in bom1Map)){
                 missingBom2.push(line);
             }else{
@@ -238,7 +304,6 @@ function BOMCompMain(props){
                         const des2Set = new Set(d2);
                         const additions = setSubtraction(des2Set, des1Set);
                         const subtractions = setSubtraction(des1Set, des2Set);
-                        //console.log(additions);
                         if(additions.size > 0 || subtractions.size > 0){
                             differences[header.accessor] = {
                                 bom1: l[header.accessor], bom2: line[header.accessor], 
@@ -246,10 +311,13 @@ function BOMCompMain(props){
                             };
                         }
                     }
+                    else if(header.accessor == 'ipn'){
+
+                    }
                     else{
                         if(l[header.accessor] && line[header.accessor]){
-                            const lowerBOM1Field = l[header.accessor].toLowerCase();
-                            const lowerBOM2Field = line[header.accessor].toLowerCase();
+                            const lowerBOM1Field = l[header.accessor].toString().toLowerCase();
+                            const lowerBOM2Field = line[header.accessor].toString().toLowerCase();
                             if(lowerBOM1Field !== lowerBOM2Field){
                                 differences[header.accessor] = {bom1: l[header.accessor], bom2: line[header.accessor]};
                             }
@@ -262,6 +330,8 @@ function BOMCompMain(props){
                     bomDifferences[key] = {
                         id: i,
                         differences: differences,
+                        ipn1: l.ipn,
+                        ipn2: line.ipn,
                         line1: l,
                         line2: line
                     };
@@ -276,6 +346,19 @@ function BOMCompMain(props){
             return arr;
         }, []);
         const hasDifferences = Object.keys(bomDifferences).length + missingBom1.length + missingBom2.length > 0;
+        
+
+        const seperate = BOMComparisonFunctions.seperate_combined(combinedBoms);
+
+
+        let bom1_collect = []; let bom2_collect = [];
+        if(selectedMatchingField === 'ipn' || selectedMatchingField === 'alias/cpn'){
+            bom1_collect = BOMComparisonFunctions.collect_on_field(seperate.bom1, selectedMatchingField);
+            console.log(bom1_collect);
+            bom2_collect = BOMComparisonFunctions.collect_on_field(seperate.bom2, selectedMatchingField);
+            console.log(bom2_collect);
+        }
+
         const out = {
             diffLines: bomDifferences,
             missingFromBom1: missingBom1,
@@ -283,13 +366,42 @@ function BOMCompMain(props){
             combinedBom: combinedBoms,
             hasIPNKey: hasIPN,
             hasDifferences: hasDifferences,
-            nDifferences: Object.keys(bomDifferences).length + missingBom1.length + missingBom2.length
+            nDifferences: Object.keys(bomDifferences).length + missingBom1.length + missingBom2.length,
+
+            table_data_old: bom1_collect,
+            table_data_new: bom2_collect
         };
-        
         setCompOutput(out);
         //create comp output
-
+        //compare_ipn_bom(props.bom1.ipnBom, props.bom2.ipnBom);
         return out;
+    }
+    /*
+    function compare_ipn_bom(bom1, bom2){
+        //const bom1 = props.bom1.ipnBom;
+        //const bom2 = props.bom2.ipnBom;
+        const bom1Map = {} // ipn as key
+        const bom1Keys = new Set();
+        bom1.forEach(line => {
+            bom1Map[line.ipn] = line;
+            bom1Keys.add(line.ipn);
+        });
+        console.log(bom1);
+        console.log(add(1, 2));
+        const bom2Map = {};
+        const bom2Keys = new Set();
+        const foundKeys = new Set(); // mpns from bom1 found in bom2
+        const missingBom2 = []; // lines missing from bom2
+        const bomDifferences = {};
+
+    }*/
+    function handleChangePrimaryField(field){
+        if(field === 'IPN'){
+            setSelectedMatchingField('ipn');
+        }
+        else if(field === 'Alias/CPN'){
+            setSelectedMatchingField('alias/cpn');
+        }
     }
     function handleChangeView(){
         const newBomView = bomView === 1 ? 0 : bomView+1;
@@ -327,6 +439,7 @@ function BOMCompMain(props){
         </div>
         </div>
         <div className='FlexNormal'>
+            <SelectPrimaryField fields={props.matchingFields} onSelect={handleChangePrimaryField}/>
             <Button disabled={!hasBOM(props.bom1) && !hasBOM(props.bom2)}
              onClick={compBom}>Compare</Button>
             <Button onClick={handleChangeView}>{bomView === 0 && 'Side by Side View'}{bomView === 1 && 'Comparisons View'}</Button>
@@ -334,6 +447,7 @@ function BOMCompMain(props){
             <CompAnalysis comparison={compOutput}/>
         </div>
         <div className='FlexNormal Overflow'>
+            {compOutput && <CompareKeyTable headers={tableHeaders} table_data_old={compOutput.table_data_old} table_data_new={compOutput.table_data_new}/>}
             {bomView === 0 && <SideBySideComparison2Table headers={tableHeaders} comparison={compOutput}/>}
             {bomView === 1 && <ComparisonTable headers={tableHeaders} comparison={compOutput}/>}
         </div>
@@ -454,7 +568,7 @@ function SideBySideComparisonTable(props){
 
 function SideBySideComparison2Table(props){
     const style = {width: '50%', overflow: 'auto'};
-    const border = {borderRight: 'black 2px solid'}
+    const border = {borderRight: 'black 2px solid'};
     return(
         <>
         <div style={{display: 'flex', flexDirection: 'row'}}>
@@ -537,7 +651,7 @@ function SideBySideComparison2Table(props){
                 const bom2Line = line.bom2;
                 const key = getKey(bom2Line, props.comparison.hasIPNKey);
                 const hasDiff = key in props.comparison.diffLines;
-                return <tr key={i}>
+                return <tr key={i+'2'}>
                     {props.headers.map((h, j) => {
                         let style = {overflow: 'hidden'};
                         if(hasDiff){
@@ -556,14 +670,14 @@ function SideBySideComparison2Table(props){
                                         {diffs[h.accessor].subtractions.size > 0 && <span style={{color: subColour}}>Subtractions: {subString}</span>}
                                 </div>
                                 return <>
-                                <td key={'d1'+j+props.headers.length} colSpan={1} style={style}>{bom2Line[h.accessor]}</td>
-                                <td key={'d2'+j+props.headers.length} colSpan={1} style={style}>{body}</td>
+                                <td key={'d1'+j+props.headers.length+'2'} colSpan={1} style={style}>{bom2Line[h.accessor]}</td>
+                                <td key={'d2'+j+props.headers.length+'2'} colSpan={1} style={style}>{body}</td>
                                 </>
                             }
 
-                            return <td key={j} colSpan={2} style={style}>{bom2Line[h.accessor]}</td>
+                            return <td key={j+'2'} colSpan={2} style={style}>{bom2Line[h.accessor]}</td>
                         }
-                        return <td key={j+props.headers.length} colSpan={1} style={style}>{bom2Line[h.accessor]}</td>
+                        return <td key={j+props.headers.length+'2'} colSpan={1} style={style}>{bom2Line[h.accessor]}</td>
                     })}
                 </tr>
             })}

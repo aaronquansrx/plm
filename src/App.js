@@ -30,6 +30,8 @@ import './css/App.css';
 import CircularBufferTest from './pages/CircularBufferTest';
 import BOMComparison from './pages/BOMComparison';
 
+import TestBOMComparisonPage from './BOMComparison/components/TestPage';
+
 const stores = [
   {id: 'AU', label: 'AU'},
   {id: 'MY', label: 'MY'}
@@ -52,8 +54,7 @@ const pages = [
   {path: 'partsearch', title: 'Open Market Part Search', element: () => <PartSearch/>},
   {path: 'bomscrub', title: 'Components Attributes Search', element: () => <BOMScrub/>},
   {path: 'singlecomponent', title: 'Single Component Attribute Search', element: () => <SingleComponentAttribute/>},
-  {path: 'bomcomparison', title: 'BOM Comparison', element: () => <BOMComparison/>}
-
+  {path: 'bomcomparison', title: 'BOM Comparison', element: () => <TestBOMComparisonPage/>}
 ];
 
 /*
@@ -155,6 +156,7 @@ function App() {
         <Route path={path('tables')} element={<QuotingTables user={user}/>}/>
         <Route path={path('quoteusers')} element={<QuotingUsers username={username} user={user}/>}/>
         <Route path={path('feedback')} element={<Feedback/>}/>
+        <Route path={path('bomcomparisonold')} element={<BOMComparison/>}/>
         {/*<Route path={path('bomtable')} element={<BOMUploadTable/>}/>*/} 
         <Route path={path('singlecomponent/:partId')} element={<SingleComponentAttribute/>}/>
       </Routes>
