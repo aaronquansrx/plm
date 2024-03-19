@@ -44,7 +44,7 @@ export function MoveXBOMFinder(props){
                 console.log(res);
                 if('data' in res){
                     if('boms' in res.data){
-                        console.log(res.data)
+                        console.log(res.data);
                         setBomList(res.data.boms);
                         if(res.data.boms.length > 0){
                             //setChosen(res.data.boms[0]['Customer name']);
