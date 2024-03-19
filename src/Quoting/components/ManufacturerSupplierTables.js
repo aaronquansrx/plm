@@ -308,7 +308,7 @@ export function AlternateManufacturerAdder(props){
 
 export function SupplierTable(props){
     const [supplierData, setSupplierData] = useState([]);
-    const [addSupplier, setAddSupplier] = useState({name: '', phone: '', email: ''});
+    const [addSupplier, setAddSupplier] = useState({name: '', phone: '', email: '', comment: ''});
     const [deleteLine, setDeleteLine] = useState(null);
     const [deleteModal, setDeleteModal] = useState(false);
     const hasData = useRef(false);
@@ -320,7 +320,8 @@ export function SupplierTable(props){
     const headers = [
         {label: 'Supplier', accessor: 'name', editing: true}, 
         {label: 'Phone', accessor: 'phone', editing: true},
-        {label: 'Email', accessor: 'email', editing: true}
+        {label: 'Email', accessor: 'email', editing: true},
+        {label: 'Comment/Remark', accessor: 'comment', editing: true}
     ];
     function getSuppliers(){
         const getData = {function: 'suppliers'};
@@ -400,6 +401,8 @@ export function SupplierTable(props){
             <Form.Control type='text' value={addSupplier.phone} onChange={handleChangeSupplier('phone')}/>
             <Form.Label>Email</Form.Label>
             <Form.Control type='text' value={addSupplier.email} onChange={handleChangeSupplier('email')}/>
+            <Form.Label>Comment/Remark</Form.Label>
+            <Form.Control type='text' value={addSupplier.email} onChange={handleChangeSupplier('comment')}/>
         </Form>
         <Button onClick={handleAddSupplier}>Add</Button>
         </div>

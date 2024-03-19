@@ -270,7 +270,7 @@ function ConsolidatePage(props){
     }
     function updateSupplierMappingData(priceCD, region, manufacturerSupplierMap, customSupplierManufacturerMap){
         setRegion(region);
-        //console.log(customSupplier);
+        //console.log(manufacturerSupplierMap);
         //const manufacturer_supplier_map = data.manufacturer_supplier_map;
         const newData = [...priceCD].map((line, i) => {
             const newLine = {...line};
@@ -310,6 +310,7 @@ function ConsolidatePage(props){
             const status = 'Pending RFQ';
             lines++;
             return {...line, system: sys, supplier: sup.supplier_name, supplier_id: sup.supplier_id, 
+                comment: sup.comment,
                 email: sup.email, status: status, selection: false, 
                 mqa: null, est_total_po: null, excess: null, lineNum: lines};
         }
@@ -372,7 +373,7 @@ function ConsolidatePage(props){
             //}
             return obj;
         }, {});
-        console.log(allMap);
+        //console.log(allMap);
         const updates = [];
         //console.log(mpnMap);
         function updateLine(newLine, isMpn=true, isAll=false){
@@ -466,7 +467,7 @@ function ConsolidatePage(props){
             }
             return newLine;
         });
-        console.log(compRFQData);
+        //console.log(compRFQData);
         compRFQData.forEach((line, i) => {
             const moq = parseInt(line.moq);
             const batch = parseFloat(line['sum0']);

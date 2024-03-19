@@ -983,6 +983,7 @@ function SupplierMappingTable(props){
 }
 
 export function RequestForQuoteList(props){
+    console.log(props.RFQData);
     const [showExportModal, setShowExportModal] = useState(false);
     const batchHeaders = Array.from(Array(props.numBatches)).map((_, i) => {
         return {accessor: 'sum'+i.toString(), label: 'Batch '+(i+1).toString()};
@@ -1002,6 +1003,7 @@ export function RequestForQuoteList(props){
         {accessor: 'sum_eau', label: 'Total EAU'},
         {accessor: 'supplier', label: 'Supplier'},
         {accessor: 'email', label: 'Email'},
+        {accessor: 'comment', label: 'Comment/Remark'},
         ...customHeaders
     ];
     function handleBack(){
@@ -1065,7 +1067,7 @@ export function RFQTable(props){
         <tbody>
             {props.data.map((row, i) => {
                 //const cn = selectedRow === i ? 'HighlightedRow' : '';
-                console.log(row);
+                //console.log(row);
                 return(
                 <tr key={i} className={''} /*onClick={handleSelectLine(i)}*/>
                     {props.headers.map((h, j) => {
