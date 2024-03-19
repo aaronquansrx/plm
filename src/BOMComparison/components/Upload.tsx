@@ -19,7 +19,6 @@ export function UploadExcelInterface(props:UploadExcelInterfaceProps){
             const sheet_array = excelSheetToArray(workbook.Sheets[sheet_name]);
             return {name: sheet_name, array: sheet_array};
         });
-        console.log(sheets); // to remove
         props.onDrop(sheets, file_name);
     }
     
@@ -39,13 +38,9 @@ type ExcelDropzoneProps= {
     children: JSX.Element;
 };
 
-//test this
 export function ExcelDropzone(props:ExcelDropzoneProps) {
   function handleDrop(f:File, binary_str: string | ArrayBuffer | null){
-    //if(f.type)
-    //console.log(f.type);
     const workbook = XLSX.read(binary_str, {type:'binary', cellStyles:true, cellFormula:true});
-    //console.log(workbook);
     props.onDrop(workbook, f.name);
   }
 
@@ -61,7 +56,6 @@ type FileDropzoneProps = {
 };
 
   export function FileDropzone(props:FileDropzoneProps) {
-    //const dropFunction = props.onDrop;
     const handleDrop = useCallback(<T extends File>(accepted_files: T[], file_rejections: FileRejection[], event: DropEvent) => {
       accepted_files.forEach((file:File) => {
         const reader = new FileReader();

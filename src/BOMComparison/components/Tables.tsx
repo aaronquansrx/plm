@@ -3,17 +3,15 @@ import {useState, useEffect, useRef} from 'react';
 
 import update from 'immutability-helper';
 import { Table } from 'react-bootstrap';
-
 import { SelectCheckbox } from './Controls';
 
-export type TableHeader<T extends Record<string, any>> = {
-    accessor: keyof T, label: string
-  }
-  
-  type DisplayRecordTableProps<T extends Record<string, any>> = {
-    headers: TableHeader<T>[];
-    data: T[];
-  }
+import { TableHeader } from '../table/types';
+
+
+type DisplayRecordTableProps<T extends Record<string, any>> = {
+  headers: TableHeader<T>[];
+  data: T[];
+}
   
 export function DisplayRecordTableHeader<T extends Record<string, any>>(props:{headers: TableHeader<T>[]}){
   return(

@@ -54,8 +54,7 @@ const pages = [
   {path: 'partsearch', title: 'Open Market Part Search', element: () => <PartSearch/>},
   {path: 'bomscrub', title: 'Components Attributes Search', element: () => <BOMScrub/>},
   {path: 'singlecomponent', title: 'Single Component Attribute Search', element: () => <SingleComponentAttribute/>},
-  {path: 'bomcomparison', title: 'BOM Comparison', element: () => <BOMComparison/>}
-
+  {path: 'bomcomparison', title: 'BOM Comparison', element: () => <TestBOMComparisonPage/>}
 ];
 
 /*
@@ -157,7 +156,7 @@ function App() {
         <Route path={path('tables')} element={<QuotingTables user={user}/>}/>
         <Route path={path('quoteusers')} element={<QuotingUsers username={username} user={user}/>}/>
         <Route path={path('feedback')} element={<Feedback/>}/>
-        <Route path={path('bomcomparisontest')} element={<TestBOMComparisonPage/>}/>
+        <Route path={path('bomcomparisonold')} element={<BOMComparison/>}/>
         {/*<Route path={path('bomtable')} element={<BOMUploadTable/>}/>*/} 
         <Route path={path('singlecomponent/:partId')} element={<SingleComponentAttribute/>}/>
       </Routes>

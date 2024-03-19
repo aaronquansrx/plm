@@ -1,7 +1,7 @@
 import {useState, useEffect, useRef} from 'react';
 import { CollectedBOMLine } from '../scripts/differencesTs';
 import { Table } from 'react-bootstrap';
-import { TableHeader } from './Tables';
+import { TableHeader } from '../table/types';
 
 type CompareKeyTableProps = {
     headers: TableHeader<CollectedBOMLine>[];

@@ -25,7 +25,6 @@ type SelectStringDropdown = {
 }
 
 export function SelectDropdown(props:SelectStringDropdown){
-    //console.log(props.items.length > 0 ? props.items[0] : null);
     const [selected, setSelected] = useState(props.items.length > 0 ? props.items[0] : null);
     useEffect(() => {
         if(props.selected) setSelected(props.selected);
@@ -48,3 +47,37 @@ export function SelectDropdown(props:SelectStringDropdown){
         </Dropdown>
     );
 }
+
+type ObjectDropdownProps<T> = {
+    selected?: T
+    items: T[];
+    item_key: keyof T;
+    onChange: (item:T, item_no:number) => void;
+  }
+  
+  export function ObjectDropdown<T>(props: ObjectDropdownProps<T>){
+    const [selected, setSelected] = useState<T | undefined>(props.items.length > 0 ? props.items[0] : undefined);
+    useEffect(() => {
+      if(props.selected !== undefined){
+        setSelected(props.selected);
+      }
+    }, [props.selected])
+    function handleChange(item:T, item_no:number){
+      setSelected(item);
+      if(props.onChange) props.onChange(item, item_no);
+    }
+    return(
+      <>
+      <Dropdown>
+        <Dropdown.Toggle variant="success" id="dropdown-basic">
+          {selected && selected[props.item_key]}
+        </Dropdown.Toggle>
+        <Dropdown.Menu style={{maxHeight: '300px', overflow: 'auto'}}>
+          {props.items.map((item, i) => 
+            <Dropdown.Item key={i} onClick={() => handleChange(item, i)}>{item[props.item_key]}</Dropdown.Item>
+          )}
+        </Dropdown.Menu>
+      </Dropdown>
+      </>
+    );
+  }
