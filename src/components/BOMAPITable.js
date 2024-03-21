@@ -1157,7 +1157,8 @@ function APIRow(props){
 }
 
 function SinglePricesRenderer(props){
-    const price = props.quantity > 1 ? props.value[getPriceIndex()].unit_price : props.value[0].unit_price;
+    const price = props.value.length > 0 ? (props.quantity > 1 ? props.value[getPriceIndex()].unit_price :  props.value[0].unit_price) 
+    : 0;
     function getPriceIndex(){
         let n = 0;
         while(n+1 < props.value.length && props.quantity >= props.value[n+1].break_quantity){
